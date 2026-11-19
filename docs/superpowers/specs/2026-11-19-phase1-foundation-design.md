@@ -29,7 +29,7 @@ Material shortfalls and calculator sync, Inventory, GOOD import (phase 2); wishe
 | Layer | Choice |
 |---|---|
 | Backend | Python 3.12, FastAPI, uvicorn |
-| HoYoLAB | `genshin` (genshin.py) pinned to `1.0.0` (the version verified by the probe) |
+| HoYoLAB | `genshin` (genshin.py) pinned to `1.7.32` (the release verified by the probe; the package's internal `__version__` string misleadingly reports `1.0.0`, and installing `genshin==1.0.0` pulls an old, broken release) |
 | HTTP | `httpx` (game data and images) |
 | Database | SQLite via SQLAlchemy 2.x; schema managed by **Alembic** migrations, applied automatically at startup |
 | Config | `.env` (cookie, UID, region) via `python-dotenv`; other settings in the database |
@@ -75,7 +75,7 @@ All tables are created by the first Alembic migration.
 |---|---|---|
 | `game_character` | `id` PK, `name`, `slug`, `rarity`, `element`, `weapon_type`, `region`, `icon`, `splash`, `release_at` | Game |
 | `game_meta` | `key` PK, `value` (e.g. `characters_fetched_at`, last error) | Game |
-| `owned_character` | `character_id` PK, `level`, `ascension`, `constellation`, `friendship`, `talent_normal`, `talent_skill`, `talent_burst`, `weapon_name`, `weapon_icon`, `weapon_rarity`, `weapon_level`, `weapon_refinement`, `stats` (JSON), `synced_at` | Account |
+| `owned_character` | `character_id` PK (canonical id, see §5), `name`, `element`, `icon` (only set for Traveler, to keep the reported variant's art), `level`, `constellation`, `friendship`, `talent_normal`, `talent_skill`, `talent_burst`, `weapon_name`, `weapon_icon`, `weapon_rarity`, `weapon_level`, `weapon_refinement`, `stats` (JSON), `synced_at` | Account |
 | `owned_artifact` | `character_id`, `slot` (PK pair), `set_name`, `rarity`, `level`, `main_stat`, `substats` (JSON), `icon` | Account |
 | `live_notes` | single row: `resin`, `resin_max`, `resin_full_at`, `commissions_done`, `commissions_max`, `expeditions` (JSON), `realm_currency`, `realm_currency_max`, `fetched_at` | Account |
 | `sync_run` | `id`, `started_at`, `finished_at`, `trigger` (`auto`/`manual`/`connect`), `parts` (JSON: per part `ok`, `error`, `count`) | Account |
@@ -104,7 +104,8 @@ Rules:
   - All Traveler entries collapse into one `game_character` named "Traveler"; on sync it takes whichever Traveler id/element HoYoLAB reports. Same for Manekin/Manekina ("Manekin").
   - Entries with `release_at` in the future are hidden.
 - **Refresh triggers:** first run; data older than 7 days at startup; a sync returning an unknown character id; "Refresh game data" in Settings.
-- **Image cache:** `/api/img/<name>` serves from `data/cache/img/`, downloading on first request. On download failure it returns a placeholder image and retries on a later request.
+- **Image cache:** `/api/img/<name>` serves game art from `data/cache/img/`, downloading on first request. Weapon and artifact icons arrive from HoYoLAB as full URLs; `/api/img/remote?url=<url>` caches those too, accepting only hosts under `hoyoverse.com`, `mihoyo.com`, `hoyolab.com`, `enka.network`, and `yatta.moe`. On download failure either route returns a placeholder image (not cached) and retries on a later request.
+- **Canonical ids:** Traveler variants (`10000005`, `10000007`, and Yatta's `10000005-<element>` keys) map to `10000005`; Manekin/Manekina (`10000117`, `10000118`) map to `10000117`. Sync applies the same mapping to HoYoLAB ids.
 - **Failure:** keep cached data; store the error in `game_meta`; Settings displays it.
 
 ---
@@ -136,7 +137,7 @@ Rules:
 
 Before part 1, the database file is copied to `data/backups/tracker-<timestamp>.db`; only the 5 newest are kept.
 
-Each part catches its own exceptions and records `{ok: false, error}` in `sync_run.parts`; later parts still run (details is skipped if roster failed on the first-ever sync, as there is nothing to detail).
+Each part catches its own exceptions and records `{ok: false, error}` in `sync_run.parts`; later parts still run, except that details is skipped whenever roster failed, because it needs the roster's character ids. An auto sync is also skipped if any sync started less than 60 s ago, so a failing sync is not retried on every page load.
 
 ### 6.4 Errors
 
@@ -179,7 +180,7 @@ Top navigation: Dashboard · Characters · Teams · Inventory · Events · Map �
 
 - Header: splash art, name, element, weapon type, rarity, "← Characters".
 - Goal switch; when `build`, editors for target level (dropdown of level caps 20, 40, 50, 60, 70, 80, 90, plus any higher caps the game currently allows), three talent targets (1–10), weapon target level. Saved on change.
-- If owned: level/ascension/constellation/friendship; talents as current → target; weapon card (icon, name, level, refinement); five artifact cards (set, slot, main stat, substats); stats table.
+- If owned: level/constellation/friendship (HoYoLAB does not report character ascension); talents as current → target; weapon card (icon, name, level, refinement); five artifact cards (set, slot, main stat, substats); stats table.
 - If not owned: game info, goal, and targets only.
 - Placeholder panel: "Material shortfall — arrives in phase 2".
 
@@ -220,7 +221,7 @@ Top navigation: Dashboard · Characters · Teams · Inventory · Events · Map �
 
 ### Backend (pytest)
 
-- **Fixtures:** one recorded response each for game accounts, roster, detailed characters, notes, and the Yatta list, with UID, nickname, and other identifiers replaced by fake values before commit. Sync tests run against fixtures with the HoYoLAB client mocked; no network.
+- **Fixtures:** a trimmed Yatta character list (public data, no identifiers) and fake HoYoLAB objects built from the verified genshin.py field names, with made-up UID and nickname. Sync tests run against a fake HoYoLAB source; no network. The live `smoke` command is what checks the real API shapes.
 - **Unit tests:** status derivation (all six combinations); `build` default-target fill and target retention; progress formula including targets at/below current; Traveler/Manekin collapse and unreleased filtering; auto-sync interval check; manual 60 s limit; single flight; partial-failure isolation; expired cookie → `expired` status and stopped run; connect writes `.env` only after a successful test and preserves other lines; backup rotation keeps 5.
 - **Secret leakage test:** with known fake cookie values configured, no API response body and no captured log record contains them.
 - **API tests:** TestClient against a temporary SQLite file with migrations applied from empty.
