@@ -41,3 +41,35 @@ def seed_game(session_factory, rows=GAME_ROWS, release: datetime = datetime(2020
                 region=None, icon=icon, splash=icon.replace("UI_AvatarIcon_", "UI_Gacha_AvatarImg_"),
                 release_at=release,
             ))
+
+
+import time  # noqa: E402
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app.main import create_app  # noqa: E402
+
+
+def make_client(paths, source=None, accounts=None, transport=None) -> TestClient:
+    """`accounts`: list[Account] to return, or an Exception to raise, from the account lookup."""
+    http = httpx.AsyncClient(transport=transport or httpx.MockTransport(lambda r: httpx.Response(404)))
+
+    async def fetch_accounts(cookies):
+        if isinstance(accounts, Exception):
+            raise accounts
+        return list(accounts or [])
+
+    app = create_app(paths, source_factory=lambda: source, accounts_fetcher=fetch_accounts,
+                     http_client=http, offline=True)
+    return TestClient(app)
+
+
+def wait_for_sync(client: TestClient, timeout: float = 5.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while True:
+        status = client.get("/api/sync/status").json()
+        if not status["running"]:
+            return status
+        if time.monotonic() > deadline:
+            raise TimeoutError("sync did not finish")
+        time.sleep(0.02)

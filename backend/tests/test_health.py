@@ -1,13 +1,11 @@
-from fastapi.testclient import TestClient
-
 from app.config import Paths, default_paths
-from app.main import create_app
 from app.timeutil import iso, utcnow
+from helpers import make_client
 
 
-def test_health():
-    client = TestClient(create_app())
-    assert client.get("/api/health").json() == {"ok": True}
+def test_health(paths):
+    with make_client(paths) as client:
+        assert client.get("/api/health").json() == {"ok": True}
 
 
 def test_paths_layout(tmp_path):
