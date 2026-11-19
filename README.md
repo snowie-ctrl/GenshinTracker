@@ -1,0 +1,49 @@
+# GenshinTracker
+
+A personal, locally run Genshin Impact tracker: your roster syncs from HoYoLAB automatically,
+grouped by what you're building, own, want, or don't have yet.
+
+> Fan project. Not affiliated with or endorsed by HoYoverse. Game data comes from community
+> sources (Yatta, Enka) and is downloaded at runtime; no game assets are stored in this repo.
+
+## Requirements
+
+- Python 3.12+
+- Node.js LTS (to build the web pages)
+
+## Setup (Windows PowerShell)
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e "backend[dev]"
+python run.py
+```
+
+Open http://127.0.0.1:8765. The first `python run.py` builds the frontend (needs `npm`).
+
+## Connect HoYoLAB
+
+1. Log in at hoyolab.com in your browser.
+2. Press F12 → Application (Firefox: Storage) → Cookies → `https://www.hoyolab.com`.
+3. In the app, open **Settings → Connect HoYoLAB** and paste `ltuid_v2`, `ltoken_v2`, `ltmid_v2`
+   (and the optional ones if present).
+
+The values are tested first, then saved only to your local `.env`, which is git-ignored.
+Treat them like a password.
+
+## Development
+
+```powershell
+# backend tests (from backend/)
+python -m pytest
+# live check against your account (from backend/, after connecting)
+python -m app.smoke
+# frontend (from frontend/)
+npm run dev      # http://localhost:5173, proxies /api to the backend on 8765
+npm run check
+npm test
+npm run e2e      # needs the venv active; builds nothing, run `npm run build` first
+```
+
+Your data lives in `data/` (database, backups, image cache). Delete `data/` to start fresh.
