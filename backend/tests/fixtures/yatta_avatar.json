@@ -1,0 +1,16 @@
+{
+  "response": 200,
+  "data": {
+    "items": {
+      "10000032": {"id": 10000032, "rank": 4, "name": "Bennett", "element": "Fire", "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "MONDSTADT", "icon": "UI_AvatarIcon_Bennett", "release": 1601244000},
+      "10000089": {"id": 10000089, "rank": 5, "name": "Furina", "element": "Water", "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "FONTAINE", "icon": "UI_AvatarIcon_Furina", "release": 1699398000},
+      "10000052": {"id": 10000052, "rank": 5, "name": "Raiden Shogun", "element": "Electric", "weaponType": "WEAPON_POLE", "region": "INAZUMA", "icon": "UI_AvatarIcon_Shougun", "release": 1630447200},
+      "10000005-anemo": {"id": "10000005-anemo", "rank": 5, "name": "Traveler", "element": "Wind", "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "", "icon": "UI_AvatarIcon_PlayerBoy", "release": 1601244000},
+      "10000005-pyro": {"id": "10000005-pyro", "rank": 5, "name": "Traveler", "element": "Fire", "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "", "icon": "UI_AvatarIcon_PlayerBoy", "release": 1735758000},
+      "10000007-geo": {"id": "10000007-geo", "rank": 5, "name": "Traveler", "element": "Rock", "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "", "icon": "UI_AvatarIcon_PlayerGirl", "release": 1601244000},
+      "10000117": {"id": 10000117, "rank": 5, "name": "Manekin", "element": null, "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "", "icon": "UI_AvatarIcon_MannequinBoy", "release": 1760994000},
+      "10000118": {"id": 10000118, "rank": 5, "name": "Manekina", "element": null, "weaponType": "WEAPON_SWORD_ONE_HAND", "region": "", "icon": "UI_AvatarIcon_MannequinGirl", "release": 1760994000},
+      "10000999": {"id": 10000999, "rank": 5, "name": "Futurechar", "element": "Ice", "weaponType": "WEAPON_CATALYST", "region": "SNEZHNAYA", "icon": "UI_AvatarIcon_Futurechar", "release": 4102444800}
+    }
+  }
+}
