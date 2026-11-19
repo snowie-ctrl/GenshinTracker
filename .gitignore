@@ -28,3 +28,8 @@ Thumbs.db
 
 # Brainstorming companion mockups
 .superpowers/
+
+# End-to-end test data and frontend test output
+.e2e-data/
+frontend/test-results/
+frontend/playwright-report/
