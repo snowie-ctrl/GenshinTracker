@@ -1,0 +1,128 @@
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.context import AppContext, get_ctx
+from app.db.models import CharacterGoal, GameCharacter, OwnedArtifact, OwnedCharacter
+from app.domain import Current, Targets, derive_status, progress, resolve_targets
+from app.gamedata.yatta import splash_for
+from app.schemas import TargetsIn
+from app.settings.store import default_targets
+from app.timeutil import utcnow
+
+router = APIRouter()
+
+
+class GoalIn(BaseModel):
+    goal: Literal["none", "want", "build"] | None = None
+    targets: TargetsIn | None = None
+
+
+def goal_targets(row: CharacterGoal | None) -> Targets | None:
+    if row is None or row.target_level is None:
+        return None
+    return Targets(row.target_level, row.target_normal, row.target_skill, row.target_burst,
+                   row.target_weapon_level)
+
+
+def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_row: CharacterGoal | None) -> dict:
+    goal = goal_row.goal if goal_row else "none"
+    status, prefarming = derive_status(o is not None, goal)
+    targets = goal_targets(goal_row)
+    cid = g.id if g is not None else o.character_id
+    icon = (o.icon if o is not None and o.icon else None) or (g.icon if g is not None else None)
+    talents = None
+    if o is not None and o.talent_normal is not None:
+        talents = {"normal": o.talent_normal, "skill": o.talent_skill, "burst": o.talent_burst}
+    prog = None
+    if status == "building" and targets is not None:
+        prog = progress(Current(o.level, o.talent_normal, o.talent_skill, o.talent_burst), targets)
+    return {
+        "id": cid,
+        "slug": g.slug if g is not None else f"id-{cid}",
+        "name": g.name if g is not None else o.name,
+        "rarity": g.rarity if g is not None else 0,
+        "element": (o.element if o is not None and o.element else None) or (g.element if g is not None else None),
+        "weapon_type": g.weapon_type if g is not None else None,
+        "icon": icon,
+        "splash": splash_for(icon) if icon else None,
+        "owned": o is not None,
+        "level": o.level if o else None,
+        "constellation": o.constellation if o else None,
+        "friendship": o.friendship if o else None,
+        "talents": talents,
+        "weapon": None if o is None else {
+            "name": o.weapon_name, "icon": o.weapon_icon, "rarity": o.weapon_rarity,
+            "level": o.weapon_level, "refinement": o.weapon_refinement,
+        },
+        "goal": goal,
+        "targets": targets.to_dict() if targets else None,
+        "status": status,
+        "prefarming": prefarming,
+        "progress": prog,
+    }
+
+
+def _all(s: Session) -> list[tuple[GameCharacter | None, OwnedCharacter | None, CharacterGoal | None]]:
+    games = {g.id: g for g in s.scalars(select(GameCharacter))}
+    owned = {o.character_id: o for o in s.scalars(select(OwnedCharacter))}
+    goals = {r.character_id: r for r in s.scalars(select(CharacterGoal))}
+    now = utcnow()
+    ids = [gid for gid, g in games.items() if g.release_at <= now or gid in owned]
+    ids += [oid for oid in owned if oid not in games]
+    return [(games.get(i), owned.get(i), goals.get(i)) for i in ids]
+
+
+@router.get("/characters")
+def list_characters(ctx: AppContext = Depends(get_ctx)) -> list[dict]:
+    with ctx.session_factory() as s:
+        return [character_payload(g, o, r) for g, o, r in _all(s)]
+
+
+@router.get("/characters/{slug}")
+def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
+    with ctx.session_factory() as s:
+        for g, o, r in _all(s):
+            payload = character_payload(g, o, r)
+            if payload["slug"] != slug:
+                continue
+            artifacts = [] if o is None else s.scalars(
+                select(OwnedArtifact).where(OwnedArtifact.character_id == o.character_id)
+                .order_by(OwnedArtifact.slot)).all()
+            payload["artifacts"] = [
+                {"slot": a.slot, "set_name": a.set_name, "rarity": a.rarity, "level": a.level,
+                 "main_stat": a.main_stat, "substats": a.substats, "icon": a.icon}
+                for a in artifacts
+            ]
+            payload["stats"] = o.stats if o is not None else []
+            return payload
+    raise HTTPException(404, "Unknown character")
+
+
+@router.put("/characters/{character_id}/goal")
+def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(get_ctx)) -> dict:
+    with ctx.session_factory.begin() as s:
+        g = s.get(GameCharacter, character_id)
+        o = s.get(OwnedCharacter, character_id)
+        if g is None and o is None:
+            raise HTTPException(404, "Unknown character")
+        row = s.get(CharacterGoal, character_id)
+        if row is None:
+            row = CharacterGoal(character_id=character_id, goal="none", updated_at=utcnow())
+            s.add(row)
+        new_goal = body.goal or row.goal
+        if body.targets is not None:
+            targets = Targets(**body.targets.model_dump())
+        else:
+            targets = resolve_targets(new_goal, goal_targets(row), default_targets(s))
+        row.goal = new_goal
+        if targets is not None:
+            row.target_level, row.target_normal = targets.level, targets.normal
+            row.target_skill, row.target_burst = targets.skill, targets.burst
+            row.target_weapon_level = targets.weapon_level
+        row.updated_at = utcnow()
+        s.flush()
+        return character_payload(g, o, row)
