@@ -15,6 +15,10 @@ DEFAULT_SYNC_INTERVAL_MINUTES = 10
 MANUAL_SYNC_MIN_SECONDS = 60
 GAMEDATA_MAX_AGE_DAYS = 7
 BACKUPS_KEPT = 5
+GAPS_DEBOUNCE_SECONDS = 3.0
+# Set from the phase 2 live check (docs/superpowers/notes/2026-11-19-phase2-calculator-findings.md):
+# True if HoYoLAB's lack_num already subtracts what can be crafted from spare lower tiers.
+LACK_INCLUDES_CRAFTING = False
 
 
 @dataclass(frozen=True)
