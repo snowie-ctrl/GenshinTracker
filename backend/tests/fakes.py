@@ -27,7 +27,7 @@ class FakeSource:
     """Stand-in for GenshinPySource. `fail` maps part name -> exception to raise."""
 
     def __init__(self, roster=None, notes=NOTES, fail=None, gate: asyncio.Event | None = None,
-                 gaps: GapResult | None = None):
+                 gaps: GapResult | None = None, gaps_gate: asyncio.Event | None = None):
         self.roster = roster if roster is not None else [
             make_roster(10000032, name="Bennett"), make_roster(10000089, level=90, name="Furina"),
         ]
@@ -35,6 +35,7 @@ class FakeSource:
         self.fail = fail or {}
         self.gate = gate
         self.gaps = gaps
+        self.gaps_gate = gaps_gate
         self.calls: list = []
 
     async def get_roster(self):
@@ -65,6 +66,8 @@ class FakeSource:
 
     async def compute_gaps(self, chars):
         self.calls.append(("gaps", tuple(c.character_id for c in chars)))
+        if self.gaps_gate is not None:
+            await self.gaps_gate.wait()
         if "gaps" in self.fail:
             raise self.fail["gaps"]
         if self.gaps is not None:

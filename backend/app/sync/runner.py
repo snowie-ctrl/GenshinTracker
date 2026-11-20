@@ -44,7 +44,8 @@ def last_successful(session: Session) -> SyncRun | None:
     """Last finished run whose roster part succeeded. A part that keeps failing for an
     account-setting reason (e.g. Real-Time Notes disabled) must not shorten the interval."""
     runs = session.scalars(
-        select(SyncRun).where(SyncRun.finished_at.is_not(None)).order_by(SyncRun.id.desc()).limit(20)
+        select(SyncRun).where(SyncRun.finished_at.is_not(None), SyncRun.trigger != "gaps")
+        .order_by(SyncRun.id.desc()).limit(20)
     )
     for run in runs:
         if (run.parts or {}).get("roster", {}).get("ok"):
@@ -69,6 +70,7 @@ class SyncManager:
         self._clock = clock
         self._task: asyncio.Task | None = None
         self._run_id: int | None = None
+        self._run_trigger: str | None = None
         self._auth_generation = 0
         self._gaps_delay = gaps_delay
         self._gaps_timer: asyncio.Task | None = None
@@ -91,7 +93,8 @@ class SyncManager:
     async def wait(self) -> None:
         while True:
             if self._gaps_timer is not None and not self._gaps_timer.done():
-                await self._gaps_timer
+                # asyncio.wait does not raise if schedule_gaps() cancels the timer meanwhile
+                await asyncio.wait({self._gaps_timer})
                 continue
             if self._task is not None and not self._task.done():
                 await self._task
@@ -100,7 +103,9 @@ class SyncManager:
             return
 
     def schedule_gaps(self) -> None:
-        """Recalculate gaps a few seconds after the last edit; later edits restart the timer."""
+        """Recalculate gaps a few seconds after the last edit; later edits restart the timer.
+
+        Must be called from inside the running event loop (e.g. from an async def handler)."""
         if self._gaps_timer is not None and not self._gaps_timer.done():
             self._gaps_timer.cancel()
         self._gaps_timer = asyncio.create_task(self._gaps_after_delay())
@@ -122,6 +127,7 @@ class SyncManager:
             s.flush()
             run_id = run.id
         self._run_id = run_id
+        self._run_trigger = "gaps"
         self._task = asyncio.create_task(self._run_gaps_only(run_id, source, self._auth_generation))
         self._task.add_done_callback(self._on_task_done)
         return SyncRequestResult(run_id, True, "started")
@@ -184,6 +190,9 @@ class SyncManager:
                 log.warning("Game data refresh after unknown ids failed: %s", type(e).__name__)
 
     async def request(self, trigger: str) -> SyncRequestResult:
+        while self.running and self._run_trigger == "gaps":
+            # a gaps-only run has no roster/details/notes: let it finish, then sync for real
+            await asyncio.wait({self._task})
         if self.running:
             return SyncRequestResult(self._run_id, False, "joined")
         now = self._clock()
@@ -209,6 +218,7 @@ class SyncManager:
             s.flush()
             run_id = run.id
         self._run_id = run_id
+        self._run_trigger = trigger
         self._task = asyncio.create_task(self._run(run_id, source, self._auth_generation))
         self._task.add_done_callback(self._on_task_done)
         return SyncRequestResult(run_id, True, "started")

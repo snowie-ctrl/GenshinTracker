@@ -299,3 +299,46 @@ async def test_gaps_runs_do_not_count_for_manual_limit(paths, session_factory):
 async def test_start_gaps_not_connected(paths, session_factory):
     m = manager(paths, session_factory, None)
     assert m.start_gaps().reason == "not_connected"
+
+
+async def test_wait_survives_timer_replaced_by_new_edit(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    source = FakeSource()
+    m = SyncManager(session_factory, paths.db_file, paths.backups, lambda: source,
+                    lambda ids: asyncio.sleep(0), clock=Clock(START), gaps_delay=0.05)
+    m.schedule_gaps()
+    waiter = asyncio.create_task(m.wait())
+    await asyncio.sleep(0)
+    m.schedule_gaps()                                     # cancels the timer the waiter is on
+    await waiter                                          # must not raise CancelledError
+    assert len([c for c in source.calls if isinstance(c, tuple) and c[0] == "gaps"]) == 1
+
+
+async def test_request_during_gaps_only_run_waits_then_runs_full_sync(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    gate = asyncio.Event()
+    source = FakeSource(gaps_gate=gate)
+    m = manager(paths, session_factory, source)
+    assert m.start_gaps().started
+    req = asyncio.create_task(m.request("manual"))
+    await asyncio.sleep(0.01)
+    assert not req.done()
+    gate.set()
+    result = await req
+    await m.wait()
+    assert result.started and result.reason == "started"
+    run = last_run(session_factory)
+    assert run.trigger == "manual" and {"roster", "details", "notes"} <= set(run.parts)
+    with session_factory() as s:
+        assert s.query(SyncRun).filter_by(trigger="gaps").count() == 1
+
+
+def test_last_successful_ignores_gaps_runs(session_factory):
+    from app.sync.runner import last_successful
+    with session_factory.begin() as s:
+        s.add(SyncRun(started_at=START, finished_at=START, trigger="manual", parts={"roster": {"ok": True}}))
+        s.add(SyncRun(started_at=START, finished_at=START, trigger="gaps", parts={"roster": {"ok": True}}))
+    with session_factory() as s:
+        assert last_successful(s).trigger == "manual"
