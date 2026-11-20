@@ -37,6 +37,6 @@ def make_source_factory(paths: Paths, session_factory: sessionmaker) -> Callable
         with session_factory() as s:
             if get_setting(s, "hoyolab_status") == "expired":
                 return None
-        return GenshinPySource(cookies, int(env["GENSHIN_UID"]))
+        return GenshinPySource(cookies, int(env["GENSHIN_UID"]), region=env.get("GENSHIN_REGION"))
 
     return factory

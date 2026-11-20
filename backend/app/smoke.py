@@ -11,7 +11,7 @@ async def main() -> None:
     env = read_env(default_paths().env_file)
     if not env.get("GENSHIN_UID"):
         sys.exit("Connect from the app's Settings page first (GENSHIN_UID missing in .env).")
-    source = GenshinPySource(cookies_from_env(env), int(env["GENSHIN_UID"]))
+    source = GenshinPySource(cookies_from_env(env), int(env["GENSHIN_UID"]), region=env.get("GENSHIN_REGION"))
     roster = await source.get_roster()
     print(f"roster: {len(roster)} characters")
     details = await source.get_details([r.raw_id for r in roster[:3]])

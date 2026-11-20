@@ -2,7 +2,8 @@ import asyncio
 from datetime import datetime, timedelta
 
 from app.sync.hoyolab import (
-    ArtifactInfo, DetailEntry, ExpeditionInfo, NotesInfo, RosterEntry, WeaponInfo,
+    ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, TalentIds,
+    WeaponInfo,
 )
 
 WEAPON = WeaponInfo("The Flute", "https://act-webstatic.hoyoverse.com/w.png", 4, 90, 5)
@@ -25,13 +26,15 @@ def make_detail(id: int, talents: tuple[int, int, int] = (6, 8, 8)) -> DetailEnt
 class FakeSource:
     """Stand-in for GenshinPySource. `fail` maps part name -> exception to raise."""
 
-    def __init__(self, roster=None, notes=NOTES, fail=None, gate: asyncio.Event | None = None):
+    def __init__(self, roster=None, notes=NOTES, fail=None, gate: asyncio.Event | None = None,
+                 gaps: GapResult | None = None):
         self.roster = roster if roster is not None else [
             make_roster(10000032, name="Bennett"), make_roster(10000089, level=90, name="Furina"),
         ]
         self.notes = notes
         self.fail = fail or {}
         self.gate = gate
+        self.gaps = gaps
         self.calls: list = []
 
     async def get_roster(self):
@@ -53,6 +56,23 @@ class FakeSource:
         if "notes" in self.fail:
             raise self.fail["notes"]
         return self.notes
+
+    async def get_talent_ids(self, character_id):
+        self.calls.append(("talents", character_id))
+        if "talents" in self.fail:
+            raise self.fail["talents"]
+        return TalentIds(character_id * 10 + 1, character_id * 10 + 2, character_id * 10 + 9)
+
+    async def compute_gaps(self, chars):
+        self.calls.append(("gaps", tuple(c.character_id for c in chars)))
+        if "gaps" in self.fail:
+            raise self.fail["gaps"]
+        if self.gaps is not None:
+            return self.gaps
+        guide = MaterialAmount(104302, "Guide to Freedom", "", 3, 9, 4)
+        return GapResult(per_character={c.character_id: [guide] for c in chars},
+                         total=[MaterialAmount(104302, "Guide to Freedom", "", 3, 9 * len(chars), 4 * len(chars))],
+                         spare=[])
 
 
 class Clock:

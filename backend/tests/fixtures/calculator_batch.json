@@ -1,0 +1,23 @@
+{
+  "items": [{}, {}],
+  "has_user_info": true,
+  "overall_consume": [
+    {"id": 104302, "name": "Guide to Freedom", "icon": "https://act-webstatic.hoyoverse.com/m/104302.png", "level": 3, "num": 18, "lack_num": 7, "wiki_url": ""},
+    {"id": 104303, "name": "Philosophies of Freedom", "icon": "https://act-webstatic.hoyoverse.com/m/104303.png", "level": 4, "num": 12, "lack_num": 0, "wiki_url": ""},
+    {"id": 999001, "name": "Brand New Material", "icon": "https://act-webstatic.hoyoverse.com/m/999001.png", "level": 4, "num": 3, "lack_num": 3, "wiki_url": ""}
+  ],
+  "available_material": [
+    {"id": 104301, "name": "Teachings of Freedom", "icon": "https://act-webstatic.hoyoverse.com/m/104301.png", "level": 2, "num": 10, "lack_num": 0, "wiki_url": ""}
+  ],
+  "single_role_result": [
+    {"has_user_info": true, "overall_consume": [
+      {"id": 104302, "name": "Guide to Freedom", "icon": "", "level": 3, "num": 9, "lack_num": 0, "wiki_url": ""},
+      {"id": 104303, "name": "Philosophies of Freedom", "icon": "", "level": 4, "num": 6, "lack_num": 0, "wiki_url": ""}
+    ]},
+    {"has_user_info": true, "overall_consume": [
+      {"id": 104302, "name": "Guide to Freedom", "icon": "", "level": 3, "num": 9, "lack_num": 0, "wiki_url": ""},
+      {"id": 104303, "name": "Philosophies of Freedom", "icon": "", "level": 4, "num": 6, "lack_num": 0, "wiki_url": ""},
+      {"id": 999001, "name": "Brand New Material", "icon": "", "level": 4, "num": 3, "lack_num": 3, "wiki_url": ""}
+    ]}
+  ]
+}

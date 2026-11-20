@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Protocol, Sequence
+from typing import Any, Awaitable, Callable, Mapping, Protocol, Sequence
 
 import aiohttp
 import genshin
@@ -42,6 +42,7 @@ class WeaponInfo:
     rarity: int
     level: int
     refinement: int
+    id: int = 0
 
 
 @dataclass(frozen=True)
@@ -95,18 +96,63 @@ class NotesInfo:
     realm_currency: int
     realm_currency_max: int
     expeditions: list[ExpeditionInfo]
+    weekly_discounts_left: int | None = None
+    weekly_discounts_max: int | None = None
+
+
+class NoInventoryData(HoyolabError):
+    pass
+
+
+@dataclass(frozen=True)
+class TalentIds:
+    normal: int
+    skill: int
+    burst: int
+
+
+@dataclass(frozen=True)
+class GapCharacter:
+    character_id: int
+    level_current: int
+    level_target: int
+    talents: tuple[tuple[int, int, int], ...]
+    weapon: tuple[int, int, int] | None
+
+
+@dataclass(frozen=True)
+class MaterialAmount:
+    id: int
+    name: str
+    icon: str
+    rarity: int
+    need: int
+    short: int
+
+
+@dataclass(frozen=True)
+class GapResult:
+    per_character: dict[int, list[MaterialAmount]]
+    total: list[MaterialAmount]
+    spare: list[MaterialAmount]
 
 
 class HoyolabSource(Protocol):
     async def get_roster(self) -> list[RosterEntry]: ...
     async def get_details(self, raw_ids: Sequence[int]) -> list[DetailEntry]: ...
     async def get_notes(self) -> NotesInfo: ...
+    async def get_talent_ids(self, character_id: int) -> TalentIds: ...
+    async def compute_gaps(self, chars: Sequence[GapCharacter]) -> GapResult: ...
 
 
 # --- mappers ---------------------------------------------------------------
 def _weapon(w: Any) -> WeaponInfo:
     return WeaponInfo(name=w.name, icon=w.icon, rarity=int(w.rarity), level=int(w.level),
-                      refinement=int(w.refinement))
+                      refinement=int(w.refinement), id=int(getattr(w, "id", 0) or 0))
+
+
+def _opt_int(v: Any) -> int | None:
+    return None if v is None else int(v)
 
 
 def _prop(p: Any) -> str:
@@ -148,11 +194,60 @@ def to_notes(n: Any) -> NotesInfo:
                            remaining_seconds=int(e.remaining_time.total_seconds()))
             for e in n.expeditions
         ],
+        weekly_discounts_left=_opt_int(getattr(n, "remaining_resin_discounts", None)),
+        weekly_discounts_max=_opt_int(getattr(n, "max_resin_discounts", None)),
     )
 
 
 def to_account(a: Any) -> Account:
     return Account(uid=int(a.uid), server=a.server, nickname=a.nickname, level=int(a.level))
+
+
+def to_talent_ids(items: Sequence[Mapping]) -> TalentIds:
+    upgradeable = [i for i in items if int(i.get("max_level", 1) or 1) > 1]
+    if len(upgradeable) > 3:  # alternate sprint (group id order digit 3) sits between skill and burst
+        upgradeable = [i for i in upgradeable if int(i["group_id"]) % 10 != 3]
+    if len(upgradeable) < 3:
+        raise HoyolabError("Unexpected talent list from HoYoLAB.")
+    return TalentIds(int(upgradeable[0]["group_id"]), int(upgradeable[1]["group_id"]),
+                     int(upgradeable[-1]["group_id"]))
+
+
+def build_batch_body(chars: Sequence[GapCharacter], uid: int, region: str) -> dict:
+    items = []
+    for c in chars:
+        item: dict[str, Any] = {
+            "avatar_id": c.character_id,
+            "avatar_level_current": c.level_current,
+            "avatar_level_target": c.level_target,
+            "skill_list": [{"id": g, "level_current": cur, "level_target": tgt} for g, cur, tgt in c.talents],
+        }
+        if c.weapon is not None:
+            wid, cur, tgt = c.weapon
+            item["weapon"] = {"id": wid, "level_current": cur, "level_target": tgt}
+        items.append(item)
+    return {"items": items, "uid": uid, "region": region}
+
+
+def _amount(m: Mapping) -> MaterialAmount:
+    return MaterialAmount(id=int(m["id"]), name=str(m.get("name") or ""), icon=str(m.get("icon") or ""),
+                          rarity=int(m.get("level") or 0), need=int(m.get("num") or 0),
+                          short=int(m.get("lack_num") or 0))
+
+
+def to_gap_result(raw: Mapping, character_ids: list[int]) -> GapResult:
+    if not raw.get("has_user_info"):
+        raise NoInventoryData("HoYoLAB returned no inventory data.")
+    total = [_amount(m) for m in raw.get("overall_consume") or []]
+    singles = list(raw.get("single_role_result") or [])
+    if not singles and len(character_ids) == 1:
+        per = {character_ids[0]: total}
+    elif len(singles) != len(character_ids):
+        raise HoyolabError(f"Calculator returned {len(singles)} results for {len(character_ids)} characters.")
+    else:
+        per = {cid: [_amount(m) for m in s.get("overall_consume") or []] for cid, s in zip(character_ids, singles)}
+    return GapResult(per_character=per, total=total,
+                     spare=[_amount(m) for m in raw.get("available_material") or []])
 
 
 # --- calls -----------------------------------------------------------------
@@ -176,9 +271,11 @@ async def call_api(fn: Callable[..., Awaitable[Any]], *args: Any,
 
 
 class GenshinPySource:
-    def __init__(self, cookies: dict[str, str], uid: int, delays: Sequence[float] = RETRY_DELAYS):
+    def __init__(self, cookies: dict[str, str], uid: int, delays: Sequence[float] = RETRY_DELAYS,
+                 *, region: str | None = None):
         self._client = genshin.Client(cookies, game=genshin.Game.GENSHIN, uid=uid)
         self._uid = uid
+        self._region = region or genshin.utility.recognize_genshin_server(uid)
         self._delays = delays
 
     async def get_roster(self) -> list[RosterEntry]:
@@ -196,6 +293,17 @@ class GenshinPySource:
 
     async def get_notes(self) -> NotesInfo:
         return to_notes(await call_api(self._client.get_genshin_notes, self._uid, delays=self._delays))
+
+    async def get_talent_ids(self, character_id: int) -> TalentIds:
+        data = await call_api(self._client.request_calculator, "avatarSkill/list", method="GET",
+                              params={"avatar_id": character_id}, delays=self._delays)
+        return to_talent_ids(data.get("list") or [])
+
+    async def compute_gaps(self, chars: Sequence[GapCharacter]) -> GapResult:
+        body = build_batch_body(chars, self._uid, self._region)
+        raw = await call_api(self._client.request_calculator, "batch_compute", data=body,
+                             api_version=3, delays=self._delays)
+        return to_gap_result(raw, [c.character_id for c in chars])
 
 
 async def fetch_accounts(cookies: dict[str, str]) -> list[Account]:

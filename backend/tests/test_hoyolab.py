@@ -5,9 +5,10 @@ import genshin
 import pytest
 
 from app.sync.hoyolab import (
-    AuthExpired, HoyolabError, RateLimited, call_api,
-    to_detail_entry, to_notes, to_roster_entry,
+    AuthExpired, GapCharacter, HoyolabError, NoInventoryData, RateLimited, build_batch_body, call_api,
+    to_detail_entry, to_gap_result, to_notes, to_roster_entry, to_talent_ids,
 )
+from helpers import load_fixture
 
 WEAPON = NS(id=1, icon="https://act-webstatic.hoyoverse.com/w.png", name="The Flute", rarity=4, level=90, refinement=5)
 
@@ -103,3 +104,72 @@ async def test_call_api_maps_invalid_cookies_and_other_errors():
         await call_api(bad_cookie, delays=())
     with pytest.raises(HoyolabError):
         await call_api(other, delays=())
+
+
+def test_roster_entry_keeps_weapon_id():
+    c = NS(id=10000032, name="Bennett", element="Pyro", rarity=4, icon="x", level=80,
+           friendship=10, constellation=6, weapon=WEAPON)
+    assert to_roster_entry(c).weapon.id == 1
+
+
+def test_notes_weekly_discounts_optional():
+    base = dict(current_resin=10, max_resin=200, remaining_resin_recovery_time=timedelta(minutes=1),
+                completed_commissions=4, max_commissions=4, current_realm_currency=0,
+                max_realm_currency=2400, expeditions=[])
+    assert to_notes(NS(**base)).weekly_discounts_left is None
+    notes = to_notes(NS(**base, remaining_resin_discounts=1, max_resin_discounts=3))
+    assert (notes.weekly_discounts_left, notes.weekly_discounts_max) == (1, 3)
+
+
+def test_to_talent_ids_picks_normal_skill_burst():
+    items = [
+        {"id": 10321, "group_id": 3201, "max_level": 10},   # normal
+        {"id": 10322, "group_id": 3202, "max_level": 10},   # skill
+        {"id": 10323, "group_id": 3203, "max_level": 10},   # alternate sprint (order 3) - dropped
+        {"id": 10329, "group_id": 3209, "max_level": 10},   # burst
+        {"id": 3221, "group_id": 3221, "max_level": 1},     # passive
+    ]
+    ids = to_talent_ids(items)
+    assert (ids.normal, ids.skill, ids.burst) == (3201, 3202, 3209)
+
+
+def test_to_talent_ids_rejects_short_lists():
+    with pytest.raises(HoyolabError):
+        to_talent_ids([{"id": 1, "group_id": 1, "max_level": 10}])
+
+
+def test_build_batch_body_includes_uid_region_and_only_given_parts():
+    chars = [GapCharacter(10000032, 80, 90, ((3201, 6, 8),), (11401, 90, 90)),
+             GapCharacter(10000089, 1, 90, (), None)]
+    body = build_batch_body(chars, uid=700000001, region="os_euro")
+    assert body["uid"] == 700000001 and body["region"] == "os_euro"
+    first, second = body["items"]
+    assert first == {"avatar_id": 10000032, "avatar_level_current": 80, "avatar_level_target": 90,
+                     "skill_list": [{"id": 3201, "level_current": 6, "level_target": 8}],
+                     "weapon": {"id": 11401, "level_current": 90, "level_target": 90}}
+    assert "weapon" not in second and second["skill_list"] == []
+
+
+def test_to_gap_result_maps_per_character_total_and_spare():
+    result = to_gap_result(load_fixture("calculator_batch.json"), [10000032, 10000089])
+    assert [m.id for m in result.per_character[10000089]] == [104302, 104303, 999001]
+    guide = next(m for m in result.total if m.id == 104302)
+    assert (guide.need, guide.short, guide.rarity) == (18, 7, 3)
+    assert result.spare[0].id == 104301 and result.spare[0].need == 10
+
+
+def test_to_gap_result_without_user_info_fails():
+    raw = load_fixture("calculator_batch.json") | {"has_user_info": False}
+    with pytest.raises(NoInventoryData):
+        to_gap_result(raw, [10000032, 10000089])
+
+
+def test_to_gap_result_single_character_without_single_results():
+    raw = load_fixture("calculator_batch.json") | {"single_role_result": []}
+    result = to_gap_result(raw, [10000032])
+    assert result.per_character[10000032] == result.total
+
+
+def test_to_gap_result_count_mismatch_fails():
+    with pytest.raises(HoyolabError):
+        to_gap_result(load_fixture("calculator_batch.json"), [1, 2, 3])
