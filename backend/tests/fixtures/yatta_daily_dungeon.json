@@ -1,0 +1,14 @@
+{"response": 200, "data": {
+  "monday": {
+    "domainofMasteryForsakenRift": {"id": 4213, "name": "Domain of Mastery: Forsaken Rift", "reward": [102, 202, 105, 104303, 104302, 104301], "city": 1},
+    "domainofForgeryCecilia": {"id": 4313, "name": "Domain of Forgery: Cecilia Garden", "reward": [102, 202, 105, 114001], "city": 1}
+  },
+  "thursday": {
+    "domainofMasteryForsakenRift": {"id": 4213, "name": "Domain of Mastery: Forsaken Rift", "reward": [102, 202, 105, 104303, 104302, 104301], "city": 1}
+  },
+  "sunday": {
+    "domainofMasteryForsakenRift": {"id": 4213, "name": "Domain of Mastery: Forsaken Rift", "reward": [102, 202, 105, 104303, 104302, 104301], "city": 1},
+    "domainofForgeryCecilia": {"id": 4313, "name": "Domain of Forgery: Cecilia Garden", "reward": [102, 202, 105, 114001], "city": 1},
+    "trounceDomain": {"id": 9999, "name": "Trounce Domain: Something", "reward": [113003], "city": 1}
+  }
+}}

@@ -1,0 +1,21 @@
+{
+  "104112": {"response": 200, "data": {"name": "Agnidus Agate Fragment", "type": "Character Ascension Material",
+    "recipe": {"15001": {"104111": {"name": "Agnidus Agate Sliver", "icon": "UI_ItemIcon_104111", "rank": 2, "count": 3}},
+               "50007": {"104122": {"name": "Varunada Lazurite Fragment", "icon": "UI_ItemIcon_104122", "rank": 3, "count": 1},
+                         "104201": {"name": "Dust of Azoth", "icon": "UI_ItemIcon_104201", "rank": 2, "count": 3}}},
+    "source": [{"name": "Check the Enemies Tab in the Adventurer Handbook", "type": "single"},
+               {"name": "Placeholder - Craftable Amount: {0}", "type": "single"}]}},
+  "104302": {"response": 200, "data": {"name": "Guide to Freedom", "type": "Character Talent Material",
+    "recipe": {"15002": {"104301": {"name": "Teachings of Freedom", "icon": "UI_ItemIcon_104301", "rank": 2, "count": 3}}},
+    "source": [{"name": "Domain of Mastery: Forsaken Rift", "type": "domain", "days": ["monday", "thursday", "sunday"]}]}},
+  "104303": {"response": 200, "data": {"name": "Philosophies of Freedom", "type": "Character Talent Material",
+    "recipe": {"15003": {"104302": {"name": "Guide to Freedom", "icon": "UI_ItemIcon_104302", "rank": 3, "count": 3}}},
+    "source": [{"name": "Domain of Mastery: Forsaken Rift", "type": "domain", "days": ["monday", "thursday", "sunday"]}]}},
+  "104301": {"response": 200, "data": {"name": "Teachings of Freedom", "type": "Character Talent Material", "recipe": null,
+    "source": [{"name": "Domain of Mastery: Forsaken Rift", "type": "domain", "days": ["monday", "thursday", "sunday"]}]}},
+  "113003": {"response": 200, "data": {"name": "Dvalin's Plume", "type": "Character Level-Up Material",
+    "recipe": {"60001": {"113004": {"name": "Dvalin's Claw", "icon": "UI_ItemIcon_113004", "rank": 5, "count": 1},
+                         "113021": {"name": "Dream Solvent", "icon": "UI_ItemIcon_113021", "rank": 4, "count": 1}}},
+    "source": [{"name": "Lv. 70+ Stormterror Challenge Reward", "type": "single"},
+               {"name": "Obtained from the Crafting Bench Conversion Tab", "type": "single"}]}}
+}

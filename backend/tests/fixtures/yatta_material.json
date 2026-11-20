@@ -1,0 +1,22 @@
+{"response": 200, "data": {
+  "types": {"localSpecialtyMondstadt": "Local Specialty (Mondstadt)"},
+  "items": {
+    "202": {"id": 202, "name": "Mora", "type": "commonCurrency", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_202", "rank": 3, "route": "Mora"},
+    "104003": {"id": 104003, "name": "Hero's Wit", "type": "characterEXPMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_104003", "rank": 4, "route": "Hero's Wit"},
+    "104013": {"id": 104013, "name": "Mystic Enhancement Ore", "type": "weaponEnhancementMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_104013", "rank": 3, "route": "Mystic Enhancement Ore"},
+    "104111": {"id": 104111, "name": "Agnidus Agate Sliver", "type": "characterAscensionMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_104111", "rank": 2, "route": "Agnidus Agate Sliver"},
+    "104112": {"id": 104112, "name": "Agnidus Agate Fragment", "type": "characterAscensionMaterial", "recipe": true, "mapMark": false, "icon": "UI_ItemIcon_104112", "rank": 3, "route": "Agnidus Agate Fragment"},
+    "113001": {"id": 113001, "name": "Hurricane Seed", "type": "characterLevelUpMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_113001", "rank": 4, "route": "Hurricane Seed"},
+    "113003": {"id": 113003, "name": "Dvalin's Plume", "type": "characterLevelUpMaterial", "recipe": true, "mapMark": false, "icon": "UI_ItemIcon_113003", "rank": 5, "route": "Dvalin's Plume"},
+    "113021": {"id": 113021, "name": "Dream Solvent", "type": "characterLevelUpMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_113021", "rank": 4, "route": "Dream Solvent"},
+    "100055": {"id": 100055, "name": "Small Lamp Grass", "type": "localSpecialtyMondstadt", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_100055", "rank": 1, "route": "Small Lamp Grass"},
+    "104301": {"id": 104301, "name": "Teachings of Freedom", "type": "characterTalentMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_104301", "rank": 2, "route": "Teachings of Freedom"},
+    "104302": {"id": 104302, "name": "Guide to Freedom", "type": "characterTalentMaterial", "recipe": true, "mapMark": false, "icon": "UI_ItemIcon_104302", "rank": 3, "route": "Guide to Freedom"},
+    "104303": {"id": 104303, "name": "Philosophies of Freedom", "type": "characterTalentMaterial", "recipe": true, "mapMark": false, "icon": "UI_ItemIcon_104303", "rank": 4, "route": "Philosophies of Freedom"},
+    "104319": {"id": 104319, "name": "Crown of Insight", "type": "characterTalentMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_104319", "rank": 5, "route": "Crown of Insight"},
+    "114001": {"id": 114001, "name": "Tile of Decarabian's Tower", "type": "weaponAscensionMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_114001", "rank": 2, "route": "Tile of Decarabian's Tower"},
+    "112002": {"id": 112002, "name": "Slime Condensate", "type": "characterandWeaponEnhancementMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_112002", "rank": 1, "route": "Slime Condensate"},
+    "100001": {"id": 100001, "name": "Fowl", "type": "cookingIngredient", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_100001", "rank": 1, "route": "Fowl"},
+    "100100": {"id": 100100, "name": "Some Quest Item", "type": "questItem", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_100100", "rank": 4, "route": "Some Quest Item"}
+  }
+}}
