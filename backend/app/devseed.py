@@ -5,9 +5,10 @@ from pathlib import Path
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import CharacterGoal, GameCharacter, GameMeta
-from app.sync.hoyolab import ArtifactInfo, DetailEntry, NotesInfo, RosterEntry, WeaponInfo
-from app.sync.persist import save_details, save_notes, save_roster
+from app.db.models import CharacterGoal, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
+from app.planner.requests import snapshot
+from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
+from app.sync.persist import save_details, save_gaps, save_notes, save_roster
 from app.timeutil import iso, utcnow
 
 # (id, name, slug, rarity, element, weapon, icon)
@@ -23,7 +24,33 @@ CHARACTERS = [
 ]
 OWNED = {10000032: (80, (6, 8, 8)), 10000089: (90, (9, 9, 9)), 10000023: (80, (6, 6, 6)), 10000073: (90, (8, 8, 8))}
 GOALS = {10000032: "build", 10000089: "build", 10000047: "want", 10000087: "build"}
-WEAPON = WeaponInfo("Favonius Sword", "https://enka.network/ui/UI_EquipIcon_Sword_Favonius.png", 4, 90, 3)
+WEAPON = WeaponInfo("Favonius Sword", "https://enka.network/ui/UI_EquipIcon_Sword_Zephyrus.png", 4, 90, 3, 11401)
+
+# (id, name, category, rarity, craft_from, yatta_type, sources)
+MATERIALS = [
+    (202, "Mora", "exp", 3, None, "commonCurrency", []),
+    (104003, "Hero's Wit", "exp", 4, None, "characterEXPMaterial", []),
+    (104111, "Agnidus Agate Sliver", "ascension", 2, None, "characterAscensionMaterial", []),
+    (104112, "Agnidus Agate Fragment", "ascension", 3, 104111, "characterAscensionMaterial", []),
+    (100055, "Small Lamp Grass", "specialty", 1, None, "localSpecialtyMondstadt",
+     [{"kind": "region", "name": "Mondstadt", "days": []}]),
+    (104301, "Teachings of Freedom", "talent", 2, None, "characterTalentMaterial", []),
+    (104302, "Guide to Freedom", "talent", 3, 104301, "characterTalentMaterial", []),
+    (104303, "Philosophies of Freedom", "talent", 4, 104302, "characterTalentMaterial", []),
+    (113003, "Dvalin's Plume", "weekly", 5, None, "characterLevelUpMaterial",
+     [{"kind": "weekly_boss", "name": "Stormterror", "days": []}]),
+    (104319, "Crown of Insight", "special", 5, None, "characterTalentMaterial", []),
+]
+FREEDOM_SOURCE = {"kind": "domain", "name": "Domain of Mastery: Forsaken Rift", "days": [0, 1, 2, 3, 4, 5, 6]}
+WEAPONS = [(11401, "Favonius Sword", "UI_EquipIcon_Sword_Zephyrus", 4, "Sword"),
+           (11509, "Mistsplitter Reforged", "UI_EquipIcon_Sword_Narukami", 5, "Sword"),
+           (13407, "Favonius Lance", "UI_EquipIcon_Pole_Zephyrus", 4, "Polearm"),
+           (14504, "A Thousand Floating Dreams", "UI_EquipIcon_Catalyst_Ayus", 5, "Catalyst")]
+
+
+def _amount(mid, need, short):
+    name = next(m[1] for m in MATERIALS if m[0] == mid)
+    return MaterialAmount(mid, name, "", 3, need, short)
 
 
 def seed(root: Path) -> None:
@@ -57,6 +84,28 @@ def seed(root: Path) -> None:
                                 target_normal=8 if build else None, target_skill=8 if build else None,
                                 target_burst=8 if build else None,
                                 target_weapon_level=90 if build else None, updated_at=now))
+        for order, (mid, name, cat, rarity, craft, ytype, sources) in enumerate(MATERIALS):
+            src = [FREEDOM_SOURCE] if cat == "talent" else sources
+            s.add(GameMaterial(id=mid, name=name, icon=f"UI_ItemIcon_{mid}", rarity=rarity, yatta_type=ytype,
+                               category=cat,
+                               family=104301 if cat == "talent" else (104111 if mid in (104111, 104112) else mid),
+                               craft_from=craft, sources=src, sort_order=order, detail_fetched=True))
+        s.add(GameDomain(id=4213, name="Domain of Mastery: Forsaken Rift", kind="talent", city=1,
+                         weekdays=[0, 1, 2, 3, 4, 5, 6], material_ids=[104303, 104302, 104301]))
+        for wid, name, icon, rarity, wtype in WEAPONS:
+            s.add(GameWeapon(id=wid, name=name, icon=icon, rarity=rarity, weapon_type=wtype))
+        s.merge(GameMeta(key="materials_fetched_at", value=iso(now)))
+        s.flush()
+        result = GapResult(
+            per_character={
+                10000032: [_amount(104302, 9, 4), _amount(104303, 6, 0), _amount(113003, 2, 2), _amount(104003, 20, 0)],
+                10000089: [_amount(104302, 6, 4), _amount(104319, 1, 1)],
+            },
+            total=[_amount(104302, 15, 7), _amount(104303, 6, 0), _amount(113003, 2, 2), _amount(104003, 20, 0),
+                   _amount(104319, 1, 1)],
+            spare=[_amount(104301, 9, 0)],
+        )
+        save_gaps(s, result, snapshot(s), [], now)
     engine.dispose()
 
 
