@@ -32,6 +32,24 @@ Open http://127.0.0.1:8765. The first `python run.py` builds the frontend (needs
 The values are tested first, then saved only to your local `.env`, which is git-ignored.
 Treat them like a password.
 
+## Planner (phase 2)
+
+Set characters to **Build** on the Characters page and pick targets. After each sync — and a few seconds after any
+target change — the app asks HoYoLAB's calculator what is still missing:
+
+- **Inventory** shows every upgrade material like the in-game backpack. Red `−N` = still to farm; `craft N` = you can
+  craft it from spare lower tiers; `✓` = you have enough. Without a scanner import the app only knows counts for
+  materials a Build character needs, so other tiles show no number.
+- **Dashboard** shows domains open today (server time, reset 04:00), weekly bosses (tick them when done; they reset
+  Monday 04:00 server time) and what each Build character still needs.
+- **Planned weapon**: on a character's page you can plan for a weapon other than the equipped one; it is planned from
+  level 1 because HoYoLAB only reports equipped weapons.
+
+Known limits: Traveler and Manekin are not planned yet. Characters sitting exactly at a level cap (20/40/50/60/70/80)
+may be counted as not yet ascended; this is checked against a live account before release.
+
+Live check of the calculator against your account: `cd backend; ..\.venv\Scripts\python -m app.smoke --gaps`.
+
 ## Development
 
 ```powershell
