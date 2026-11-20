@@ -14,6 +14,9 @@
 	--error: #ef6b6b;
 	--r5: linear-gradient(160deg, #9b6a3c, #d6a253);
 	--r4: linear-gradient(160deg, #5c4a8a, #9a78c9);
+	--r3: linear-gradient(160deg, #3d5a8a, #5c86c6);
+	--r2: linear-gradient(160deg, #3d6b52, #5a9b74);
+	--r1: linear-gradient(160deg, #55555f, #77778a);
 	--r0: linear-gradient(160deg, #3a3a48, #50505f);
 	color-scheme: dark;
 }

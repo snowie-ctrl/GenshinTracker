@@ -12,7 +12,7 @@
 		{ label: 'Dashboard', href: '/' },
 		{ label: 'Characters', href: '/characters' },
 		{ label: 'Teams', phase: 4 },
-		{ label: 'Inventory', phase: 2 },
+		{ label: 'Inventory', href: '/inventory' },
 		{ label: 'Events', phase: 5 },
 		{ label: 'Map', phase: 5 },
 		{ label: 'Wishes', phase: 3 },

@@ -25,6 +25,7 @@ export interface Character {
 	status: Status;
 	prefarming: boolean;
 	progress: number | null;
+	planned_weapon_id: number | null;
 }
 
 export interface Artifact {
@@ -34,6 +35,8 @@ export interface Artifact {
 export interface CharacterDetail extends Character {
 	artifacts: Artifact[];
 	stats: { name: string; value: string }[];
+	shortfall: { gaps: GapStatus; materials: CharMaterial[] } | null;
+	planned_weapon: PlannedWeapon | null;
 }
 
 export interface Connection { status: 'connected' | 'expired' | 'missing'; uid: number | null }
@@ -55,13 +58,42 @@ export interface Dashboard {
 	connection: Connection;
 	notes: Notes | null;
 	building: { count: number; average_progress: number | null };
+	farm_today: { weekday: number; domains: FarmDomain[] };
+	weekly_bosses: { discounts_left: number | null; discounts_max: number | null; bosses: WeeklyBoss[] };
+	building_cards: BuildingCard[];
+	gaps: GapStatus;
 }
 export interface Settings {
 	connection: Connection;
 	sync_interval_minutes: number;
 	default_targets: Targets;
 	level_caps: number[];
-	gamedata: { fetched_at: string | null; last_error: string | null; count: number };
+	gamedata: {
+		fetched_at: string | null; last_error: string | null; count: number;
+		materials: { fetched_at: string | null; last_error: string | null; count: number };
+	};
 }
 export interface Account { uid: number; server: string; nickname: string; level: number }
 export type ConnectResponse = { status: 'connected'; uid: number } | { status: 'choose'; accounts: Account[] };
+
+export type MaterialState = 'short' | 'met' | 'unneeded';
+export interface MaterialSource { kind: 'domain' | 'weekly_boss' | 'region' | 'text'; name: string; days: number[] }
+export interface CharRef { id: number; name: string; slug: string; icon: string | null }
+export interface Needer extends CharRef { need: number }
+export interface Material {
+	id: number; name: string; icon: string; rarity: number; category: string; state: MaterialState;
+	need: number; short: number; have: number | null; craftable: number; to_farm: number;
+	sources: MaterialSource[]; characters: Needer[];
+}
+export interface CharMaterial {
+	id: number; name: string; icon: string; rarity: number; category: string;
+	need: number; short: number; shared: boolean;
+}
+export interface GapStatus { computed_at: string | null; ok: boolean | null; error: string | null; stale: boolean; skipped: string[] }
+export interface InventoryCategory { key: string; label: string; materials: Material[] }
+export interface Inventory { gaps: GapStatus; categories: InventoryCategory[] }
+export interface FarmDomain { id: number; name: string; kind: 'talent' | 'weapon'; weekdays: number[]; materials: Material[]; characters: CharRef[] }
+export interface WeeklyBoss { name: string; done: boolean; materials: Material[]; characters: CharRef[] }
+export interface BuildingCard { character: CharRef; progress: number | null; materials: CharMaterial[]; skipped: boolean }
+export interface WeaponOption { id: number; name: string; icon: string; rarity: number; weapon_type: string }
+export interface PlannedWeapon { id: number; name: string; icon: string; rarity: number; equipped: boolean }

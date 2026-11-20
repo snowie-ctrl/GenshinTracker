@@ -183,6 +183,11 @@
 			{settings.gamedata.fetched_at ? `updated ${timeAgo(settings.gamedata.fetched_at, now)}` : 'never downloaded'}
 		</p>
 		{#if settings.gamedata.last_error}<p class="error">Last error: {settings.gamedata.last_error}</p>{/if}
+		<p>
+			{settings.gamedata.materials.count} materials ·
+			{settings.gamedata.materials.fetched_at ? `updated ${timeAgo(settings.gamedata.materials.fetched_at, now)}` : 'never downloaded'}
+		</p>
+		{#if settings.gamedata.materials.last_error}<p class="error">Materials: {settings.gamedata.materials.last_error}</p>{/if}
 		<button type="button" onclick={refreshGamedata} disabled={refreshing}>
 			{refreshing ? 'Refreshing…' : 'Refresh game data'}
 		</button>

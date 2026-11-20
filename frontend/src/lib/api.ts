@@ -1,5 +1,6 @@
 import type {
-	Character, CharacterDetail, ConnectResponse, Dashboard, Goal, Settings, SyncStatus, Targets
+	Character, CharacterDetail, ConnectResponse, Dashboard, Goal, Inventory, Settings, SyncStatus, Targets,
+	WeaponOption
 } from './types';
 
 export class ApiError extends Error {
@@ -30,8 +31,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
 	characters: () => request<Character[]>('GET', '/characters'),
 	character: (slug: string) => request<CharacterDetail>('GET', `/characters/${encodeURIComponent(slug)}`),
-	setGoal: (id: number, body: { goal?: Goal; targets?: Targets }) =>
+	setGoal: (id: number, body: { goal?: Goal; targets?: Targets; planned_weapon_id?: number | null }) =>
 		request<Character>('PUT', `/characters/${id}/goal`, body),
+	inventory: () => request<Inventory>('GET', '/inventory'),
+	weapons: (type: string) => request<WeaponOption[]>('GET', `/weapons?type=${encodeURIComponent(type)}`),
+	setBossDone: (name: string, done: boolean) =>
+		request<{ name: string; done: boolean }>('PUT', `/weekly-bosses/${encodeURIComponent(name)}`, { done }),
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
 	settings: () => request<Settings>('GET', '/settings'),
 	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets }) =>
