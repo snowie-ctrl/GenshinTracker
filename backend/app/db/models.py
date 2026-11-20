@@ -1,7 +1,7 @@
 """SQLite tables. Three categories: game data, account data (overwritten by sync), user data."""
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -30,6 +30,40 @@ class GameMeta(Base):
     value: Mapped[object | None] = mapped_column(JSON, nullable=True)
 
 
+class GameMaterial(Base):
+    __tablename__ = "game_material"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    icon: Mapped[str] = mapped_column(String)
+    rarity: Mapped[int] = mapped_column(Integer)
+    yatta_type: Mapped[str] = mapped_column(String)
+    category: Mapped[str] = mapped_column(String)
+    family: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    craft_from: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sources: Mapped[list] = mapped_column(JSON)
+    sort_order: Mapped[int] = mapped_column(Integer)
+    detail_fetched: Mapped[bool] = mapped_column(Boolean)
+
+
+class GameDomain(Base):
+    __tablename__ = "game_domain"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    kind: Mapped[str] = mapped_column(String)
+    city: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekdays: Mapped[list] = mapped_column(JSON)
+    material_ids: Mapped[list] = mapped_column(JSON)
+
+
+class GameWeapon(Base):
+    __tablename__ = "game_weapon"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    icon: Mapped[str] = mapped_column(String)
+    rarity: Mapped[int] = mapped_column(Integer)
+    weapon_type: Mapped[str] = mapped_column(String)
+
+
 # --- account data (sync overwrites) ----------------------------------------
 class OwnedCharacter(Base):
     __tablename__ = "owned_character"
@@ -48,6 +82,7 @@ class OwnedCharacter(Base):
     weapon_rarity: Mapped[int] = mapped_column(Integer)
     weapon_level: Mapped[int] = mapped_column(Integer)
     weapon_refinement: Mapped[int] = mapped_column(Integer)
+    weapon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     stats: Mapped[list] = mapped_column(JSON)
     synced_at: Mapped[datetime] = mapped_column(DateTime)
 
@@ -74,6 +109,8 @@ class LiveNotes(Base):
     commissions_max: Mapped[int] = mapped_column(Integer)
     realm_currency: Mapped[int] = mapped_column(Integer)
     realm_currency_max: Mapped[int] = mapped_column(Integer)
+    weekly_discounts_left: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weekly_discounts_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     expeditions: Mapped[list] = mapped_column(JSON)
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
 
@@ -87,6 +124,35 @@ class SyncRun(Base):
     parts: Mapped[dict] = mapped_column(JSON)
 
 
+class MaterialGap(Base):
+    __tablename__ = "material_gap"
+    character_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    need: Mapped[int] = mapped_column(Integer)
+    short: Mapped[int] = mapped_column(Integer)
+
+
+class MaterialTotal(Base):
+    __tablename__ = "material_total"
+    material_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String)   # HoYoLAB's name/icon, used for ids missing from the catalogue
+    icon: Mapped[str] = mapped_column(String)
+    rarity: Mapped[int] = mapped_column(Integer)
+    need: Mapped[int] = mapped_column(Integer)
+    short: Mapped[int] = mapped_column(Integer)
+    spare: Mapped[int] = mapped_column(Integer)
+
+
+class GapRun(Base):
+    __tablename__ = "gap_run"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    computed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    snapshot: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    ok: Mapped[bool] = mapped_column(Boolean)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
+    skipped: Mapped[list] = mapped_column(JSON)
+
+
 # --- user data (sync never writes, except setting.hoyolab_status) ----------
 class CharacterGoal(Base):
     __tablename__ = "character_goal"
@@ -97,7 +163,14 @@ class CharacterGoal(Base):
     target_skill: Mapped[int | None] = mapped_column(Integer, nullable=True)
     target_burst: Mapped[int | None] = mapped_column(Integer, nullable=True)
     target_weapon_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    planned_weapon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class WeeklyBossDone(Base):
+    __tablename__ = "weekly_boss_done"
+    boss: Mapped[str] = mapped_column(String, primary_key=True)
+    week_start: Mapped[datetime] = mapped_column(DateTime, primary_key=True)
 
 
 class Setting(Base):

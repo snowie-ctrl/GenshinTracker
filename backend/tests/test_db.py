@@ -8,6 +8,8 @@ from app.db.models import Base, Setting
 TABLES = {
     "game_character", "game_meta", "owned_character", "owned_artifact",
     "live_notes", "sync_run", "character_goal", "setting",
+    "game_material", "game_domain", "game_weapon", "material_gap", "material_total",
+    "gap_run", "weekly_boss_done",
 }
 
 
@@ -15,6 +17,17 @@ def test_migrate_creates_all_tables(paths):
     engine = make_engine(paths.db_file)
     migrate(engine)
     assert TABLES <= set(inspect(engine).get_table_names())
+    engine.dispose()
+
+
+def test_phase2_columns_exist(paths):
+    engine = make_engine(paths.db_file)
+    migrate(engine)
+    cols = {t: {c["name"] for c in inspect(engine).get_columns(t)}
+            for t in ("owned_character", "live_notes", "character_goal")}
+    assert "weapon_id" in cols["owned_character"]
+    assert {"weekly_discounts_left", "weekly_discounts_max"} <= cols["live_notes"]
+    assert "planned_weapon_id" in cols["character_goal"]
     engine.dispose()
 
 
