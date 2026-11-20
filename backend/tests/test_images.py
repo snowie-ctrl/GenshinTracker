@@ -17,6 +17,20 @@ def transport(calls: list, status=200):
     return httpx.MockTransport(handler)
 
 
+def test_placeholder_is_fully_transparent():
+    """The placeholder sits over the card's rarity background, so it must not paint anything."""
+    import struct
+    import zlib
+
+    data = PLACEHOLDER_PNG
+    width, height, _depth, color_type = struct.unpack(">IIBB", data[16:26])
+    assert (width, height) == (1, 1) and color_type in (4, 6)  # has an alpha channel
+    idat = data.index(b"IDAT")
+    length = struct.unpack(">I", data[idat - 4:idat])[0]
+    pixel = zlib.decompress(data[idat + 4:idat + 4 + length])
+    assert pixel[-1] == 0  # alpha of the single pixel
+
+
 async def test_named_downloads_once_then_serves_cache(tmp_path):
     calls: list = []
     async with httpx.AsyncClient(transport=transport(calls)) as http:

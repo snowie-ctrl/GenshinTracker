@@ -15,8 +15,8 @@ NAME_RE = re.compile(r"^UI_[A-Za-z0-9_]+$")
 ALLOWED_HOST_SUFFIXES = ("hoyoverse.com", "mihoyo.com", "hoyolab.com", "enka.network", "yatta.moe")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 PLACEHOLDER_PNG = base64.b64decode(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
-)
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII="
+)  # 1x1 fully transparent RGBA pixel, so the card's rarity background shows through
 
 
 @dataclass(frozen=True)
