@@ -7,7 +7,9 @@
 	import type { Dashboard } from '$lib/types';
 	import MaterialPopover from '$lib/MaterialPopover.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
-	import { charTileView, gapLabel, shouldPoll, tileView, weekdayNames } from '$lib/materials';
+	import {
+		charTileView, gapLabel, gapsSettled, notCalculatedLabel, shouldPoll, tileView, weekdayNames
+	} from '$lib/materials';
 	import type { WeeklyBoss } from '$lib/types';
 
 	let toast = $state<string | null>(null);
@@ -125,7 +127,9 @@
 		{#if data.building_cards.length === 0}
 			<p class="muted">Set characters to Build to plan farming.</p>
 		{:else if data.farm_today.domains.length === 0}
-			<p class="muted">Nothing to farm in domains today ✓</p>
+			<p class="muted">
+				{gapsSettled(data.gaps) ? 'Nothing to farm in domains today ✓' : notCalculatedLabel(data.gaps, now)}
+			</p>
 		{:else}
 			<div class="cards">
 				{#each data.farm_today.domains as d (d.id)}
@@ -155,8 +159,12 @@
 		{#if data.weekly_bosses.discounts_left !== null}
 			<p class="muted">Discounted runs left {data.weekly_bosses.discounts_left}/{data.weekly_bosses.discounts_max}</p>
 		{/if}
-		{#if bosses.length === 0}
-			<p class="muted">No weekly boss drops to farm ✓</p>
+		{#if data.building_cards.length === 0}
+			<p class="muted">Set characters to Build to plan farming.</p>
+		{:else if bosses.length === 0}
+			<p class="muted">
+				{gapsSettled(data.gaps) ? 'No weekly boss drops to farm ✓' : notCalculatedLabel(data.gaps, now)}
+			</p>
 		{:else}
 			<div class="cards">
 				{#each bosses as b (b.name)}
@@ -185,6 +193,9 @@
 
 	<section class="panel">
 		<h2>Building</h2>
+		{#if data.building_cards.length === 0}
+			<p class="muted">Set characters to Build to plan farming.</p>
+		{/if}
 		<div class="cards">
 			{#each data.building_cards as card (card.character.id)}
 				<div class="card build" data-testid="building-card-{card.character.slug}">
@@ -201,7 +212,9 @@
 					{#if card.skipped}
 						<p class="muted">{card.character.name} planning isn't supported yet.</p>
 					{:else if card.materials.length === 0}
-						<p class="muted">Everything in the bag ✓</p>
+						<p class="muted">
+							{card.calculated ? 'Everything in the bag ✓' : notCalculatedLabel(data.gaps, now)}
+						</p>
 					{:else}
 						<div class="tiles-row">
 							{#each card.materials as m (m.id)}

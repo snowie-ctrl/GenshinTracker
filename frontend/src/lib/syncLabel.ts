@@ -1,8 +1,9 @@
 import { timeAgo } from './time';
 import type { SyncRun, SyncStatus } from './types';
 
+/** Last finished full sync: gaps-only recalculations say nothing about roster/details/notes. */
 export function lastFinished(s: SyncStatus | null): SyncRun | null {
-	return s?.runs.find((r) => r.finished_at) ?? null;
+	return s?.runs.find((r) => r.finished_at && r.trigger !== 'gaps') ?? null;
 }
 
 export function failedParts(run: SyncRun): string[] {

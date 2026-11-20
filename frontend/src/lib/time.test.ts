@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatDuration, timeAgo } from './time';
-import { syncLabel } from './syncLabel';
+import { lastFinished, syncLabel } from './syncLabel';
 import type { SyncStatus } from './types';
 
 describe('formatDuration', () => {
@@ -35,5 +35,12 @@ describe('syncLabel', () => {
 		expect(
 			syncLabel({ running: false, runs: [run({ roster: { ok: true }, notes: { ok: false, error: 'x' } })] }, now)
 		).toBe('⚠ 1 part failed');
+	});
+	it('ignores gaps-only runs', () => {
+		const gapsRun = { ...run({ gaps: { ok: false, error: 'x' } }, '2026-11-19T11:59:00Z'), id: 2, trigger: 'gaps' };
+		const full = run({ roster: { ok: true } });
+		expect(syncLabel({ running: false, runs: [gapsRun, full] }, now)).toBe('Synced 3 min ago');
+		expect(lastFinished({ running: false, runs: [gapsRun, full] })).toBe(full);
+		expect(syncLabel({ running: false, runs: [gapsRun] }, now)).toBe('Not synced yet');
 	});
 });

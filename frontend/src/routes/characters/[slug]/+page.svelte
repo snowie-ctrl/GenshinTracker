@@ -6,7 +6,7 @@
 	import { sync } from '$lib/sync.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
-	import { charTileView, gapLabel, shouldPoll } from '$lib/materials';
+	import { charTileView, gapLabel, groupByCategory, notCalculatedLabel, shouldPoll } from '$lib/materials';
 	import type { CharacterDetail, Goal, Targets, WeaponOption } from '$lib/types';
 
 	let c = $state<CharacterDetail | null>(null);
@@ -166,13 +166,18 @@
 			{#if c.shortfall.gaps.skipped.includes(c.name)}
 				<p class="muted">{c.name} planning isn't supported yet.</p>
 			{:else if c.shortfall.materials.length === 0}
-				<p class="muted">Everything in the bag ✓</p>
+				<p class="muted">
+					{c.shortfall.calculated ? 'Everything in the bag ✓' : notCalculatedLabel(c.shortfall.gaps, now)}
+				</p>
 			{:else}
-				<div class="tiles-row">
-					{#each c.shortfall.materials as m (m.id)}
-						<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={charTileView(m)} testid="short-{m.id}" />
-					{/each}
-				</div>
+				{#each groupByCategory(c.shortfall.materials) as group (group.key)}
+					<h3 class="category">{group.label}</h3>
+					<div class="tiles-row">
+						{#each group.materials as m (m.id)}
+							<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={charTileView(m)} testid="short-{m.id}" />
+						{/each}
+					</div>
+				{/each}
 			{/if}
 		</section>
 	{/if}
@@ -191,6 +196,7 @@
 	.artifact { background: var(--panel-2); border-radius: 8px; padding: 8px; }
 	.artifact ul { margin: 4px 0 0; padding-left: 16px; color: var(--muted); }
 	.tiles-row { display: flex; flex-wrap: wrap; gap: 10px; }
+	h3.category { margin: 12px 0 6px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
 	.weapon-pick { display: inline-flex; flex-direction: column; gap: 4px; margin-top: 12px; }
 	table td { padding: 2px 16px 2px 0; }
 </style>

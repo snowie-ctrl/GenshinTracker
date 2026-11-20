@@ -35,7 +35,7 @@ export interface Artifact {
 export interface CharacterDetail extends Character {
 	artifacts: Artifact[];
 	stats: { name: string; value: string }[];
-	shortfall: { gaps: GapStatus; materials: CharMaterial[] } | null;
+	shortfall: { gaps: GapStatus; materials: CharMaterial[]; calculated: boolean } | null;
 	planned_weapon: PlannedWeapon | null;
 }
 
@@ -86,14 +86,14 @@ export interface Material {
 	sources: MaterialSource[]; characters: Needer[];
 }
 export interface CharMaterial {
-	id: number; name: string; icon: string; rarity: number; category: string;
+	id: number; name: string; icon: string; rarity: number; category: string; category_label: string;
 	need: number; short: number; shared: boolean;
 }
-export interface GapStatus { computed_at: string | null; ok: boolean | null; error: string | null; stale: boolean; skipped: string[] }
+export interface GapStatus { computed_at: string | null; ok: boolean | null; error: string | null; stale: boolean; pending: boolean; skipped: string[] }
 export interface InventoryCategory { key: string; label: string; materials: Material[] }
 export interface Inventory { gaps: GapStatus; categories: InventoryCategory[] }
 export interface FarmDomain { id: number; name: string; kind: 'talent' | 'weapon'; weekdays: number[]; materials: Material[]; characters: CharRef[] }
 export interface WeeklyBoss { name: string; done: boolean; materials: Material[]; characters: CharRef[] }
-export interface BuildingCard { character: CharRef; progress: number | null; materials: CharMaterial[]; skipped: boolean }
+export interface BuildingCard { character: CharRef; progress: number | null; materials: CharMaterial[]; skipped: boolean; calculated: boolean }
 export interface WeaponOption { id: number; name: string; icon: string; rarity: number; weapon_type: string }
 export interface PlannedWeapon { id: number; name: string; icon: string; rarity: number; equipped: boolean }

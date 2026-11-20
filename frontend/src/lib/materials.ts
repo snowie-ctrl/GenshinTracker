@@ -24,6 +24,19 @@ export function charTileView(m: CharMaterial): TileView {
 	return { main: `✓ ${m.need}`, badge: null, hint, tone: 'met' };
 }
 
+export interface CharMaterialGroup { key: string; label: string; materials: CharMaterial[] }
+
+/** Rows arrive sorted by category; split them into consecutive groups for small headings. */
+export function groupByCategory(ms: CharMaterial[]): CharMaterialGroup[] {
+	const groups: CharMaterialGroup[] = [];
+	for (const m of ms) {
+		const last = groups.at(-1);
+		if (last && last.key === m.category) last.materials.push(m);
+		else groups.push({ key: m.category, label: m.category_label, materials: [m] });
+	}
+	return groups;
+}
+
 export function filterMaterials(ms: Material[], filter: InventoryFilter, query: string): Material[] {
 	const q = query.trim().toLowerCase();
 	return ms.filter((m) => {
@@ -38,6 +51,7 @@ export function weekdayNames(days: number[]): string {
 }
 
 export function gapLabel(g: GapStatus, now: number): string {
+	if (g.pending) return 'Updating…';
 	if (g.ok === false) return `⚠ Shortfall update failed: ${g.error ?? 'unknown error'}`;
 	if (g.stale) return 'Updating…';
 	if (g.computed_at) return `Calculated ${timeAgo(g.computed_at, now)}`;
@@ -45,5 +59,15 @@ export function gapLabel(g: GapStatus, now: number): string {
 }
 
 export function shouldPoll(g: GapStatus | null | undefined): boolean {
-	return !!g && g.stale && g.ok !== false;
+	return !!g && (g.pending || (g.stale && g.ok !== false));
+}
+
+/** A successful calculation exists, so an empty list really means "nothing to farm". */
+export function gapsSettled(g: GapStatus): boolean {
+	return !!g.computed_at && g.ok !== false;
+}
+
+/** For a character (or section) with no calculation behind it, instead of a ✓ empty state. */
+export function notCalculatedLabel(g: GapStatus, now: number): string {
+	return g.ok === false ? `Not calculated yet · ${gapLabel(g, now)}` : 'Not calculated yet';
 }
