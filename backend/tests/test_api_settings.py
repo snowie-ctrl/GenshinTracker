@@ -18,7 +18,8 @@ def test_settings_defaults(paths):
     assert body["sync_interval_minutes"] == 10
     assert body["default_targets"] == {"level": 90, "normal": 8, "skill": 8, "burst": 8, "weapon_level": 90}
     assert body["level_caps"] == [20, 40, 50, 60, 70, 80, 90]
-    assert body["gamedata"] == {"fetched_at": None, "last_error": None, "count": 0}
+    assert body["gamedata"] == {"fetched_at": None, "last_error": None, "count": 0,
+                               "materials": {"fetched_at": None, "last_error": None, "count": 0}}
 
 
 def test_put_settings_validates_and_saves(paths):
@@ -131,6 +132,7 @@ def test_gamedata_refresh_endpoint(paths):
     with make_client(paths, transport=yatta_transport()) as client:
         body = client.post("/api/gamedata/refresh").json()
     assert body["refreshed"] is True and body["gamedata"]["count"] == 6
+    assert body["gamedata"]["materials"]["count"] > 0
 
 
 def _sf_for(paths):

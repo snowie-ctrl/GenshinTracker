@@ -16,7 +16,7 @@ from app.api import ROUTERS
 from app.config import FRONTEND_BUILD, Paths, default_paths
 from app.context import AppContext, make_source_factory
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.gamedata.service import refresh
+from app.gamedata.service import refresh_all
 from app.sync.hoyolab import fetch_accounts
 from app.sync.runner import SyncManager
 
@@ -36,7 +36,7 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
 
     async def on_unknown_ids(_ids: set[int]) -> None:
         if not is_offline:
-            await refresh(session_factory, http, force=True)
+            await refresh_all(session_factory, http, force=True)
 
     sync = SyncManager(session_factory, paths.db_file, paths.backups,
                        source_factory or make_source_factory(paths, session_factory), on_unknown_ids)
@@ -45,7 +45,7 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        task = None if is_offline else asyncio.create_task(refresh(session_factory, http))
+        task = None if is_offline else asyncio.create_task(refresh_all(session_factory, http))
         yield
         if task is not None:
             task.cancel()

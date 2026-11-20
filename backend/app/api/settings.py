@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import LEVEL_CAPS
 from app.context import AppContext, get_ctx
-from app.gamedata.service import gamedata_status, refresh
+from app.gamedata.service import gamedata_status, refresh_all
 from app.schemas import TargetsIn
 from app.settings.connect import ConnectError, connect
 from app.settings.envfile import COOKIE_KEYS, connection_status, read_env
@@ -95,6 +95,6 @@ async def connect_hoyolab(body: HoyolabIn, ctx: AppContext = Depends(get_ctx)) -
 
 @router.post("/gamedata/refresh")
 async def refresh_gamedata(ctx: AppContext = Depends(get_ctx)) -> dict:
-    refreshed = await refresh(ctx.session_factory, ctx.http, force=True)
+    refreshed = await refresh_all(ctx.session_factory, ctx.http, force=True)
     with ctx.session_factory() as s:
         return {"refreshed": refreshed, "gamedata": gamedata_status(s)}

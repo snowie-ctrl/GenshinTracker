@@ -22,12 +22,31 @@ def load_fixture(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
-def yatta_transport(status: int = 200) -> httpx.MockTransport:
-    payload = load_fixture("yatta_avatar.json")
+def yatta_transport(status: int = 200, fail_details: frozenset[int] = frozenset()) -> httpx.MockTransport:
+    avatar = load_fixture("yatta_avatar.json")
+    material = load_fixture("yatta_material.json")
+    details = load_fixture("yatta_material_details.json")
+    dungeon = load_fixture("yatta_daily_dungeon.json")
+    weapon = load_fixture("yatta_weapon.json")
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.path.endswith("/avatar"):
-            return httpx.Response(status, json=payload if status == 200 else {})
+        path = request.url.path
+        if status != 200:
+            return httpx.Response(status, json={})
+        if path.endswith("/avatar"):
+            return httpx.Response(200, json=avatar)
+        if path.endswith("/material"):
+            return httpx.Response(200, json=material)
+        if "/material/" in path:
+            mid = int(path.rsplit("/", 1)[1])
+            if mid in fail_details:
+                return httpx.Response(500)
+            body = details.get(str(mid), {"response": 200, "data": {"recipe": None, "source": []}})
+            return httpx.Response(200, json=body)
+        if path.endswith("/dailyDungeon"):
+            return httpx.Response(200, json=dungeon)
+        if path.endswith("/weapon"):
+            return httpx.Response(200, json=weapon)
         return httpx.Response(404)
 
     return httpx.MockTransport(handler)
