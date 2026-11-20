@@ -39,11 +39,13 @@ class SyncRequestResult:
 
 
 def last_successful(session: Session) -> SyncRun | None:
+    """Last finished run whose roster part succeeded. A part that keeps failing for an
+    account-setting reason (e.g. Real-Time Notes disabled) must not shorten the interval."""
     runs = session.scalars(
         select(SyncRun).where(SyncRun.finished_at.is_not(None)).order_by(SyncRun.id.desc()).limit(20)
     )
     for run in runs:
-        if run.parts and all(p.get("ok") for p in run.parts.values()):
+        if (run.parts or {}).get("roster", {}).get("ok"):
             return run
     return None
 
@@ -65,6 +67,12 @@ class SyncManager:
         self._clock = clock
         self._task: asyncio.Task | None = None
         self._run_id: int | None = None
+        self._auth_generation = 0
+
+    def invalidate_auth(self) -> None:
+        """Called when new cookies are saved: an in-flight run with the old cookie must not
+        mark the account expired afterwards."""
+        self._auth_generation += 1
 
     @property
     def running(self) -> bool:
@@ -99,10 +107,10 @@ class SyncManager:
             s.flush()
             run_id = run.id
         self._run_id = run_id
-        self._task = asyncio.create_task(self._run(run_id, source))
+        self._task = asyncio.create_task(self._run(run_id, source, self._auth_generation))
         return SyncRequestResult(run_id, True, "started")
 
-    async def _run(self, run_id: int, source: HoyolabSource) -> None:
+    async def _run(self, run_id: int, source: HoyolabSource, generation: int) -> None:
         parts: dict[str, dict] = {}
         unknown: set[int] = set()
         try:
@@ -154,8 +162,9 @@ class SyncManager:
             if expired:
                 for part in PARTS:
                     parts.setdefault(part, {"ok": False, "error": EXPIRED_MSG})
-                with self._sf.begin() as s:
-                    set_setting(s, "hoyolab_status", "expired")
+                if generation == self._auth_generation:  # cookie not replaced meanwhile
+                    with self._sf.begin() as s:
+                        set_setting(s, "hoyolab_status", "expired")
         finally:
             with self._sf.begin() as s:
                 run = s.get(SyncRun, run_id)

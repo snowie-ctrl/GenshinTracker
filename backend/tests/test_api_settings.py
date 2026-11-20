@@ -83,6 +83,19 @@ def test_connect_cleans_pasted_values(paths):
     assert (env["LTUID_V2"], env["LTOKEN_V2"], env["LTMID_V2"]) == tuple(SECRETS)
 
 
+import pytest  # noqa: E402
+
+from app.api.settings import HoyolabIn  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "pasted",
+    ['"abc;"', 'abc;"', '"ltoken_v2=abc"', "LTOKEN_V2=abc", "ltoken_v2 = abc", " 'abc' ; ", "abc"],
+)
+def test_cookie_cleaning_handles_wrapped_quotes_and_prefixes(pasted):
+    assert HoyolabIn(ltuid_v2="1", ltoken_v2=pasted).ltoken_v2 == "abc"
+
+
 def test_connect_clears_stale_optional_keys(paths):
     paths.env_file.write_text("PORT=9000\nCOOKIE_TOKEN_V2=old-token\n", encoding="utf-8")
     with make_client(paths, source=FakeSource(), accounts=[ACCOUNT]) as client:

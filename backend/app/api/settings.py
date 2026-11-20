@@ -1,3 +1,4 @@
+import re
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -33,11 +34,13 @@ class HoyolabIn(BaseModel):
     @classmethod
     def _clean(cls, value, info: ValidationInfo) -> str:
         """Accept values pasted with spaces, quotes, a `name=` prefix, or a trailing `;`."""
-        text = "" if value is None else str(value).strip()
-        prefix = f"{info.field_name}="
-        if text.startswith(prefix):
-            text = text[len(prefix):]
-        return text.strip().rstrip(";").strip().strip("\"'").strip()
+        text = "" if value is None else str(value)
+        prefix = re.compile(rf"^{re.escape(info.field_name)}\s*=\s*", re.IGNORECASE)
+        while True:  # peel layers in any order until nothing changes
+            cleaned = prefix.sub("", text.strip().strip("\"'").rstrip(";").strip())
+            if cleaned == text:
+                return cleaned
+            text = cleaned
 
     def cookies(self) -> dict[str, str]:
         return {k: getattr(self, k) for k in COOKIE_KEYS if getattr(self, k)}
@@ -82,6 +85,10 @@ async def connect_hoyolab(body: HoyolabIn, ctx: AppContext = Depends(get_ctx)) -
         raise HTTPException(400, str(e)) from None
     if result.status == "choose":
         return {"status": "choose", "accounts": [asdict(a) for a in result.accounts]}
+    # A sync using the old cookie may still be running: stop it from marking us expired,
+    # let it finish, then start a fresh run with the new cookie.
+    ctx.sync.invalidate_auth()
+    await ctx.sync.wait()
     await ctx.sync.request("connect")
     return {"status": "connected", "uid": result.uid}
 

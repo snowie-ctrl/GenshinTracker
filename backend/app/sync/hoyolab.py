@@ -6,6 +6,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Protocol, Sequence
 
+import aiohttp
 import genshin
 
 from app.gamedata.yatta import canonical_id
@@ -169,6 +170,8 @@ async def call_api(fn: Callable[..., Awaitable[Any]], *args: Any,
             raise AuthExpired(str(e)) from None
         except genshin.errors.GenshinException as e:
             raise HoyolabError(str(e)) from None
+        except (aiohttp.ClientError, TimeoutError) as e:  # offline, DNS, timeouts
+            raise HoyolabError(f"Could not reach HoYoLAB ({type(e).__name__}).") from None
     raise AssertionError("unreachable")
 
 

@@ -83,6 +83,15 @@ async def test_call_api_gives_up_with_rate_limited():
         await call_api(always, delays=(0, 0))
 
 
+@pytest.mark.parametrize("error", [__import__("aiohttp").ClientConnectionError("dns"), TimeoutError()])
+async def test_call_api_maps_network_errors(error):
+    async def offline():
+        raise error
+
+    with pytest.raises(HoyolabError, match="Could not reach HoYoLAB"):
+        await call_api(offline, delays=())
+
+
 async def test_call_api_maps_invalid_cookies_and_other_errors():
     async def bad_cookie():
         raise genshin.errors.InvalidCookies({"retcode": -100, "message": "not logged in"})

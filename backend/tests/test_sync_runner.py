@@ -93,7 +93,7 @@ async def test_auto_respects_interval(paths, session_factory):
 
 async def test_auto_skips_right_after_a_failed_run(paths, session_factory):
     clock = Clock(START)
-    m = manager(paths, session_factory, FakeSource(fail={"notes": HoyolabError("x")}), clock=clock)
+    m = manager(paths, session_factory, FakeSource(fail={"roster": HoyolabError("x")}), clock=clock)
     await m.request("manual")
     await m.wait()
     clock.advance(seconds=30)
@@ -150,3 +150,27 @@ async def test_sync_never_touches_goals_or_other_settings(paths, session_factory
     await m.wait()
     with session_factory() as s:
         assert get_setting(s, "sync_interval_minutes") == 42
+
+
+async def test_interval_counts_runs_whose_roster_succeeded(paths, session_factory):
+    """A part that always fails (e.g. Real-Time Notes disabled) must not make auto-sync run every page load."""
+    seed_game(session_factory)
+    clock = Clock(START)
+    m = manager(paths, session_factory, FakeSource(fail={"notes": HoyolabError("DataNotPublic")}), clock=clock)
+    await m.request("manual")
+    await m.wait()
+    clock.advance(minutes=5)
+    assert (await m.request("auto")).reason == "fresh"
+
+
+async def test_reconnect_during_run_is_not_overwritten_by_old_expiry(paths, session_factory):
+    gate = asyncio.Event()
+    m = manager(paths, session_factory, FakeSource(fail={"roster": AuthExpired("old cookie")}, gate=gate))
+    await m.request("manual")
+    m.invalidate_auth()  # user reconnects with a fresh cookie while the old run is in flight
+    with session_factory.begin() as s:
+        set_setting(s, "hoyolab_status", "connected")
+    gate.set()
+    await m.wait()
+    with session_factory() as s:
+        assert get_setting(s, "hoyolab_status") == "connected"
