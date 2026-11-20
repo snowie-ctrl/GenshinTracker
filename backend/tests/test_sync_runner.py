@@ -3,11 +3,12 @@ from datetime import datetime
 
 import pytest
 
-from app.db.models import LiveNotes, OwnedCharacter, SyncRun
+from app.db.models import CharacterGoal, GapRun, LiveNotes, MaterialTotal, OwnedCharacter, SyncRun
 from app.settings.store import get_setting, set_setting
-from app.sync.hoyolab import AuthExpired, HoyolabError
+from app.sync.hoyolab import AuthExpired, HoyolabError, NoInventoryData
 from app.sync.runner import SyncManager, SyncTooSoon
 from fakes import Clock, FakeSource, make_roster
+from app.timeutil import utcnow
 from helpers import seed_game
 
 START = datetime(2026, 11, 19, 12, 0, 0)
@@ -36,7 +37,7 @@ async def test_full_sync_saves_everything(paths, session_factory):
     run = last_run(session_factory)
     assert run.finished_at is not None
     assert run.parts == {"roster": {"ok": True, "count": 2}, "details": {"ok": True, "count": 2},
-                         "notes": {"ok": True}}
+                         "notes": {"ok": True}, "gaps": {"ok": True, "count": 0}}
     with session_factory() as s:
         assert s.get(OwnedCharacter, 10000032).talent_burst == 8
         assert s.get(LiveNotes, 1).resin == 153
@@ -61,6 +62,7 @@ async def test_roster_failure_skips_details_but_runs_notes(paths, session_factor
     parts = last_run(session_factory).parts
     assert parts["roster"]["ok"] is False
     assert parts["details"] == {"ok": False, "error": "skipped: roster failed"}
+    assert parts["gaps"] == {"ok": False, "error": "skipped: roster failed"}
     assert parts["notes"]["ok"] is True
     assert not any(isinstance(c, tuple) for c in source.calls)
 
@@ -174,3 +176,126 @@ async def test_reconnect_during_run_is_not_overwritten_by_old_expiry(paths, sess
     await m.wait()
     with session_factory() as s:
         assert get_setting(s, "hoyolab_status") == "connected"
+
+
+def build_goal(session_factory, cid, skill=8):
+    with session_factory.begin() as s:
+        s.merge(CharacterGoal(character_id=cid, goal="build", target_level=90, target_normal=8,
+                              target_skill=skill, target_burst=8, target_weapon_level=90, updated_at=utcnow()))
+
+
+async def test_full_sync_runs_gaps_part(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    source = FakeSource()
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["gaps"] == {"ok": True, "count": 1}
+    assert ("talents", 10000032) in source.calls and ("gaps", (10000032,)) in source.calls
+    with session_factory() as s:
+        assert s.get(MaterialTotal, 104302).short == 4
+        assert s.get(GapRun, 1).ok is True
+
+
+async def test_gaps_failure_is_isolated_and_recorded(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    m = manager(paths, session_factory, FakeSource(fail={"gaps": NoInventoryData("HoYoLAB returned no inventory data.")}))
+    await m.request("manual")
+    await m.wait()
+    parts = last_run(session_factory).parts
+    assert parts["gaps"]["ok"] is False and "no inventory data" in parts["gaps"]["error"]
+    assert parts["roster"]["ok"] and parts["notes"]["ok"]
+    with session_factory() as s:
+        assert s.get(GapRun, 1).ok is False
+
+
+async def test_traveler_is_skipped_but_others_calculated(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    build_goal(session_factory, 10000005)
+    source = FakeSource(roster=[make_roster(10000032, name="Bennett"),
+                                make_roster(10000005, raw_id=10000007, name="Traveler")])
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["gaps"] == {"ok": True, "count": 1, "skipped": ["Traveler"]}
+    assert ("gaps", (10000032,)) in source.calls
+
+
+async def test_no_work_skips_calculator_call(paths, session_factory):
+    seed_game(session_factory)
+    source = FakeSource()
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["gaps"] == {"ok": True, "count": 0}
+    assert not any(isinstance(c, tuple) and c[0] == "gaps" for c in source.calls)
+
+
+async def test_talent_ids_are_cached(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    clock = Clock(START)
+    source = FakeSource()
+    m = manager(paths, session_factory, source, clock=clock)
+    await m.request("manual")
+    await m.wait()
+    clock.advance(minutes=2)
+    await m.request("manual")
+    await m.wait()
+    assert source.calls.count(("talents", 10000032)) == 1
+
+
+async def test_schedule_gaps_debounces_edits(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    source = FakeSource()
+    m = SyncManager(session_factory, paths.db_file, paths.backups, lambda: source,
+                    lambda ids: asyncio.sleep(0), clock=Clock(START), gaps_delay=0.05)
+    m.schedule_gaps()
+    m.schedule_gaps()
+    m.schedule_gaps()
+    assert m.gaps_pending
+    await m.wait()
+    gap_calls = [c for c in source.calls if isinstance(c, tuple) and c[0] == "gaps"]
+    assert len(gap_calls) == 1
+    run = last_run(session_factory)
+    assert run.trigger == "gaps" and set(run.parts) == {"gaps"}
+    assert "roster" not in source.calls                   # gaps-only run touches nothing else
+    assert not m.gaps_pending
+
+
+async def test_gaps_request_during_full_sync_is_queued_once(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    gate = asyncio.Event()
+    source = FakeSource(gate=gate)
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    assert m.start_gaps().reason == "queued"
+    assert m.start_gaps().reason == "queued"
+    gate.set()
+    await m.wait()
+    gap_calls = [c for c in source.calls if isinstance(c, tuple) and c[0] == "gaps"]
+    assert len(gap_calls) == 2                            # one inside the full sync, one queued run
+    assert last_run(session_factory).trigger == "gaps"
+
+
+async def test_gaps_runs_do_not_count_for_manual_limit(paths, session_factory):
+    seed_game(session_factory)
+    clock = Clock(START)
+    m = manager(paths, session_factory, FakeSource(), clock=clock)
+    await m.request("manual")
+    await m.wait()
+    clock.advance(seconds=61)
+    m.start_gaps()
+    await m.wait()
+    result = await m.request("manual")                    # last non-gaps run is 61 s old
+    assert result.started
+
+
+async def test_start_gaps_not_connected(paths, session_factory):
+    m = manager(paths, session_factory, None)
+    assert m.start_gaps().reason == "not_connected"
