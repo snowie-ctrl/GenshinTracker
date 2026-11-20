@@ -45,8 +45,9 @@ target change — the app asks HoYoLAB's calculator what is still missing:
 - **Planned weapon**: on a character's page you can plan for a weapon other than the equipped one; it is planned from
   level 1 because HoYoLAB only reports equipped weapons.
 
-Known limits: Traveler and Manekin are not planned yet. Characters sitting exactly at a level cap (20/40/50/60/70/80)
-may be counted as not yet ascended; this is checked against a live account before release.
+Known limits: Traveler and Manekin are not planned yet. HoYoLAB doesn't report ascension, so a character sitting
+exactly at a level cap (20/40/50/60/70/80) is counted as not yet ascended — if you've already ascended them, the
+next ascension's materials show as still needed until they level up.
 
 Live check of the calculator against your account: `cd backend; ..\.venv\Scripts\python -m app.smoke --gaps`.
 
