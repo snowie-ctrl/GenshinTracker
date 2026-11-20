@@ -224,7 +224,9 @@ class SyncManager:
                 elif elapsed is not None and elapsed < MANUAL_SYNC_MIN_SECONDS:
                     skip = SyncRequestResult(last.id, False, "recent")
                 if skip is not None:
-                    gaps_outdated = self._gaps_outdated(s)
+                    gap_run = s.get(GapRun, 1)
+                    # after a failed calculation only an edit or the interval sync retries: not every page load
+                    gaps_outdated = (gap_run is None or gap_run.ok is not False) and self._gaps_outdated(s)
         if skip is not None:
             if gaps_outdated and not self.gaps_pending:
                 self.start_gaps()  # e.g. goals edited before a restart, or Build goals from before the upgrade

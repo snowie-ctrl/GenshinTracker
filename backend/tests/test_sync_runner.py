@@ -374,6 +374,49 @@ async def test_auto_recent_after_upgrade_calculates_existing_build_goals(paths, 
         assert s.get(GapRun, 1).ok is True
 
 
+def gap_calls(source) -> list:
+    return [c for c in source.calls if isinstance(c, tuple) and c[0] == "gaps"]
+
+
+async def failed_gaps_then_goal_edit(paths, session_factory, clock):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    source = FakeSource(fail={"gaps": NoInventoryData("HoYoLAB returned no inventory data.")})
+    m = SyncManager(session_factory, paths.db_file, paths.backups, lambda: source,
+                    lambda ids: asyncio.sleep(0), clock=clock, gaps_delay=0.01)
+    await m.request("manual")
+    await m.wait()
+    with session_factory() as s:
+        assert s.get(GapRun, 1).ok is False
+    build_goal(session_factory, 10000032, skill=9)        # goals now differ from the stored snapshot
+    return m, source
+
+
+@pytest.mark.parametrize("seconds,reason", [(300, "fresh"), (30, "recent")])
+async def test_auto_skip_does_not_retry_gaps_after_a_failed_calculation(paths, session_factory, seconds, reason):
+    clock = Clock(START)
+    m, source = await failed_gaps_then_goal_edit(paths, session_factory, clock)
+    if reason == "recent":                                # last full sync failed, so only the 60 s rule skips
+        with session_factory.begin() as s:
+            run = s.query(SyncRun).filter_by(trigger="manual").one()
+            run.parts = {**run.parts, "roster": {"ok": False}}
+    calls, runs = len(gap_calls(source)), gaps_runs(session_factory)
+    clock.advance(seconds=seconds)
+    for _ in range(3):                                    # repeated page navigations
+        assert (await m.request("auto")).reason == reason
+        await m.wait()
+    assert len(gap_calls(source)) == calls
+    assert gaps_runs(session_factory) == runs
+
+
+async def test_goal_edit_still_retries_gaps_after_a_failed_calculation(paths, session_factory):
+    m, source = await failed_gaps_then_goal_edit(paths, session_factory, Clock(START))
+    calls = len(gap_calls(source))
+    m.schedule_gaps()
+    await m.wait()
+    assert len(gap_calls(source)) == calls + 1
+
+
 async def test_auto_fresh_without_build_goals_starts_nothing(paths, session_factory):
     seed_game(session_factory)
     clock = Clock(START)
