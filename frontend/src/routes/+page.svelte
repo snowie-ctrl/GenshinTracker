@@ -5,7 +5,12 @@
 	import { sync } from '$lib/sync.svelte';
 	import { formatDuration, timeAgo } from '$lib/time';
 	import type { Dashboard } from '$lib/types';
+	import MaterialPopover from '$lib/MaterialPopover.svelte';
+	import MaterialTile from '$lib/MaterialTile.svelte';
+	import { charTileView, gapLabel, shouldPoll, tileView, weekdayNames } from '$lib/materials';
+	import type { WeeklyBoss } from '$lib/types';
 
+	let toast = $state<string | null>(null);
 	let data = $state<Dashboard | null>(null);
 	let error = $state<string | null>(null);
 	let now = $state(Date.now());
@@ -26,6 +31,26 @@
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
+		}
+	}
+
+	$effect(() => {
+		if (!shouldPoll(data?.gaps)) return;
+		const t = setTimeout(load, 2000);
+		return () => clearTimeout(t);
+	});
+
+	const bosses = $derived([...(data?.weekly_bosses.bosses ?? [])].sort((a, b) => Number(a.done) - Number(b.done)));
+
+	async function toggleBoss(b: WeeklyBoss) {
+		const done = !b.done;
+		b.done = done;
+		try {
+			await api.setBossDone(b.name, done);
+			toast = null;
+		} catch (e) {
+			b.done = !done;
+			toast = errorMessage(e);
 		}
 	}
 
@@ -91,9 +116,120 @@
 		</section>
 		<p class="muted">As of {timeAgo(notes.fetched_at, now)}.</p>
 	{/if}
+
+	{#if toast}<p class="error">{toast}</p>{/if}
+	<p class="muted">{gapLabel(data.gaps, now)}</p>
+
+	<section class="panel" data-testid="farm-today">
+		<h2>Active today</h2>
+		{#if data.building_cards.length === 0}
+			<p class="muted">Set characters to Build to plan farming.</p>
+		{:else if data.farm_today.domains.length === 0}
+			<p class="muted">Nothing to farm in domains today ✓</p>
+		{:else}
+			<div class="cards">
+				{#each data.farm_today.domains as d (d.id)}
+					<div class="card">
+						<div class="title">{d.name}</div>
+						<div class="muted small">{weekdayNames(d.weekdays)}</div>
+						<div class="tiles-row">
+							{#each d.materials as m (m.id)}
+								<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={tileView(m)}>
+									{#snippet popover()}<MaterialPopover material={m} />{/snippet}
+								</MaterialTile>
+							{/each}
+						</div>
+						<div class="avatars">
+							{#each d.characters as c (c.id)}
+								<a href="/characters/{c.slug}" title={c.name}>{#if imgSrc(c.icon)}<img src={imgSrc(c.icon)} alt={c.name} />{/if}</a>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
+
+	<section class="panel">
+		<h2>Weekly bosses</h2>
+		{#if data.weekly_bosses.discounts_left !== null}
+			<p class="muted">Discounted runs left {data.weekly_bosses.discounts_left}/{data.weekly_bosses.discounts_max}</p>
+		{/if}
+		{#if bosses.length === 0}
+			<p class="muted">No weekly boss drops to farm ✓</p>
+		{:else}
+			<div class="cards">
+				{#each bosses as b (b.name)}
+					<div class="card" class:done={b.done} data-testid="boss-{b.name}">
+						<label class="title">
+							<input type="checkbox" checked={b.done} onchange={() => toggleBoss(b)} aria-label="Done this week" />
+							{b.name}
+						</label>
+						<div class="tiles-row">
+							{#each b.materials as m (m.id)}
+								<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={tileView(m)}>
+									{#snippet popover()}<MaterialPopover material={m} />{/snippet}
+								</MaterialTile>
+							{/each}
+						</div>
+						<div class="avatars">
+							{#each b.characters as c (c.id)}
+								<a href="/characters/{c.slug}" title={c.name}>{#if imgSrc(c.icon)}<img src={imgSrc(c.icon)} alt={c.name} />{/if}</a>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
+
+	<section class="panel">
+		<h2>Building</h2>
+		<div class="cards">
+			{#each data.building_cards as card (card.character.id)}
+				<div class="card build" data-testid="building-card-{card.character.slug}">
+					<div class="head">
+						{#if imgSrc(card.character.icon)}<img src={imgSrc(card.character.icon)} alt="" />{/if}
+						<div>
+							<a class="title" href="/characters/{card.character.slug}">{card.character.name}</a>
+							{#if card.progress !== null}
+								<div class="bar" role="progressbar" aria-valuenow={Math.round(card.progress * 100)}
+									aria-valuemin={0} aria-valuemax={100}><span style="width: {card.progress * 100}%"></span></div>
+							{/if}
+						</div>
+					</div>
+					{#if card.skipped}
+						<p class="muted">{card.character.name} planning isn't supported yet.</p>
+					{:else if card.materials.length === 0}
+						<p class="muted">Everything in the bag ✓</p>
+					{:else}
+						<div class="tiles-row">
+							{#each card.materials as m (m.id)}
+								<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={charTileView(m)} />
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	</section>
 {/if}
 
 <style>
+	.cards { display: flex; flex-wrap: wrap; gap: 12px; }
+	.card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+		min-width: 220px; color: inherit; text-decoration: none; }
+	.card.done { opacity: 0.45; }
+	.card .title { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+	.small { font-size: 12px; }
+	.tiles-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+	.avatars { display: flex; gap: 4px; }
+	.avatars img { width: 28px; height: 28px; border-radius: 50%; background: var(--r0); }
+	.card.build .head { display: flex; gap: 8px; align-items: center; }
+	.card.build .head img { width: 40px; height: 40px; border-radius: 8px; background: var(--r0); }
+	.bar { width: 140px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+	.bar span { display: block; height: 100%; background: var(--building); }
+	section.panel { margin-top: 12px; }
 	.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
 	.big { font-size: 28px; font-weight: 700; }
 	.big .muted { font-size: 16px; font-weight: 400; }
