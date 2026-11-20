@@ -6,7 +6,7 @@ from app.sync.hoyolab import (
     WeaponInfo,
 )
 
-WEAPON = WeaponInfo("The Flute", "https://act-webstatic.hoyoverse.com/w.png", 4, 90, 5)
+WEAPON = WeaponInfo("The Flute", "https://act-webstatic.hoyoverse.com/w.png", 4, 90, 5, 1)
 NOTES = NotesInfo(153, 200, 3600, 4, 4, 1460, 2400,
                   [ExpeditionInfo("https://act-webstatic.hoyoverse.com/e.png", False, 7200)])
 
