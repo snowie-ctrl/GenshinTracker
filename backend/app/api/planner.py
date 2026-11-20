@@ -38,7 +38,8 @@ def planner_view(session: Session) -> tuple[PlannerData, dict[int, dict]]:
 
 
 def gaps_for(ctx: AppContext, session: Session) -> dict:
-    return gap_status(session, pending=ctx.sync.gaps_pending, connected=is_connected(ctx, session))
+    pending = ctx.sync.gaps_pending or ctx.sync.gaps_running
+    return gap_status(session, pending=pending, connected=is_connected(ctx, session))
 
 
 @router.get("/inventory")

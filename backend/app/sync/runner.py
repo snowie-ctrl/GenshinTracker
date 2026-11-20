@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import GAPS_DEBOUNCE_SECONDS, MANUAL_SYNC_MIN_SECONDS
-from app.db.models import SyncRun
+from app.db.models import GapRun, SyncRun
 from app.planner.requests import build_inputs, gap_requests, has_work, snapshot
 from app.settings.store import get_setting, set_setting
 from app.sync.backup import backup_db
@@ -89,6 +89,11 @@ class SyncManager:
     def gaps_pending(self) -> bool:
         timer = self._gaps_timer is not None and not self._gaps_timer.done()
         return timer or self._gaps_queued
+
+    @property
+    def gaps_running(self) -> bool:
+        """A gaps-only recalculation is in progress (a full sync's gaps part does not count)."""
+        return self.running and self._run_trigger == "gaps"
 
     async def wait(self) -> None:
         while True:
@@ -189,6 +194,13 @@ class SyncManager:
             except Exception as e:
                 log.warning("Game data refresh after unknown ids failed: %s", type(e).__name__)
 
+    @staticmethod
+    def _gaps_outdated(session: Session) -> bool:
+        """Build goals differ from the last successful calculation (or were never calculated)."""
+        run = session.get(GapRun, 1)
+        stored = run.snapshot if run is not None else None
+        return (stored or []) != snapshot(session)
+
     async def request(self, trigger: str) -> SyncRequestResult:
         while self.running and self._run_trigger == "gaps":
             # a gaps-only run has no roster/details/notes: let it finish, then sync for real
@@ -196,6 +208,8 @@ class SyncManager:
         if self.running:
             return SyncRequestResult(self._run_id, False, "joined")
         now = self._clock()
+        skip: SyncRequestResult | None = None
+        gaps_outdated = False
         with self._sf() as s:
             last = s.scalars(select(SyncRun).where(SyncRun.trigger != "gaps")
                              .order_by(SyncRun.id.desc()).limit(1)).first()
@@ -206,9 +220,15 @@ class SyncManager:
                 ok = last_successful(s)
                 interval = timedelta(minutes=int(get_setting(s, "sync_interval_minutes")))
                 if ok is not None and now - ok.finished_at < interval:
-                    return SyncRequestResult(ok.id, False, "fresh")
-                if elapsed is not None and elapsed < MANUAL_SYNC_MIN_SECONDS:
-                    return SyncRequestResult(last.id, False, "recent")
+                    skip = SyncRequestResult(ok.id, False, "fresh")
+                elif elapsed is not None and elapsed < MANUAL_SYNC_MIN_SECONDS:
+                    skip = SyncRequestResult(last.id, False, "recent")
+                if skip is not None:
+                    gaps_outdated = self._gaps_outdated(s)
+        if skip is not None:
+            if gaps_outdated and not self.gaps_pending:
+                self.start_gaps()  # e.g. goals edited before a restart, or Build goals from before the upgrade
+            return skip
         source = self._source_factory()
         if source is None:
             return SyncRequestResult(None, False, "not_connected")

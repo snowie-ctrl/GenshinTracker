@@ -31,5 +31,7 @@ async def start_sync(trigger: Literal["auto", "manual"] = "auto", ctx: AppContex
 @router.get("/sync/status")
 def sync_status(ctx: AppContext = Depends(get_ctx)) -> dict:
     with ctx.session_factory() as s:
-        runs = s.scalars(select(SyncRun).order_by(SyncRun.id.desc()).limit(10)).all()
+        # gaps-only recalculations would push real syncs out of the list (the top bar reads it)
+        runs = s.scalars(select(SyncRun).where(SyncRun.trigger != "gaps")
+                         .order_by(SyncRun.id.desc()).limit(10)).all()
         return {"running": ctx.sync.running, "runs": [run_dict(r) for r in runs]}

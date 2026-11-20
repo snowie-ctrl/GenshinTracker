@@ -118,7 +118,8 @@ def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
             if payload["goal"] == "build":
                 data, index = planner_view(s)
                 payload["shortfall"] = {"gaps": gaps_for(ctx, s),
-                                        "materials": character_shortfall(data, payload["id"], index)}
+                                        "materials": character_shortfall(data, payload["id"], index),
+                                        "calculated": payload["id"] in data.calculated}
             else:
                 payload["shortfall"] = None
             return payload

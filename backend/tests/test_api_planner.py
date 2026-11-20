@@ -1,9 +1,11 @@
 import time
 from datetime import datetime
+from types import SimpleNamespace
 
 from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import (
-    CharacterGoal, GameDomain, GameMaterial, GameWeapon, MaterialGap, MaterialTotal, WeeklyBossDone,
+    CharacterGoal, GameDomain, GameMaterial, GameWeapon, GapRun, MaterialGap, MaterialTotal, SyncRun,
+    WeeklyBossDone,
 )
 from app.sync.persist import save_details, save_notes, save_roster
 from app.timeutil import utcnow
@@ -139,3 +141,42 @@ def test_goal_change_schedules_gaps_run(paths):
             time.sleep(0.05)
         wait_for_sync(client)
     assert any(isinstance(c, tuple) and c[0] == "gaps" for c in source.calls)
+
+
+def test_calculated_flag_on_cards_and_detail(paths):
+    sf = setup(paths)
+    with make_client(paths) as client:
+        assert client.get("/api/dashboard").json()["building_cards"][0]["calculated"] is False   # no gap run yet
+        shortfall = client.get("/api/characters/bennett").json()["shortfall"]
+        assert shortfall["calculated"] is False
+        assert {m["category_label"] for m in shortfall["materials"]} == {"Talent books", "Weekly boss drops"}
+    with sf.begin() as s:
+        s.add(GapRun(id=1, computed_at=datetime(2026, 11, 19, 12), ok=True, error=None, skipped=[],
+                     snapshot=[[10000032, 90, 8, 8, 8, 90, None]]))
+    with make_client(paths) as client:
+        assert client.get("/api/dashboard").json()["building_cards"][0]["calculated"] is True
+        assert client.get("/api/characters/bennett").json()["shortfall"]["calculated"] is True
+
+
+def test_gaps_pending_includes_a_running_gaps_only_run(paths, monkeypatch):
+    import app.api.planner as planner_api
+    sf = setup(paths)
+    monkeypatch.setattr(planner_api, "is_connected", lambda ctx, session: True)
+    with sf() as s:
+        idle = SimpleNamespace(sync=SimpleNamespace(gaps_pending=False, gaps_running=False))
+        running = SimpleNamespace(sync=SimpleNamespace(gaps_pending=False, gaps_running=True))
+        assert planner_api.gaps_for(idle, s)["pending"] is False
+        assert planner_api.gaps_for(running, s)["pending"] is True
+
+
+def test_sync_status_runs_exclude_gaps_only_runs(paths):
+    sf = sf_for(paths)
+    with sf.begin() as s:
+        s.add(SyncRun(started_at=datetime(2026, 11, 19, 11), finished_at=datetime(2026, 11, 19, 11),
+                      trigger="manual", parts={"roster": {"ok": True}}))
+        for i in range(12):
+            s.add(SyncRun(started_at=datetime(2026, 11, 19, 12, i), finished_at=datetime(2026, 11, 19, 12, i),
+                          trigger="gaps", parts={"gaps": {"ok": True}}))
+    with make_client(paths) as client:
+        runs = client.get("/api/sync/status").json()["runs"]
+    assert [r["trigger"] for r in runs] == ["manual"]

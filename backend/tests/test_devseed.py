@@ -34,5 +34,8 @@ def test_devseed_contains_planner_data(tmp_path):
     assert dash["farm_today"]["domains"][0]["name"] == "Domain of Mastery: Forsaken Rift"
     assert dash["weekly_bosses"]["bosses"][0]["name"] == "Stormterror"
     assert dash["gaps"]["stale"] is False
+    cards = {c["character"]["slug"]: c for c in dash["building_cards"]}
+    assert all(c["calculated"] for c in cards.values())
+    assert cards["neuvillette"]["materials"] == []          # Build, no rows, in snapshot -> fully built
     states = {m["id"]: m["state"] for c in inv["categories"] for m in c["materials"]}
     assert states[104302] == "short" and states[104003] == "met" and states[100055] == "unneeded"

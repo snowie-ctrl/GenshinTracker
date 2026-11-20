@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.config import LACK_INCLUDES_CRAFTING
 from app.db.models import (
-    CharacterGoal, GameCharacter, GameDomain, GameMaterial, MaterialGap, MaterialTotal, OwnedCharacter,
+    CharacterGoal, GameCharacter, GameDomain, GameMaterial, GapRun, MaterialGap, MaterialTotal, OwnedCharacter,
 )
 from app.gamedata.materials import CATEGORIES
+from app.planner.requests import snapshot
 
 CATEGORY_ORDER: tuple[str, ...] = (*CATEGORIES, "other")
 OTHER_ORDER = 10**6
@@ -64,6 +65,15 @@ class PlannerData:
     characters: dict[int, CharRef]
     domains: list[Domain]
     lack_includes_crafting: bool = False
+    # Build characters whose goal is unchanged since the last successful calculation. Having no
+    # gap rows means "fully built" only for these; the others are simply not calculated yet.
+    calculated: frozenset[int] = frozenset()
+
+
+def calculated_ids(stored: list | None, current: list) -> frozenset[int]:
+    """Ids whose current snapshot row equals the row in the last successful gap run's snapshot."""
+    before = {row[0]: list(row) for row in stored or []}
+    return frozenset(row[0] for row in current if before.get(row[0]) == list(row))
 
 
 def load(session: Session) -> PlannerData:
@@ -92,4 +102,6 @@ def load(session: Session) -> PlannerData:
                                                g.slug if g is not None else f"id-{row.character_id}", icon)
     domains = [Domain(d.id, d.name, d.kind, d.city, list(d.weekdays), list(d.material_ids))
                for d in session.scalars(select(GameDomain).order_by(GameDomain.id))]
-    return PlannerData(materials, totals, gaps, characters, domains, LACK_INCLUDES_CRAFTING)
+    run = session.get(GapRun, 1)
+    calculated = calculated_ids(run.snapshot if run is not None else None, snapshot(session))
+    return PlannerData(materials, totals, gaps, characters, domains, LACK_INCLUDES_CRAFTING, calculated)

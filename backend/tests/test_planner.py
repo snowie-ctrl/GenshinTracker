@@ -46,7 +46,7 @@ def test_rollup_partial_and_nothing_spare():
 
 def test_rollup_netted_mode_does_not_subtract_again():
     r = rollup(data({1: Total(0, 0, 40), 2: Total(10, 5, 0)}, netted=True))
-    assert (r[2].craftable, r[2].to_farm) == (0, 5)
+    assert (r[2].craftable, r[2].to_farm) == (5, 5)     # craft hint kept; short already nets crafting
 
 
 def test_material_states_and_have():
@@ -108,7 +108,14 @@ def test_gap_status_stale_pending_failed_and_disconnected(session_factory):
         s.get(GapRun, 1).error = "HoyolabError: down"
     with session_factory() as s:
         st = gap_status(s, pending=False, connected=True)
-        assert st["ok"] is False and st["error"] == "HoyolabError: down"
+        assert st["ok"] is False and st["error"] == "HoyolabError: down" and st["pending"] is False
+        st = gap_status(s, pending=True, connected=True)                         # a recalculation after a failure
+        assert st["ok"] is False and st["pending"] is True
+        assert gap_status(s, pending=True, connected=False)["pending"] is False
+    with session_factory.begin() as s:
+        s.delete(s.get(GapRun, 1))
+    with session_factory() as s:
+        assert gap_status(s, pending=True, connected=True)["pending"] is True
 
 
 from app.planner.characters import building_cards, character_shortfall
@@ -161,3 +168,32 @@ def test_building_cards_only_short_and_fully_built():
     assert cards[30]["materials"] == [] and cards[30]["skipped"] is False
     d.characters[10000005] = CharRef(10000005, "Traveler", "traveler", None)
     assert any(c["skipped"] for c in building_cards(d, {}, material_index(d)))
+
+
+def test_calculated_only_for_characters_unchanged_since_last_success(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        s.add(CharacterGoal(character_id=10000032, goal="build", target_level=90, target_normal=8,
+                            target_skill=8, target_burst=8, target_weapon_level=90, updated_at=utcnow()))
+        s.add(GapRun(id=1, computed_at=datetime(2026, 11, 19, 12), ok=True, error=None, skipped=[],
+                     snapshot=[[10000032, 90, 8, 8, 8, 90, None]]))
+        # set to Build after the last successful calculation
+        s.add(CharacterGoal(character_id=10000089, goal="build", target_level=90, target_normal=8,
+                            target_skill=8, target_burst=8, target_weapon_level=90, updated_at=utcnow()))
+    with session_factory() as s:
+        d = load(s)
+    assert d.calculated == {10000032}
+    cards = {c["character"]["id"]: c for c in building_cards(d, {}, material_index(d))}
+    assert cards[10000032]["calculated"] is True and cards[10000032]["materials"] == []   # in snapshot, no rows
+    assert cards[10000089]["calculated"] is False and cards[10000089]["materials"] == []
+    with session_factory.begin() as s:
+        s.get(CharacterGoal, 10000032).target_skill = 9                                    # changed since
+        s.get(GapRun, 1).ok = False                                                        # failure keeps snapshot
+    with session_factory() as s:
+        assert load(s).calculated == frozenset()
+
+
+def test_character_shortfall_rows_carry_category_label():
+    d = planner_fixture()
+    rows = {r["id"]: r for r in character_shortfall(d, 10, material_index(d))}
+    assert rows[2]["category_label"] == "Talent books" and rows[50]["category_label"] == "Weekly boss drops"

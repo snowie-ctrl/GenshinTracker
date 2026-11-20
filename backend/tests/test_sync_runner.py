@@ -335,6 +335,73 @@ async def test_request_during_gaps_only_run_waits_then_runs_full_sync(paths, ses
         assert s.query(SyncRun).filter_by(trigger="gaps").count() == 1
 
 
+def gaps_runs(session_factory) -> int:
+    with session_factory() as s:
+        return s.query(SyncRun).filter_by(trigger="gaps").count()
+
+
+async def test_auto_fresh_recalculates_when_goals_changed_since_last_calculation(paths, session_factory):
+    seed_game(session_factory)
+    clock = Clock(START)
+    source = FakeSource()
+    m = manager(paths, session_factory, source, clock=clock)
+    await m.request("manual")
+    await m.wait()
+    build_goal(session_factory, 10000032)                 # edited without a debounce timer (e.g. app restarted)
+    clock.advance(minutes=5)
+    assert (await m.request("auto")).reason == "fresh"
+    await m.wait()
+    assert gaps_runs(session_factory) == 1
+    with session_factory() as s:
+        assert s.get(GapRun, 1).snapshot == [[10000032, 90, 8, 8, 8, 90, None]]
+    assert (await m.request("auto")).reason == "fresh"    # now up to date: nothing more
+    await m.wait()
+    assert gaps_runs(session_factory) == 1
+
+
+async def test_auto_recent_after_upgrade_calculates_existing_build_goals(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    with session_factory.begin() as s:                    # a phase 1 sync: no gap_run row yet
+        s.add(SyncRun(started_at=START, finished_at=START, trigger="manual", parts={"roster": {"ok": False}}))
+    clock = Clock(START)
+    clock.advance(seconds=30)
+    m = manager(paths, session_factory, FakeSource(), clock=clock)
+    assert (await m.request("auto")).reason == "recent"
+    await m.wait()
+    assert gaps_runs(session_factory) == 1
+    with session_factory() as s:
+        assert s.get(GapRun, 1).ok is True
+
+
+async def test_auto_fresh_without_build_goals_starts_nothing(paths, session_factory):
+    seed_game(session_factory)
+    clock = Clock(START)
+    m = manager(paths, session_factory, FakeSource(), clock=clock)
+    await m.request("manual")
+    await m.wait()
+    with session_factory.begin() as s:
+        s.delete(s.get(GapRun, 1))
+    clock.advance(minutes=5)
+    assert (await m.request("auto")).reason == "fresh"
+    await m.wait()
+    assert gaps_runs(session_factory) == 0
+
+
+async def test_gaps_running_only_during_gaps_only_run(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    gate = asyncio.Event()
+    m = manager(paths, session_factory, FakeSource(gaps_gate=gate))
+    assert not m.gaps_running
+    m.start_gaps()
+    await asyncio.sleep(0.01)
+    assert m.gaps_running
+    gate.set()
+    await m.wait()
+    assert not m.gaps_running
+
+
 def test_last_successful_ignores_gaps_runs(session_factory):
     from app.sync.runner import last_successful
     with session_factory.begin() as s:

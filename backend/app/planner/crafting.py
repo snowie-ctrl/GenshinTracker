@@ -25,9 +25,8 @@ def chains(materials: dict[int, Material]) -> list[list[int]]:
 
 
 def rollup(data: PlannerData) -> dict[int, Crafted]:
+    """In netted mode HoYoLAB's short already accounts for crafting: keep the hint, farm = short."""
     result = {mid: Crafted(0, t.short) for mid, t in data.totals.items()}
-    if data.lack_includes_crafting:
-        return result
     empty = Total(0, 0, 0)
     for chain in chains(data.materials):
         carry = 0  # spare lower-tier items, already converted to this tier's units
@@ -35,6 +34,7 @@ def rollup(data: PlannerData) -> dict[int, Crafted]:
             t = data.totals.get(mid, empty)
             craftable = min(t.short, carry)
             if mid in data.totals:
-                result[mid] = Crafted(craftable, t.short - craftable)
+                to_farm = t.short if data.lack_includes_crafting else t.short - craftable
+                result[mid] = Crafted(craftable, to_farm)
             carry = (t.spare + carry - craftable) // 3
     return result
