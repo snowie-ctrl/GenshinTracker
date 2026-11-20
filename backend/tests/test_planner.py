@@ -109,3 +109,55 @@ def test_gap_status_stale_pending_failed_and_disconnected(session_factory):
     with session_factory() as s:
         st = gap_status(s, pending=False, connected=True)
         assert st["ok"] is False and st["error"] == "HoyolabError: down"
+
+
+from app.planner.characters import building_cards, character_shortfall
+from app.planner.data import Domain
+from app.planner.today import farm_today, weekly_bosses
+
+
+def planner_fixture():
+    mats = {**BOOKS,
+            50: mat(50, category="weekly", rarity=5, sources=[{"kind": "weekly_boss", "name": "Stormterror", "days": []}]),
+            51: mat(51, category="weekly", rarity=5, sources=[{"kind": "weekly_boss", "name": "Childe", "days": []}])}
+    d = data({2: Total(18, 7, 0), 3: Total(6, 0, 0), 50: Total(2, 2, 0), 51: Total(1, 1, 0)},
+             gaps={10: {2: (9, 4), 50: (2, 2)}, 20: {2: (9, 4), 3: (6, 0), 51: (1, 1)}}, materials=mats)
+    d.domains = [Domain(4213, "Domain of Mastery: Forsaken Rift", "talent", 1, [0, 3, 6], [3, 2, 1]),
+                 Domain(4313, "Domain of Forgery: Cecilia Garden", "weapon", 1, [0, 3, 6], [114001])]
+    return d
+
+
+def test_farm_today_lists_open_domains_with_something_to_farm():
+    d = planner_fixture()
+    idx = material_index(d)
+    today = farm_today(d, 0, idx)
+    assert [x["name"] for x in today["domains"]] == ["Domain of Mastery: Forsaken Rift"]
+    assert [m["id"] for m in today["domains"][0]["materials"]] == [2]
+    assert {c["name"] for c in today["domains"][0]["characters"]} == {"Bennett", "Furina"}
+    assert farm_today(d, 1, idx)["domains"] == []      # Tuesday: closed
+    d.domains[0] = Domain(4213, "Domain of Mastery: Forsaken Rift", "talent", 1, [0, 3], [3, 2, 1])
+    assert len(farm_today(d, 6, idx)["domains"]) == 1  # Sunday: everything open
+
+
+def test_weekly_bosses_grouped_and_done_last():
+    d = planner_fixture()
+    bosses = weekly_bosses(d, {"Childe"}, material_index(d))
+    assert [(b["name"], b["done"]) for b in bosses] == [("Stormterror", False), ("Childe", True)]
+    assert bosses[0]["characters"][0]["name"] == "Bennett"
+
+
+def test_character_shortfall_marks_shared():
+    d = planner_fixture()
+    rows = {r["id"]: r for r in character_shortfall(d, 10, material_index(d))}
+    assert rows[2]["short"] == 4 and rows[2]["shared"] is True   # combined short 7 > own 4
+    assert rows[50]["shared"] is False
+
+
+def test_building_cards_only_short_and_fully_built():
+    d = planner_fixture()
+    d.characters[30] = CharRef(30, "Xiangling", "xiangling", None)
+    cards = {c["character"]["id"]: c for c in building_cards(d, {10: 0.5, 20: 0.8, 30: 1.0}, material_index(d))}
+    assert [m["id"] for m in cards[20]["materials"]] == [2, 51]     # 3 is met, so not listed
+    assert cards[30]["materials"] == [] and cards[30]["skipped"] is False
+    d.characters[10000005] = CharRef(10000005, "Traveler", "traveler", None)
+    assert any(c["skipped"] for c in building_cards(d, {}, material_index(d)))
