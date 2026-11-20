@@ -1,8 +1,11 @@
 import logging
+import time
 
+from app.db.models import CharacterGoal
 from app.settings.envfile import read_env
 from app.sync.hoyolab import Account, HoyolabError
 from fakes import FakeSource
+from app.timeutil import utcnow
 from helpers import make_client, seed_game, wait_for_sync, yatta_transport
 
 ACCOUNT = Account(uid=800000001, server="os_usa", nickname="TestTraveler", level=60)
@@ -108,13 +111,32 @@ def test_connect_clears_stale_optional_keys(paths):
 
 def test_no_endpoint_leaks_cookie_values(paths, caplog):
     caplog.set_level(logging.DEBUG)
-    seed_game(_sf_for(paths))
-    with make_client(paths, source=FakeSource(), accounts=[ACCOUNT]) as client:
+    sf = _sf_for(paths)
+    seed_game(sf)
+    with sf.begin() as s:   # a Build goal, so the sync's gaps part does real calculator work
+        s.add(CharacterGoal(character_id=10000032, goal="build", target_level=90, target_normal=8,
+                            target_skill=8, target_burst=8, target_weapon_level=90, updated_at=utcnow()))
+    source = FakeSource()
+    with make_client(paths, source=source, accounts=[ACCOUNT]) as client:
         client.post("/api/settings/hoyolab", json=COOKIES)
-        wait_for_sync(client)
-        bodies = [client.get(p).text for p in
-                  ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
-                   "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett")]
+        status = wait_for_sync(client)
+        assert status["runs"][0]["parts"]["gaps"] == {"ok": True, "count": 1}
+        sync = client.app.state.ctx.sync
+        sync._gaps_delay = 0.01
+        bodies = [
+            client.put("/api/characters/10000032/goal",
+                       json={"targets": {"level": 90, "normal": 9, "skill": 8, "burst": 8,
+                                         "weapon_level": 90}}).text,
+            client.put("/api/weekly-bosses/Stormterror", json={"done": True}).text,
+        ]
+        deadline = time.monotonic() + 5
+        while sync.gaps_pending or sync.running:          # let the scheduled gaps-only run finish too
+            assert time.monotonic() < deadline, "gaps run never finished"
+            time.sleep(0.02)
+        bodies += [client.get(p).text for p in
+                   ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
+                    "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett")]
+    assert sum(1 for c in source.calls if isinstance(c, tuple) and c[0] == "gaps") == 2
     for text in [*bodies, caplog.text]:
         assert not any(secret in text for secret in SECRETS)
 

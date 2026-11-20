@@ -16,9 +16,10 @@ from app.api import ROUTERS
 from app.config import FRONTEND_BUILD, Paths, default_paths
 from app.context import AppContext, make_source_factory
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.gamedata.service import refresh_all
+from app.gamedata.service import claim_unknown_ids_refresh, refresh_all
 from app.sync.hoyolab import fetch_accounts
 from app.sync.runner import SyncManager
+from app.timeutil import utcnow
 
 log = logging.getLogger(__name__)
 USER_AGENT = "GenshinTracker/0.1 (local personal tool)"
@@ -34,9 +35,13 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
     http = http_client or httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, follow_redirects=True)
     is_offline = config.offline() if offline is None else offline
 
-    async def on_unknown_ids(_ids: set[int]) -> None:
-        if not is_offline:
-            await refresh_all(session_factory, http, force=True)
+    async def on_unknown_ids(ids: set[int]) -> None:
+        if is_offline:
+            return
+        with session_factory.begin() as s:
+            if not claim_unknown_ids_refresh(s, ids, utcnow()):
+                return
+        await refresh_all(session_factory, http, force=True)
 
     sync = SyncManager(session_factory, paths.db_file, paths.backups,
                        source_factory or make_source_factory(paths, session_factory), on_unknown_ids)

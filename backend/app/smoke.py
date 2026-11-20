@@ -44,6 +44,10 @@ async def gaps(source: GenshinPySource) -> None:
     print(f"check 2 (character limit): sending {len(requests)} characters in one request")
     result = await source.compute_gaps(requests)
     print(f"  per-character results: {len(result.per_character)} / {len(requests)}")
+    print("check 6 (order): first 3 materials per requested character (should match that character):")
+    for r in requests:
+        first = [(m.id, m.name, m.need, m.short) for m in result.per_character.get(r.character_id, [])[:3]]
+        print(f"  {r.character_id}: {first}")
     print("check 1/5 (crafting, spare): available_material entries:")
     for m in result.spare:
         print(f"  spare {m.id} {m.name} r{m.rarity}: num={m.need}")

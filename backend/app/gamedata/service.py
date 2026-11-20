@@ -167,6 +167,22 @@ async def refresh_all(session_factory: sessionmaker, http: httpx.AsyncClient,
     return characters or materials
 
 
+META_UNKNOWN_REFRESH = "unknown_ids_refresh"
+UNKNOWN_REFRESH_EVERY = timedelta(hours=1)
+
+
+def claim_unknown_ids_refresh(session: Session, ids: set[int], now: datetime) -> bool:
+    """True (and remembered) unless this same set of unknown material ids already forced a
+    refresh within the last hour; a gaps run every few edits must not re-download everything."""
+    key = sorted(ids)
+    last = _get_meta(session, META_UNKNOWN_REFRESH)
+    if (last and last.get("ids") == key
+            and now - datetime.fromisoformat(last["at"].rstrip("Z")) < UNKNOWN_REFRESH_EVERY):
+        return False
+    _set_meta(session, META_UNKNOWN_REFRESH, {"ids": key, "at": iso(now)})
+    return True
+
+
 def gamedata_status(session: Session) -> dict:
     return {
         "fetched_at": _get_meta(session, META_FETCHED),

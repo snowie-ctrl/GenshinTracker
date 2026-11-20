@@ -4,8 +4,8 @@ import httpx
 from sqlalchemy import select
 
 from app.db.models import GameCharacter, GameDomain, GameMaterial, GameWeapon
-from app.gamedata.service import (gamedata_status, needs_refresh, refresh, refresh_all,
-                                  refresh_materials)
+from app.gamedata.service import (claim_unknown_ids_refresh, gamedata_status, needs_refresh, refresh,
+                                  refresh_all, refresh_materials)
 from app.gamedata.yatta import canonical_id, parse_avatar_list, splash_for
 from helpers import load_fixture, yatta_transport
 
@@ -124,3 +124,15 @@ async def test_refresh_all_runs_both(session_factory):
     with session_factory() as s:
         status = gamedata_status(s)
         assert status["count"] > 0 and status["materials"]["count"] > 0
+
+
+def test_unknown_ids_refresh_is_throttled_per_id_set(session_factory):
+    def claim(ids, at):
+        with session_factory.begin() as s:
+            return claim_unknown_ids_refresh(s, ids, at)
+
+    assert claim({5, 7}, NOW) is True
+    assert claim({7, 5}, NOW + timedelta(minutes=30)) is False     # same ids within the hour
+    assert claim({5, 7, 9}, NOW + timedelta(minutes=31)) is True   # a different set
+    assert claim({5, 7, 9}, NOW + timedelta(minutes=50)) is False
+    assert claim({5, 7, 9}, NOW + timedelta(minutes=92)) is True   # an hour later: try again
