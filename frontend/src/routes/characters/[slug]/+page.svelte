@@ -5,12 +5,41 @@
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
-	import type { CharacterDetail, Goal, Targets } from '$lib/types';
+	import MaterialTile from '$lib/MaterialTile.svelte';
+	import { charTileView, gapLabel, shouldPoll } from '$lib/materials';
+	import type { CharacterDetail, Goal, Targets, WeaponOption } from '$lib/types';
 
 	let c = $state<CharacterDetail | null>(null);
 	let caps = $state<number[]>([20, 40, 50, 60, 70, 80, 90]);
 	let error = $state<string | null>(null);
 	let saveError = $state<string | null>(null);
+
+	let weapons = $state<WeaponOption[]>([]);
+	let now = $state(Date.now());
+	const weaponType = $derived(c?.weapon_type ?? null);
+
+	$effect(() => {
+		const type = weaponType; // derived: only refetches when the weapon type itself changes
+		if (!type) return;
+		api.weapons(type).then((w) => (weapons = w)).catch(() => (weapons = []));
+	});
+
+	$effect(() => {
+		if (!shouldPoll(c?.shortfall?.gaps)) return;
+		const t = setTimeout(() => load(page.params.slug ?? ''), 2000);
+		return () => clearTimeout(t);
+	});
+
+	async function setPlannedWeapon(value: string) {
+		if (!c) return;
+		try {
+			await api.setGoal(c.id, { planned_weapon_id: value === '' ? null : Number(value) });
+			saveError = null;
+			await load(page.params.slug ?? '');
+		} catch (e) {
+			saveError = errorMessage(e);
+		}
+	}
 
 	const SLOTS: Record<number, string> = { 1: 'Flower', 2: 'Plume', 3: 'Sands', 4: 'Goblet', 5: 'Circlet' };
 
@@ -24,6 +53,7 @@
 		try {
 			const [detail, settings] = await Promise.all([api.character(slug), api.settings()]);
 			c = detail;
+			now = Date.now();
 			caps = settings.level_caps;
 			error = null;
 		} catch (e) {
@@ -36,6 +66,7 @@
 		try {
 			const updated = await api.setGoal(c.id, body);
 			c = { ...c, ...updated };
+			await load(page.params.slug ?? '');
 			saveError = null;
 		} catch (e) {
 			saveError = errorMessage(e);
@@ -69,6 +100,14 @@
 		<section class="panel">
 			<h2>Build targets</h2>
 			<TargetsEditor targets={c.targets} levelCaps={caps} onchange={(t) => update({ targets: t })} />
+			<label class="weapon-pick">
+				<span>Planned weapon</span>
+				<select aria-label="Planned weapon" value={c.planned_weapon_id ?? ''}
+					onchange={(e) => setPlannedWeapon(e.currentTarget.value)}>
+					<option value="">{c.owned && c.weapon ? `Equipped: ${c.weapon.name}` : 'None'}</option>
+					{#each weapons as w (w.id)}<option value={w.id}>{'★'.repeat(w.rarity)} {w.name}</option>{/each}
+				</select>
+			</label>
 		</section>
 	{/if}
 
@@ -120,7 +159,23 @@
 		</section>
 	{/if}
 
-	<section class="panel muted">Material shortfall — arrives in phase 2.</section>
+	{#if c.shortfall}
+		<section class="panel" data-testid="shortfall">
+			<h2>Material shortfall</h2>
+			<p class="muted">{gapLabel(c.shortfall.gaps, now)}</p>
+			{#if c.shortfall.gaps.skipped.includes(c.name)}
+				<p class="muted">{c.name} planning isn't supported yet.</p>
+			{:else if c.shortfall.materials.length === 0}
+				<p class="muted">Everything in the bag ✓</p>
+			{:else}
+				<div class="tiles-row">
+					{#each c.shortfall.materials as m (m.id)}
+						<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={charTileView(m)} testid="short-{m.id}" />
+					{/each}
+				</div>
+			{/if}
+		</section>
+	{/if}
 {/if}
 
 <style>
@@ -135,5 +190,7 @@
 	.artifacts { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
 	.artifact { background: var(--panel-2); border-radius: 8px; padding: 8px; }
 	.artifact ul { margin: 4px 0 0; padding-left: 16px; color: var(--muted); }
+	.tiles-row { display: flex; flex-wrap: wrap; gap: 10px; }
+	.weapon-pick { display: inline-flex; flex-direction: column; gap: 4px; margin-top: 12px; }
 	table td { padding: 2px 16px 2px 0; }
 </style>
