@@ -6,9 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.context import AppContext, get_ctx
-from app.db.models import CharacterGoal, GameCharacter, OwnedArtifact, OwnedCharacter
+from app.api.planner import gaps_for, planner_view
+from app.db.models import CharacterGoal, GameCharacter, GameWeapon, OwnedArtifact, OwnedCharacter
 from app.domain import Current, Targets, derive_status, progress, resolve_targets
 from app.gamedata.yatta import splash_for
+from app.planner.characters import character_shortfall
 from app.schemas import TargetsIn
 from app.settings.store import default_targets
 from app.timeutil import utcnow
@@ -19,6 +21,7 @@ router = APIRouter()
 class GoalIn(BaseModel):
     goal: Literal["none", "want", "build"] | None = None
     targets: TargetsIn | None = None
+    planned_weapon_id: int | None = None
 
 
 def goal_targets(row: CharacterGoal | None) -> Targets | None:
@@ -63,7 +66,20 @@ def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_ro
         "status": status,
         "prefarming": prefarming,
         "progress": prog,
+        "planned_weapon_id": goal_row.planned_weapon_id if goal_row else None,
     }
+
+
+def planned_weapon(s: Session, row: CharacterGoal | None, o: OwnedCharacter | None) -> dict | None:
+    if row is not None and row.planned_weapon_id is not None:
+        w = s.get(GameWeapon, row.planned_weapon_id)
+        if w is not None:
+            return {"id": w.id, "name": w.name, "icon": w.icon, "rarity": w.rarity,
+                    "equipped": o is not None and o.weapon_id == w.id}
+    if o is not None and o.weapon_id:
+        return {"id": o.weapon_id, "name": o.weapon_name, "icon": o.weapon_icon, "rarity": o.weapon_rarity,
+                "equipped": True}
+    return None
 
 
 def _all(s: Session) -> list[tuple[GameCharacter | None, OwnedCharacter | None, CharacterGoal | None]]:
@@ -98,12 +114,19 @@ def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
                 for a in artifacts
             ]
             payload["stats"] = o.stats if o is not None else []
+            payload["planned_weapon"] = planned_weapon(s, r, o)
+            if payload["goal"] == "build":
+                data, index = planner_view(s)
+                payload["shortfall"] = {"gaps": gaps_for(ctx, s),
+                                        "materials": character_shortfall(data, payload["id"], index)}
+            else:
+                payload["shortfall"] = None
             return payload
     raise HTTPException(404, "Unknown character")
 
 
 @router.put("/characters/{character_id}/goal")
-def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(get_ctx)) -> dict:
+async def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(get_ctx)) -> dict:
     with ctx.session_factory.begin() as s:
         g = s.get(GameCharacter, character_id)
         o = s.get(OwnedCharacter, character_id)
@@ -113,6 +136,12 @@ def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(get_ctx)
         if row is None:
             row = CharacterGoal(character_id=character_id, goal="none", updated_at=utcnow())
             s.add(row)
+
+        def state() -> tuple:
+            return (row.goal, row.target_level, row.target_normal, row.target_skill, row.target_burst,
+                    row.target_weapon_level, row.planned_weapon_id)
+
+        before = state()
         new_goal = body.goal or row.goal
         if body.targets is not None:
             targets = Targets(**body.targets.model_dump())
@@ -123,6 +152,17 @@ def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(get_ctx)
             row.target_level, row.target_normal = targets.level, targets.normal
             row.target_skill, row.target_burst = targets.skill, targets.burst
             row.target_weapon_level = targets.weapon_level
+        if "planned_weapon_id" in body.model_fields_set:
+            wid = body.planned_weapon_id
+            if wid is not None:
+                w = s.get(GameWeapon, wid)
+                if w is None or (g is not None and w.weapon_type != g.weapon_type):
+                    raise HTTPException(400, "That weapon does not fit this character.")
+            row.planned_weapon_id = wid
+        changed = state() != before
         row.updated_at = utcnow()
         s.flush()
-        return character_payload(g, o, row)
+        payload = character_payload(g, o, row)
+    if changed:
+        ctx.sync.schedule_gaps()
+    return payload

@@ -113,7 +113,8 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
         client.post("/api/settings/hoyolab", json=COOKIES)
         wait_for_sync(client)
         bodies = [client.get(p).text for p in
-                  ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard")]
+                  ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
+                   "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett")]
     for text in [*bodies, caplog.text]:
         assert not any(secret in text for secret in SECRETS)
 
