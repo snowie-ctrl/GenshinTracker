@@ -3,15 +3,17 @@ from sqlalchemy import select
 
 from app.api.characters import goal_targets
 from app.api.planner import gaps_for, planner_view, region
+from app.api.wishes import pity_lines
 from app.context import AppContext, get_ctx
 from app.db.models import CharacterGoal, LiveNotes, OwnedCharacter, WeeklyBossDone
 from app.domain import Current, progress
 from app.planner.characters import building_cards
 from app.planner.today import farm_today, weekly_bosses
-from app.servertime import server_weekday, week_start
+from app.servertime import offset_hours, server_weekday, week_start
 from app.settings.envfile import connection_status, read_env
 from app.settings.store import get_setting
 from app.timeutil import iso, utcnow
+from app.wishes.pity import summarize
 
 router = APIRouter()
 
@@ -55,4 +57,5 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
             },
             "building_cards": building_cards(data, progress_by_id, index),
             "gaps": gaps_for(ctx, s),
+            "pity": pity_lines(summarize(s, now, offset_hours(reg))),
         }

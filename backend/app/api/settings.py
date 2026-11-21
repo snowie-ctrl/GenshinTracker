@@ -19,6 +19,7 @@ router = APIRouter()
 class SettingsIn(BaseModel):
     sync_interval_minutes: int | None = Field(default=None, ge=1, le=1440)
     default_targets: TargetsIn | None = None
+    game_install_path: str | None = Field(default=None, max_length=500)
 
 
 class HoyolabIn(BaseModel):
@@ -52,6 +53,7 @@ def settings_payload(ctx: AppContext, s: Session) -> dict:
         "connection": connection_status(env, get_setting(s, "hoyolab_status")),
         "sync_interval_minutes": get_setting(s, "sync_interval_minutes"),
         "default_targets": get_setting(s, "default_targets"),
+        "game_install_path": get_setting(s, "game_install_path"),
         "level_caps": LEVEL_CAPS,
         "gamedata": gamedata_status(s),
     }
@@ -70,6 +72,8 @@ def put_settings(body: SettingsIn, ctx: AppContext = Depends(get_ctx)) -> dict:
             set_setting(s, "sync_interval_minutes", body.sync_interval_minutes)
         if body.default_targets is not None:
             set_setting(s, "default_targets", body.default_targets.model_dump())
+        if body.game_install_path is not None:
+            set_setting(s, "game_install_path", body.game_install_path.strip())
         return settings_payload(ctx, s)
 
 
