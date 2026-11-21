@@ -39,3 +39,22 @@ def test_devseed_contains_planner_data(tmp_path):
     assert cards["neuvillette"]["materials"] == []          # Build, no rows, in snapshot -> fully built
     states = {m["id"]: m["state"] for c in inv["categories"] for m in c["materials"]}
     assert states[104302] == "short" and states[104003] == "met" and states[100055] == "unneeded"
+
+
+def test_devseed_wishes(tmp_path):
+    from app.config import Paths
+    from app.db.engine import make_engine, make_session_factory
+    from app.devseed import seed
+    from app.timeutil import utcnow
+    from app.wishes.pity import summarize
+
+    seed(tmp_path)
+    engine = make_engine(Paths(tmp_path).db_file)
+    with make_session_factory(engine)() as s:
+        r = summarize(s, utcnow(), 8)
+    engine.dispose()
+    assert (r["character"].total, r["character"].pity5, r["character"].next_state) == (30, 2, "50/50")
+    assert [p.outcome for p in r["character"].fives] == ["lost", "guaranteed"]
+    assert (r["weapon"].total, r["weapon"].pity5) == (12, 12)
+    assert [c["name"] for c in r["weapon"].fate["choices"]] == ["Mistsplitter Reforged", "A Thousand Floating Dreams"]
+    assert (r["standard"].total, r["standard"].pity5) == (60, 15)

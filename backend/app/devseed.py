@@ -1,15 +1,17 @@
 """Fake data for demos and end-to-end tests: python -m app.devseed --root PATH"""
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import CharacterGoal, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
+from app.db.models import CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
 from app.sync.persist import save_details, save_gaps, save_notes, save_roster
 from app.timeutil import iso, utcnow
+from app.wishes.merge import merge
+from app.wishes.types import IncomingWish, server_local_now
 
 # (id, name, slug, rarity, element, weapon, icon)
 CHARACTERS = [
@@ -45,12 +47,33 @@ FREEDOM_SOURCE = {"kind": "domain", "name": "Domain of Mastery: Forsaken Rift", 
 WEAPONS = [(11401, "Favonius Sword", "UI_EquipIcon_Sword_Zephyrus", 4, "Sword"),
            (11509, "Mistsplitter Reforged", "UI_EquipIcon_Sword_Narukami", 5, "Sword"),
            (13407, "Favonius Lance", "UI_EquipIcon_Pole_Zephyrus", 4, "Polearm"),
-           (14504, "A Thousand Floating Dreams", "UI_EquipIcon_Catalyst_Ayus", 5, "Catalyst")]
+           (14504, "A Thousand Floating Dreams", "UI_EquipIcon_Catalyst_Ayus", 5, "Catalyst"),
+           (15301, "Slingshot", "UI_EquipIcon_Bow_Sling", 3, "Bow")]
 
 
 def _amount(mid, need, short):
     name = next(m[1] for m in MATERIALS if m[0] == mid)
     return MaterialAmount(mid, name, "", 3, need, short)
+
+
+def demo_wishes(start_local: str) -> list[IncomingWish]:
+    """Pulls one minute apart from start_local; ids increase with time."""
+    t0 = datetime.strptime(start_local, "%Y-%m-%d %H:%M:%S") + timedelta(hours=1)
+    plans = [
+        ("character", "301", 30, {10: ("Bennett", 4, "character"), 20: ("Neuvillette", 5, "character"),
+                                  28: ("Furina", 5, "character")}),
+        ("weapon", "302", 12, {5: ("Favonius Sword", 4, "weapon")}),
+        ("standard", "200", 60, {30: ("Xingqiu", 4, "character"), 45: ("Kaedehara Kazuha", 5, "character")}),
+    ]
+    out, n = [], 0
+    for pool, gacha_type, count, special in plans:
+        for i in range(1, count + 1):
+            name, rarity, item_type = special.get(i, ("Slingshot", 3, "weapon"))
+            time = (t0 + timedelta(minutes=n)).strftime("%Y-%m-%d %H:%M:%S")
+            out.append(IncomingWish(id=str(1700000000000000000 + n), pool=pool, gacha_type=gacha_type, time=time,
+                                    name=name, item_type=item_type, rarity=rarity))
+            n += 1
+    return out
 
 
 def seed(root: Path) -> None:
@@ -106,6 +129,23 @@ def seed(root: Path) -> None:
             spare=[_amount(104301, 9, 0)],
         )
         save_gaps(s, result, snapshot(s), [], now)
+    with sf.begin() as s:
+        local = datetime.strptime(server_local_now(now, 8), "%Y-%m-%d %H:%M:%S")
+        start = (local - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+        end = (local + timedelta(days=14)).strftime("%Y-%m-%d %H:%M:%S")
+        banners = [
+            ("character", "Tide of Furina", "Furina", start, end, [10000089], [10000032, 10000025]),
+            ("weapon", "Epitome Invocation", "Mistsplitter", start, end, [11509, 14504], [11401, 13407]),
+            ("standard", "Wanderlust Invocation", "Wanderlust Invocation", "2000-01-01 00:00:00",
+             "2200-01-01 00:00:00", [], []),
+        ]
+        for pool, name, short, b_start, b_end, f5, f4 in banners:
+            s.add(GameBanner(key=f"{pool}|{b_start}|0", pool=pool, name=name, short_name=short, start=b_start,
+                             end=b_end, timezone_dependent=False, timezone_dependent_end=False, order=0,
+                             featured_5=f5, featured_4=f4, version="9.9"))
+        s.merge(GameMeta(key="banners_fetched_at", value=iso(now)))
+        s.flush()
+        merge(s, demo_wishes(start), "game", now)
     engine.dispose()
 
 
