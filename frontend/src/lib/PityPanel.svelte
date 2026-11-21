@@ -29,8 +29,8 @@
 	{#if pool.radiance}
 		<div class="muted small" title="Community estimate: the game does not show this counter.">
 			{radianceLine(pool.radiance)}
-			(<a href="https://genshin-impact.fandom.com/wiki/Wish#Capturing_Radiance" target="_blank"
-				rel="noopener">community estimate</a>)
+			· <a href="https://genshin-impact.fandom.com/wiki/Wish#Capturing_Radiance" target="_blank"
+				rel="noopener">about Capturing Radiance</a>
 		</div>
 	{/if}
 	{#if pool.fate}
