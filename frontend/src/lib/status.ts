@@ -1,3 +1,4 @@
+import { matchesTeamTags } from './teams';
 import type { Character, Goal, Status } from './types';
 
 export const SECTIONS: { status: Status; label: string }[] = [
@@ -35,16 +36,17 @@ export function progressTooltip(c: Character): string {
 	return `Lv ${c.level ?? '?'}→${c.targets.level} · ${now} → ${c.targets.normal}/${c.targets.skill}/${c.targets.burst}`;
 }
 
-export interface Filters { elements: string[]; weapons: string[]; rarities: number[]; search: string }
+export interface Filters { elements: string[]; weapons: string[]; rarities: number[]; search: string; teamTags: number[] }
 
 export function emptyFilters(): Filters {
-	return { elements: [], weapons: [], rarities: [], search: '' };
+	return { elements: [], weapons: [], rarities: [], search: '', teamTags: [] };
 }
 
 export function matches(c: Character, f: Filters): boolean {
 	if (f.elements.length && !f.elements.includes(c.element ?? '')) return false;
 	if (f.weapons.length && !f.weapons.includes(c.weapon_type ?? '')) return false;
 	if (f.rarities.length && !f.rarities.includes(c.rarity)) return false;
+	if (!matchesTeamTags(c.team_tags ?? [], f.teamTags)) return false;
 	const q = f.search.trim().toLowerCase();
 	return !q || c.name.toLowerCase().includes(q);
 }

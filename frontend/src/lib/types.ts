@@ -26,6 +26,7 @@ export interface Character {
 	prefarming: boolean;
 	progress: number | null;
 	planned_weapon_id: number | null;
+	team_tags: number[][];
 }
 
 export interface Artifact {
@@ -37,6 +38,7 @@ export interface CharacterDetail extends Character {
 	stats: { name: string; value: string }[];
 	shortfall: { gaps: GapStatus; materials: CharMaterial[]; calculated: boolean } | null;
 	planned_weapon: PlannedWeapon | null;
+	teams: TeamRef[];
 }
 
 export interface Connection { status: 'connected' | 'expired' | 'missing'; uid: number | null }
@@ -61,6 +63,7 @@ export interface Dashboard {
 	farm_today: { weekday: number; domains: FarmDomain[] };
 	weekly_bosses: { discounts_left: number | null; discounts_max: number | null; bosses: WeeklyBoss[] };
 	building_cards: BuildingCard[];
+	build_teams: BuildTeamCard[];
 	gaps: GapStatus;
 	pity: PityLine[];
 }
@@ -141,3 +144,30 @@ export interface HistoryPage { total: number; page: number; page_size: number; r
 export interface HistoryFilters { pool: Pool | ''; rarity: number | ''; type: 'character' | 'weapon' | ''; banner: string; q: string }
 export interface CacheStatus { status: 'found' | 'no_link' | 'not_found' | 'locked'; cached_at: string | null }
 export interface PityLine { pool: Pool; pity5: number; hard: number; next_state: string | null; fate_points: number | null }
+
+export interface Tag { id: number; name: string; color: string; builtin: boolean }
+export interface TagWithCount extends Tag { team_count: number }
+export interface TeamMember {
+	id: number; name: string; slug: string | null; icon: string | null; element: string | null; rarity: number;
+	owned: boolean; goal: Goal; status: Status; prefarming: boolean; level: number | null; talents: Talents | null;
+	weapon: Weapon | null; progress: number | null; role: string; artifact_line: string;
+	not_building: boolean; not_calculated: boolean;
+}
+export interface TeamMaterial {
+	id: number; name: string; icon: string; rarity: number; category: string; category_label: string;
+	need: number; short: number; craftable: number; to_farm: number; shared: boolean;
+}
+export interface Team {
+	id: number; name: string; notes: string; sort_order: number; tags: Tag[]; has_build_tag: boolean;
+	members: TeamMember[]; shortfall: TeamMaterial[] | null; progress: number | null;
+}
+export interface TeamsResponse { gaps: GapStatus; connected: boolean; teams: Team[] }
+export interface TeamResponse { gaps: GapStatus; connected: boolean; team: Team }
+export interface MemberDraft { character_id: number; role: string }
+export interface TeamBody { name: string; notes: string; members: MemberDraft[]; tag_ids: number[]; new_tags: string[] }
+export interface SaveTeamResponse { team: Team; raised: number[] }
+export interface BuildTeamCard {
+	id: number; name: string; members: CharRef[]; progress: number | null; top: TeamMaterial[]; more: number;
+	has_shortfall: boolean;
+}
+export interface TeamRef { id: number; name: string; tags: Tag[] }

@@ -7,7 +7,7 @@ function char(over: Partial<Character>): Character {
 		id: 1, slug: 'x', name: 'X', rarity: 4, element: 'Pyro', weapon_type: 'Sword',
 		icon: 'UI_AvatarIcon_X', splash: null, owned: true, level: 80, constellation: 2,
 		friendship: 10, talents: { normal: 6, skill: 8, burst: 8 }, weapon: null, goal: 'none',
-		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, ...over
+		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, team_tags: [], ...over
 	};
 }
 
@@ -66,5 +66,12 @@ describe('groupCharacters', () => {
 		expect(s.obtained.map((c) => c.name)).toEqual(['Nahida']);
 		const w = groupCharacters(list, { ...emptyFilters(), weapons: ['Catalyst'], rarities: [5] });
 		expect(w.obtained.map((c) => c.name)).toEqual(['Nahida']);
+	});
+
+	it('team tag filter keeps characters in a team with every selected tag', () => {
+		const f = { ...emptyFilters(), teamTags: [2] };
+		const a = char({ id: 1, slug: 'a', team_tags: [[1, 2]] });
+		const b = char({ id: 2, slug: 'b', team_tags: [[1]] });
+		expect(groupCharacters([a, b], f).obtained.map((c) => c.slug)).toEqual(['a']);
 	});
 });

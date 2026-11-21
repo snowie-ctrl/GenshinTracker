@@ -1,6 +1,7 @@
 import type {
 	CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
-	ImportStatus, Inventory, Pool, PoolSummary, Settings, SyncStatus, Targets, WeaponOption, WishSummary
+	ImportStatus, Inventory, Pool, PoolSummary, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
+	TeamBody, TeamResponse, TeamsResponse, WeaponOption, WishSummary
 } from './types';
 import { historyQuery } from './wishes';
 
@@ -63,7 +64,17 @@ export const api = {
 	importGame: () => request<{ import_id: number }>('POST', '/wishes/import/game'),
 	uploadWishes: (file: File) => upload<ImportStatus>('/wishes/import/file', file),
 	setChart: (pool: Pool, item_id: number | null) => request<PoolSummary>('PUT', `/wishes/chart/${pool}`, { item_id }),
-	cacheStatus: () => request<CacheStatus>('GET', '/wishes/cache-status')
+	cacheStatus: () => request<CacheStatus>('GET', '/wishes/cache-status'),
+	teams: () => request<TeamsResponse>('GET', '/teams'),
+	team: (id: number) => request<TeamResponse>('GET', `/teams/${id}`),
+	createTeam: (body: TeamBody) => request<SaveTeamResponse>('POST', '/teams', body),
+	updateTeam: (id: number, body: TeamBody) => request<SaveTeamResponse>('PUT', `/teams/${id}`, body),
+	deleteTeam: (id: number) => request<{ ok: boolean }>('DELETE', `/teams/${id}`),
+	reorderTeams: (ids: number[]) => request<{ ok: boolean }>('PUT', '/teams/order', { ids }),
+	tags: () => request<TagWithCount[]>('GET', '/tags'),
+	createTag: (name: string, color?: string) => request<Tag>('POST', '/tags', { name, color }),
+	updateTag: (id: number, patch: { name?: string; color?: string }) => request<Tag>('PUT', `/tags/${id}`, patch),
+	deleteTag: (id: number) => request<{ ok: boolean }>('DELETE', `/tags/${id}`)
 };
 
 export function errorMessage(e: unknown): string {

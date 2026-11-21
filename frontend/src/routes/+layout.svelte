@@ -11,7 +11,7 @@
 	const NAV: { label: string; href?: string; phase?: number }[] = [
 		{ label: 'Dashboard', href: '/' },
 		{ label: 'Characters', href: '/characters' },
-		{ label: 'Teams', phase: 4 },
+		{ label: 'Teams', href: '/teams' },
 		{ label: 'Inventory', href: '/inventory' },
 		{ label: 'Events', phase: 5 },
 		{ label: 'Map', phase: 5 },
