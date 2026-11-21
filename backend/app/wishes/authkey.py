@@ -2,7 +2,9 @@
 genshin.py's get_authkey() is deliberately not used: it writes the authkey to a temp file."""
 from __future__ import annotations
 
+import os
 import re
+import sys
 import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -96,9 +98,30 @@ def find_data_2(game_path: str, locallow: Path) -> Path:
     raise ImportFailed(CACHE_NOT_FOUND)
 
 
+def _read_shared(path: Path) -> bytes:
+    """Read a file the running game holds open. The game opens data_2 with DELETE access,
+    so on Windows the reader must share read, write and delete (plain open() is refused)."""
+    if sys.platform != "win32":
+        return path.read_bytes()
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = wintypes.HANDLE
+    k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+                                wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    generic_read, share_all, open_existing, normal = 0x80000000, 0x7, 3, 0x80
+    handle = k32.CreateFileW(str(path), generic_read, share_all, None, open_existing, normal, None)
+    if handle is None or handle == wintypes.HANDLE(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    fd = msvcrt.open_osfhandle(handle, os.O_RDONLY)
+    with open(fd, "rb") as f:
+        return f.read()
+
+
 def read_wish_link(data_2: Path) -> WishLink:
     try:
-        raw = data_2.read_bytes()
+        raw = _read_shared(data_2)
         mtime = data_2.stat().st_mtime
     except PermissionError:
         raise ImportFailed(CACHE_LOCKED) from None

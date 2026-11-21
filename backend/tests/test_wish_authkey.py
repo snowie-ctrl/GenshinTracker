@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import pytest
@@ -45,10 +46,32 @@ def test_locked_file_message(tmp_path, monkeypatch):
 
     def locked(self, *a, **k):
         raise PermissionError("in use")
-    monkeypatch.setattr(Path, "read_bytes", locked)
+    monkeypatch.setattr(ak, "_read_shared", locked)
     with pytest.raises(ImportFailed) as e:
         ak.load_wish_link("", locallow)
     assert e.value.message == ak.CACHE_LOCKED
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows share modes")
+def test_reads_cache_while_game_holds_it_with_delete_access(tmp_path):
+    """The running game opens data_2 with DELETE access; a plain open() then fails."""
+    import ctypes
+    from ctypes import wintypes
+    _, locallow = make_game_install(tmp_path)
+    data_2 = ak.find_data_2("", locallow)
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = wintypes.HANDLE
+    k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+                                wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    held = k32.CreateFileW(str(data_2), 0x80000000 | 0x00010000, 0x7, None, 3, 0x80, None)
+    assert held not in (None, wintypes.HANDLE(-1).value)
+    try:
+        with pytest.raises(PermissionError):
+            data_2.read_bytes()
+        assert ak.load_wish_link("", locallow).authkey == FAKE_AUTHKEY
+    finally:
+        k32.CloseHandle(held)
 
 
 def test_repr_hides_authkey(tmp_path):

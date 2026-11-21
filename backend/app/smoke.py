@@ -91,7 +91,7 @@ async def wishes() -> None:
         pity = 0
         for r in rows:
             pity = 0 if r["rank_type"] == "5" else pity + 1
-        print(f"  {pool}: {len(rows)} pulls, pity since last 5★: {pity}")
+        print(f"  {pool}: {len(rows)} pulls, pity since last 5-star: {pity}")
     marked = [r["id"] for r in raw if len(str(r["id"])) == 19 and str(r["id"])[10] == "9"]
     print(f"check 5 (id format): {len(raw)} ids, all 19 digits: "
           f"{all(len(str(r['id'])) == 19 for r in raw)}, ids with '9' as 11th digit: {len(marked)}")
