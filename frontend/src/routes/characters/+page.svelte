@@ -1,14 +1,16 @@
 <script lang="ts">
 	import { api, errorMessage } from '$lib/api';
 	import CharacterCard from '$lib/CharacterCard.svelte';
+	import TagChip from '$lib/TagChip.svelte';
 	import { loadCollapsed, saveCollapsed } from '$lib/collapse';
 	import {
 		ELEMENTS, SECTIONS, WEAPON_TYPES, deriveStatus, emptyFilters, groupCharacters, type Filters
 	} from '$lib/status';
 	import { sync } from '$lib/sync.svelte';
-	import type { Character, Goal, Status } from '$lib/types';
+	import type { Character, Goal, Status, Tag } from '$lib/types';
 
 	let chars = $state<Character[]>([]);
+	let tags = $state<Tag[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let toast = $state<string | null>(null);
@@ -23,7 +25,7 @@
 
 	async function load() {
 		try {
-			chars = await api.characters();
+			[chars, tags] = await Promise.all([api.characters(), api.tags()]);
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
@@ -71,6 +73,15 @@
 			onclick={() => (filters.rarities = toggle(filters.rarities, r))}>{r}★</button>
 	{/each}
 </div>
+
+{#if tags.length}
+	<div class="filters" data-testid="team-tag-filter">
+		<span class="muted">Team tag</span>
+		{#each tags as t (t.id)}
+			<TagChip tag={t} on={filters.teamTags.includes(t.id)} onclick={() => (filters.teamTags = toggle(filters.teamTags, t.id))} />
+		{/each}
+	</div>
+{/if}
 
 {#if toast}
 	<div class="toast error">{toast} <button type="button" onclick={() => (toast = null)}>Dismiss</button></div>

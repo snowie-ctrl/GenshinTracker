@@ -6,6 +6,7 @@
 	import { formatDuration, timeAgo } from '$lib/time';
 	import type { Dashboard } from '$lib/types';
 	import { pityLine } from '$lib/wishes';
+	import { teamTileView } from '$lib/teams';
 	import MaterialPopover from '$lib/MaterialPopover.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
 	import {
@@ -109,6 +110,36 @@
 					<li><a href="/wishes">{pityLine(line)}</a></li>
 				{/each}
 			</ul>
+		{/if}
+	</section>
+
+	<section class="panel" data-testid="build-teams">
+		<h2>Build teams</h2>
+		{#if data.build_teams.length === 0}
+			<p class="muted"><a href="/teams">Tag a team Build to plan it here</a></p>
+		{:else}
+			{#each data.build_teams as t (t.id)}
+				<div class="team-row">
+					<a class="title" href="/teams#team-{t.id}">{t.name}</a>
+					<span class="avatars">
+						{#each t.members as m (m.id)}
+							{#if m.slug}
+								<a href="/characters/{m.slug}" title={m.name}>{#if imgSrc(m.icon)}<img src={imgSrc(m.icon)} alt={m.name} />{/if}</a>
+							{:else if imgSrc(m.icon)}
+								<img src={imgSrc(m.icon)} alt={m.name} title={m.name} />
+							{/if}
+						{/each}
+					</span>
+					{#if t.progress !== null}<span class="muted">{Math.round(t.progress * 100)}%</span>{/if}
+					<span class="tiles-row">
+						{#each t.top as m (m.id)}
+							<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={teamTileView(m)} />
+						{/each}
+					</span>
+					{#if t.more > 0}<a href="/teams#team-{t.id}">+{t.more} more</a>{/if}
+					{#if t.has_shortfall && t.top.length === 0 && gapsSettled(data.gaps)}<span class="ok">Everything in the bag ✓</span>{/if}
+				</div>
+			{/each}
 		{/if}
 	</section>
 
@@ -259,6 +290,10 @@
 	section.panel { margin-top: 12px; }
 	.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
 	.pity-lines { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+	.team-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); }
+	.team-row:last-child { border-bottom: none; }
+	.team-row .avatars img { width: 32px; height: 32px; border-radius: 50%; }
+	.ok { color: var(--accent); }
 	.big { font-size: 28px; font-weight: 700; }
 	.big .muted { font-size: 16px; font-weight: 400; }
 	.expeditions { display: flex; flex-wrap: wrap; gap: 12px; }

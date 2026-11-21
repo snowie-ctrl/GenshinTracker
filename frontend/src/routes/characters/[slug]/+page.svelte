@@ -4,6 +4,7 @@
 	import GoalSwitch from '$lib/GoalSwitch.svelte';
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
+	import TagChip from '$lib/TagChip.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
 	import { charTileView, gapLabel, groupByCategory, notCalculatedLabel, shouldPoll } from '$lib/materials';
@@ -111,6 +112,19 @@
 		</section>
 	{/if}
 
+	<section class="panel" data-testid="in-teams">
+		<h2>In teams</h2>
+		{#if c.teams.length === 0}
+			<p class="muted">Not in any team</p>
+		{:else}
+			<ul class="teams">
+				{#each c.teams as t (t.id)}
+					<li><a href="/teams#team-{t.id}">{t.name}</a> {#each t.tags as tag (tag.id)}<TagChip {tag} />{/each}</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+
 	{#if c.owned}
 		<section class="panel">
 			<h2>Current</h2>
@@ -198,5 +212,7 @@
 	.tiles-row { display: flex; flex-wrap: wrap; gap: 10px; }
 	h3.category { margin: 12px 0 6px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
 	.weapon-pick { display: inline-flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+	.teams { list-style: none; padding: 0; margin: 0; }
+	.teams li { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
 	table td { padding: 2px 16px 2px 0; }
 </style>
