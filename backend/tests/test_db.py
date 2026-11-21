@@ -85,3 +85,34 @@ def test_wish_id_unique_but_nullable(session_factory):
 def test_paths_create_wish_backups(paths):
     assert paths.wish_backups == paths.backups / "wishes"
     assert paths.wish_backups.is_dir()
+
+
+def test_phase4_tables_and_build_tag(paths):
+    engine = make_engine(paths.db_file)
+    migrate(engine)
+    insp = inspect(engine)
+    assert {"team", "team_member", "tag", "team_tag"} <= set(insp.get_table_names())
+    with engine.connect() as conn:
+        row = conn.exec_driver_sql("SELECT id, name, name_key, color, builtin FROM tag").one()
+    engine.dispose()
+    assert tuple(row) == (1, "Build", "build", "orange", 1)
+
+
+def test_team_delete_cascades(session_factory):
+    from datetime import datetime
+
+    from sqlalchemy import delete, func, select
+
+    from app.db.models import Team, TeamMember, TeamTag
+
+    now = datetime(2026, 11, 21)
+    with session_factory.begin() as s:
+        s.add(Team(id=5, name="T", notes="", sort_order=0, created_at=now, updated_at=now))
+        s.flush()
+        s.add(TeamMember(team_id=5, slot=0, character_id=10000032, role=""))
+        s.add(TeamTag(team_id=5, tag_id=1))
+    with session_factory.begin() as s:
+        s.execute(delete(Team).where(Team.id == 5))
+    with session_factory() as s:
+        assert s.scalar(select(func.count()).select_from(TeamMember)) == 0
+        assert s.scalar(select(func.count()).select_from(TeamTag)) == 0

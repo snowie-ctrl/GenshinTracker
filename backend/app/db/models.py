@@ -1,7 +1,7 @@
 """SQLite tables. Three categories: game data, account data (overwritten by sync), user data."""
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -187,6 +187,41 @@ class WeeklyBossDone(Base):
     __tablename__ = "weekly_boss_done"
     boss: Mapped[str] = mapped_column(String, primary_key=True)
     week_start: Mapped[datetime] = mapped_column(DateTime, primary_key=True)
+
+
+class Team(Base):
+    __tablename__ = "team"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String)
+    notes: Mapped[str] = mapped_column(String)
+    sort_order: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class TeamMember(Base):
+    __tablename__ = "team_member"
+    __table_args__ = (UniqueConstraint("team_id", "character_id", name="uq_team_member_character"),)
+    team_id: Mapped[int] = mapped_column(Integer, ForeignKey("team.id", ondelete="CASCADE"), primary_key=True)
+    slot: Mapped[int] = mapped_column(Integer, primary_key=True)                 # 0-3, contiguous
+    character_id: Mapped[int] = mapped_column(Integer)                           # canonical id
+    role: Mapped[str] = mapped_column(String)
+
+
+class Tag(Base):
+    __tablename__ = "tag"
+    __table_args__ = (UniqueConstraint("name_key", name="uq_tag_name_key"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String)
+    name_key: Mapped[str] = mapped_column(String)                                # name.lower()
+    color: Mapped[str] = mapped_column(String)
+    builtin: Mapped[bool] = mapped_column(Boolean)
+
+
+class TeamTag(Base):
+    __tablename__ = "team_tag"
+    team_id: Mapped[int] = mapped_column(Integer, ForeignKey("team.id", ondelete="CASCADE"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("tag.id", ondelete="CASCADE"), primary_key=True)
 
 
 class Wish(Base):
