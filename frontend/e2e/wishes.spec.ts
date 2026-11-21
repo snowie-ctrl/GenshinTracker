@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('wishes page shows pity and tracks a weapon chart', async ({ page }) => {
 	await page.goto('/wishes');
 	const character = page.getByTestId('pity-character');
-	await expect(character).toContainText(/2\s*\/\s*90/);
+	await expect(character).toContainText('2 / 90');
 	await expect(character).toContainText('Next 5★: 50/50');
 	await page.getByRole('tab', { name: 'Weapon Event' }).click();
 	await expect(page.getByTestId('tab-weapon')).toContainText('Pulls');

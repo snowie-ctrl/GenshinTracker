@@ -1,5 +1,6 @@
 <!-- frontend/src/lib/WishHistory.svelte -->
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { api, errorMessage } from './api';
 	import { imgSrc } from './img';
 	import type { BannerRow, HistoryFilters, HistoryPage } from './types';
@@ -12,15 +13,28 @@
 	let error = $state<string | null>(null);
 	const pages = $derived(data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1);
 
+	let seq = 0;
+	let qInput = $state(untrack(() => filters.q));
+	let qTimer: ReturnType<typeof setTimeout> | undefined;
+
 	$effect(() => {
 		void version;
 		const f = { ...filters };
 		const p = page;
 		saveFilters(() => localStorage, f);
+		const mine = ++seq;
 		api.wishHistory(f, p)
-			.then((d) => { data = d; error = null; })
-			.catch((e) => (error = errorMessage(e)));
+			.then((d) => { if (mine === seq) { data = d; error = null; } })
+			.catch((e) => { if (mine === seq) error = errorMessage(e); });
 	});
+
+	$effect(() => () => clearTimeout(qTimer));
+
+	function onSearch(value: string) {
+		qInput = value;
+		clearTimeout(qTimer);
+		qTimer = setTimeout(() => set('q', value), 300);
+	}
 
 	function set<K extends keyof HistoryFilters>(key: K, value: HistoryFilters[K]) {
 		filters = { ...filters, [key]: value };
@@ -53,8 +67,8 @@
 			<option value="">All banners</option>
 			{#each banners as b (b.key)}<option value={b.key}>{b.short_name} ({b.start.slice(0, 10)})</option>{/each}
 		</select>
-		<input type="search" placeholder="Search name" aria-label="Search name" value={filters.q}
-			oninput={(e) => set('q', e.currentTarget.value)} />
+		<input type="search" placeholder="Search name" aria-label="Search name" value={qInput}
+			oninput={(e) => onSearch(e.currentTarget.value)} />
 	</div>
 	{#if error}<p class="error">{error}</p>{/if}
 	{#if data}

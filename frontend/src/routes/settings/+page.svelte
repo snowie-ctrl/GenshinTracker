@@ -28,6 +28,7 @@
 	let refreshing = $state(false);
 	const now = Date.now();
 	let gamePath = $state('');
+	let gamePathLoaded = false;
 	let gamePathNote = $state<string | null>(null);
 	let cache = $state<CacheStatus | null>(null);
 
@@ -42,6 +43,7 @@
 	async function saveGamePath() {
 		try {
 			settings = await api.saveSettings({ game_install_path: gamePath });
+			gamePath = settings.game_install_path;
 			gamePathNote = 'Saved.';
 			await loadCache();
 		} catch (e) {
@@ -60,7 +62,10 @@
 			settings = s;
 			runs = st.runs;
 			interval = s.sync_interval_minutes;
-			gamePath = s.game_install_path;
+			if (!gamePathLoaded) {
+				gamePath = s.game_install_path;
+				gamePathLoaded = true;
+			}
 			showForm = showForm || s.connection.status !== 'connected';
 			error = null;
 		} catch (e) {

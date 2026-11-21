@@ -14,17 +14,23 @@
 
 <section class="panel pity" data-testid="pity-{pool.pool}">
 	<h2>{POOL_LABEL[pool.pool]}</h2>
-	<div class="big">{pool.pity5}<span class="muted"> / {pool.hard}</span></div>
+	<div class="big">{pool.pity5}<span class="muted">&nbsp;/ {pool.hard}</span></div>
 	<div class="bar" role="progressbar" aria-label="5★ pity" aria-valuenow={pool.pity5} aria-valuemin={0}
 		aria-valuemax={pool.hard}>
 		<span class="fill" class:soft={pool.in_soft} style="width: {bar.fill}%"></span>
 		{#if bar.soft !== null}<span class="mark" style="left: {bar.soft}%" title="Soft pity from {pool.soft}"></span>{/if}
 	</div>
 	<div class="muted small">4★ pity {pool.pity4} / 10{pool.in_soft ? ' · in soft pity' : ''}</div>
+	<div class="bar bar4" role="progressbar" aria-label="4★ pity" aria-valuenow={pool.pity4} aria-valuemin={0}
+		aria-valuemax={10}>
+		<span class="fill four" style="width: {Math.min(100, (pool.pity4 / 10) * 100)}%"></span>
+	</div>
 	{#if pool.next_state}<div class="state">{nextStateLabel(pool.next_state)}</div>{/if}
 	{#if pool.radiance}
 		<div class="muted small" title="Community estimate: the game does not show this counter.">
 			{radianceLine(pool.radiance)}
+			(<a href="https://genshin-impact.fandom.com/wiki/Wish#Capturing_Radiance" target="_blank"
+				rel="noopener">community estimate</a>)
 		</div>
 	{/if}
 	{#if pool.fate}
@@ -46,6 +52,8 @@
 	.bar { position: relative; height: 8px; background: var(--line); border-radius: 4px; }
 	.fill { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 	.fill.soft { background: var(--warn); }
+	.bar4 { height: 4px; }
+	.fill.four { background: var(--muted); }
 	.mark { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--warn); }
 	.state { font-weight: 600; }
 	.small { font-size: 12px; }
