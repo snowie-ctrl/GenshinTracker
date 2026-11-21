@@ -1,7 +1,7 @@
 # Phase 4 — Teams: Design
 
 **Date:** 2026-11-21
-**Status:** Draft for review
+**Status:** Approved 2026-11-21
 **Parent:** [Overview design](2026-11-19-genshintracker-overview-design.md). Builds on [Phase 1 — Foundation](2026-11-19-phase1-foundation-design.md), [Phase 2 — Planner](2026-11-19-phase2-planner-design.md) and [Phase 3 — Wishes](2026-11-20-phase3-wishes-design.md); stays within the overview's architecture, data model and rules (§3, §4.3, §4.5, §7).
 
 ---
