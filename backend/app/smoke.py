@@ -1,8 +1,11 @@
 """Live check against your real account (manual, never in CI):
 python -m app.smoke          roster/details/notes
-python -m app.smoke --gaps   calculator checks for phase 2 (uses your Build goals from data/tracker.db)"""
+python -m app.smoke --gaps   calculator checks for phase 2 (uses your Build goals from data/tracker.db)
+python -m app.smoke --wishes          read-only wish fetch check (needs Wish History opened in-game)
+python -m app.smoke --paimon FILE     print sheet names/headers/row counts of a paimon.moe export"""
 import asyncio
 import sys
+from collections import Counter
 
 from sqlalchemy import select
 
@@ -11,7 +14,11 @@ from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import GameMaterial
 from app.planner.requests import build_inputs, gap_requests, has_work
 from app.settings.envfile import cookies_from_env, read_env
+from app.settings.store import get_setting
 from app.sync.hoyolab import GenshinPySource
+from app.wishes.authkey import default_locallow, load_wish_link
+from app.wishes.fetch import fetch_new, genshin_page_fn, record_uid
+from app.wishes.types import POOL_BY_GACHA_TYPE, ImportFailed
 
 
 async def basic(source: GenshinPySource) -> None:
@@ -62,6 +69,44 @@ async def gaps(source: GenshinPySource) -> None:
     engine.dispose()
 
 
+async def wishes() -> None:
+    """Read-only: never writes the database, never prints the URL or authkey."""
+    paths = default_paths()
+    engine = make_engine(paths.db_file)
+    migrate(engine)
+    with make_session_factory(engine)() as s:
+        game_path = get_setting(s, "game_install_path")
+    try:
+        link = load_wish_link(game_path, default_locallow())
+    except ImportFailed as e:
+        sys.exit(e.message)
+    print(f"check 1 (wish link): found, cached at {link.cached_at:%Y-%m-%d %H:%M} UTC, region {link.region}")
+    raw = await fetch_new(genshin_page_fn(link), set())
+    env_uid = read_env(paths.env_file).get("GENSHIN_UID")
+    print(f"  records: {len(raw)}; uid matches .env: {str(record_uid(raw)) == env_uid}")
+    by_type = Counter(r["gacha_type"] for r in raw)
+    print(f"  per gacha type: {dict(sorted(by_type.items()))} (400 present: {'400' in by_type})")
+    for pool in ("character", "weapon", "chronicled", "standard", "beginner"):
+        rows = sorted((r for r in raw if POOL_BY_GACHA_TYPE[r["gacha_type"]] == pool), key=lambda r: int(r["id"]))
+        pity = 0
+        for r in rows:
+            pity = 0 if r["rank_type"] == "5" else pity + 1
+        print(f"  {pool}: {len(rows)} pulls, pity since last 5★: {pity}")
+    marked = [r["id"] for r in raw if len(str(r["id"])) == 19 and str(r["id"])[10] == "9"]
+    print(f"check 5 (id format): {len(raw)} ids, all 19 digits: "
+          f"{all(len(str(r['id'])) == 19 for r in raw)}, ids with '9' as 11th digit: {len(marked)}")
+
+
+def paimon(path: str) -> None:
+    from openpyxl import load_workbook
+    wb = load_workbook(path, read_only=True, data_only=True)
+    for ws in wb.worksheets:
+        rows = ws.iter_rows(values_only=True)
+        header = next(rows, None)
+        count = sum(1 for r in rows if any(c is not None for c in r))
+        print(f"sheet {ws.title!r}: header {list(header) if header else None}, data rows {count}")
+
+
 async def main() -> None:
     env = read_env(default_paths().env_file)
     if not env.get("GENSHIN_UID"):
@@ -71,4 +116,9 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if "--paimon" in sys.argv:
+        paimon(sys.argv[sys.argv.index("--paimon") + 1])
+    elif "--wishes" in sys.argv:
+        asyncio.run(wishes())
+    else:
+        asyncio.run(main())
