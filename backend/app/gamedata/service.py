@@ -215,15 +215,19 @@ META_UNKNOWN_REFRESH = "unknown_ids_refresh"
 UNKNOWN_REFRESH_EVERY = timedelta(hours=1)
 
 
-def claim_unknown_ids_refresh(session: Session, ids: set[int], now: datetime) -> bool:
-    """True (and remembered) unless this same set of unknown material ids already forced a
+META_WISH_UNKNOWN_REFRESH = "wish_unknown_refresh"
+
+
+def claim_unknown_ids_refresh(session: Session, ids: set, now: datetime,
+                              meta_key: str = META_UNKNOWN_REFRESH) -> bool:
+    """True (and remembered) unless this same set of unknown ids/names already forced a
     refresh within the last hour; a gaps run every few edits must not re-download everything."""
     key = sorted(ids)
-    last = _get_meta(session, META_UNKNOWN_REFRESH)
+    last = _get_meta(session, meta_key)
     if (last and last.get("ids") == key
             and now - datetime.fromisoformat(last["at"].rstrip("Z")) < UNKNOWN_REFRESH_EVERY):
         return False
-    _set_meta(session, META_UNKNOWN_REFRESH, {"ids": key, "at": iso(now)})
+    _set_meta(session, meta_key, {"ids": key, "at": iso(now)})
     return True
 
 

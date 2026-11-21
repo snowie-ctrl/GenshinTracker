@@ -95,3 +95,20 @@ def inc(id_, pool, time, name, rarity=3, gacha_type=None, item_type="weapon"):
     from app.wishes.types import IncomingWish
     return IncomingWish(id=id_, pool=pool, gacha_type=gacha_type, time=time, name=name,
                         item_type=item_type, rarity=rarity)
+
+
+def write_env(paths, uid: int = FAKE_UID, region: str = "os_euro") -> None:
+    paths.env_file.write_text(f"GENSHIN_UID={uid}\nGENSHIN_REGION={region}\n", encoding="utf-8")
+
+
+def fake_link():
+    from datetime import datetime
+    from app.wishes.authkey import WishLink
+    return WishLink(authkey=FAKE_AUTHKEY, region="os_euro", cached_at=datetime(2024, 1, 1))
+
+
+def uigf_bytes(records: list[dict], uid: int = FAKE_UID, tz: int = 1) -> bytes:
+    import json
+    return json.dumps({"info": {"export_timestamp": 1, "export_app": "test", "export_app_version": "1",
+                                "version": "v4.0"},
+                       "hk4e": [{"uid": uid, "timezone": tz, "lang": "en-us", "list": records}]}).encode()

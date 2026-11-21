@@ -72,7 +72,8 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 
-def make_client(paths, source=None, accounts=None, transport=None) -> TestClient:
+def make_client(paths, source=None, accounts=None, transport=None,
+                wish_link_reader=None, wish_page_factory=None) -> TestClient:
     """`accounts`: list[Account] to return, or an Exception to raise, from the account lookup."""
     http = httpx.AsyncClient(transport=transport or httpx.MockTransport(lambda r: httpx.Response(404)))
 
@@ -82,7 +83,8 @@ def make_client(paths, source=None, accounts=None, transport=None) -> TestClient
         return list(accounts or [])
 
     app = create_app(paths, source_factory=lambda: source, accounts_fetcher=fetch_accounts,
-                     http_client=http, offline=True)
+                     http_client=http, offline=True,
+                     wish_link_reader=wish_link_reader, wish_page_factory=wish_page_factory)
     return TestClient(app)
 
 

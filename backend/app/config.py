@@ -20,6 +20,7 @@ GAPS_DEBOUNCE_SECONDS = 3.0
 # True if HoYoLAB's lack_num already subtracts what can be crafted from spare lower tiers.
 LACK_INCLUDES_CRAFTING = False
 WISH_BACKUPS_KEPT = 10
+APP_VERSION = "0.3.0"
 WISH_UPLOAD_MAX_BYTES = 20 * 1024 * 1024
 WISH_PAGE_DELAY = 0.3          # seconds between gacha-log pages (be gentle with the API)
 WISH_HISTORY_PAGE_SIZE = 50

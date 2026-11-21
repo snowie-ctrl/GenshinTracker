@@ -16,17 +16,21 @@ from app.api import ROUTERS
 from app.config import FRONTEND_BUILD, Paths, default_paths
 from app.context import AppContext, make_source_factory
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.gamedata.service import claim_unknown_ids_refresh, refresh_all
+from app.gamedata.service import META_WISH_UNKNOWN_REFRESH, claim_unknown_ids_refresh, refresh_all
 from app.sync.hoyolab import fetch_accounts
 from app.sync.runner import SyncManager
 from app.timeutil import utcnow
+from app.wishes.authkey import default_locallow, load_wish_link
+from app.wishes.fetch import genshin_page_fn
+from app.wishes.importer import WishImporter
 
 log = logging.getLogger(__name__)
 USER_AGENT = "GenshinTracker/0.1 (local personal tool)"
 
 
 def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetcher=None,
-               http_client: httpx.AsyncClient | None = None, offline: bool | None = None) -> FastAPI:
+               http_client: httpx.AsyncClient | None = None, offline: bool | None = None,
+               wish_link_reader=None, wish_page_factory=None) -> FastAPI:
     paths = paths or default_paths()
     paths.ensure()
     engine = make_engine(paths.db_file)
@@ -45,8 +49,19 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
 
     sync = SyncManager(session_factory, paths.db_file, paths.backups,
                        source_factory or make_source_factory(paths, session_factory), on_unknown_ids)
+    async def on_unknown_wish_names(names: set[str]) -> None:
+        if is_offline:
+            return
+        with session_factory.begin() as s:
+            if not claim_unknown_ids_refresh(s, names, utcnow(), meta_key=META_WISH_UNKNOWN_REFRESH):
+                return
+        await refresh_all(session_factory, http, force=True)
+
+    wishes = WishImporter(session_factory, paths,
+                          wish_link_reader or (lambda game_path: load_wish_link(game_path, default_locallow())),
+                          wish_page_factory or genshin_page_fn, on_unknown_wish_names)
     ctx = AppContext(paths=paths, session_factory=session_factory, http=http, offline=is_offline,
-                     sync=sync, accounts_fetcher=accounts_fetcher or fetch_accounts)
+                     sync=sync, wishes=wishes, accounts_fetcher=accounts_fetcher or fetch_accounts)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
@@ -56,6 +71,7 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await task
+        await wishes.wait()
         if http_client is None:
             await http.aclose()
         engine.dispose()

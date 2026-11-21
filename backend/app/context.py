@@ -12,6 +12,7 @@ from app.settings.envfile import cookies_from_env, read_env
 from app.settings.store import get_setting
 from app.sync.hoyolab import Account, GenshinPySource, HoyolabSource
 from app.sync.runner import SyncManager
+from app.wishes.importer import WishImporter
 
 
 @dataclass
@@ -21,6 +22,7 @@ class AppContext:
     http: httpx.AsyncClient
     offline: bool
     sync: SyncManager
+    wishes: WishImporter
     accounts_fetcher: Callable[[dict[str, str]], Awaitable[list[Account]]]
 
 
