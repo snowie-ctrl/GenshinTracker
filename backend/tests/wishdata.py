@@ -70,3 +70,22 @@ class FakeGachaApi:
         if end_id != "0":
             rows = [r for r in rows if int(r["id"]) < int(end_id)]
         return rows[:20]
+
+
+PAIMON_HEADER = ("Type", "Name", "Time", "⭐", "Pity", "#Roll", "Group", "Banner", "Part")
+
+
+def make_paimon_xlsx(sheets: dict[str, list[tuple]], header: tuple = PAIMON_HEADER) -> bytes:
+    """rows are (type, name, time, rarity); the other paimon columns are filled with filler."""
+    from io import BytesIO
+    from openpyxl import Workbook
+    wb = Workbook()
+    wb.remove(wb.active)
+    for title, rows in sheets.items():
+        ws = wb.create_sheet(title)
+        ws.append(list(header))
+        for n, (type_, name, time, rarity) in enumerate(rows, start=1):
+            ws.append([type_, name, time, rarity, 1, n, n, "Some Banner", ""])
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
