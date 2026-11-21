@@ -89,3 +89,9 @@ def make_paimon_xlsx(sheets: dict[str, list[tuple]], header: tuple = PAIMON_HEAD
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def inc(id_, pool, time, name, rarity=3, gacha_type=None, item_type="weapon"):
+    from app.wishes.types import IncomingWish
+    return IncomingWish(id=id_, pool=pool, gacha_type=gacha_type, time=time, name=name,
+                        item_type=item_type, rarity=rarity)
