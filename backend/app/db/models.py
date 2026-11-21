@@ -1,7 +1,7 @@
 """SQLite tables. Three categories: game data, account data (overwritten by sync), user data."""
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -62,6 +62,22 @@ class GameWeapon(Base):
     icon: Mapped[str] = mapped_column(String)
     rarity: Mapped[int] = mapped_column(Integer)
     weapon_type: Mapped[str] = mapped_column(String)
+
+
+class GameBanner(Base):
+    __tablename__ = "game_banner"
+    key: Mapped[str] = mapped_column(String, primary_key=True)        # f"{pool}|{start}|{order}"
+    pool: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String)
+    short_name: Mapped[str] = mapped_column(String)
+    start: Mapped[str] = mapped_column(String)                       # as given by paimon.moe
+    end: Mapped[str] = mapped_column(String)
+    timezone_dependent: Mapped[bool] = mapped_column(Boolean)       # start is a UTC+8 instant
+    timezone_dependent_end: Mapped[bool] = mapped_column(Boolean)   # end is a UTC+8 instant
+    order: Mapped[int] = mapped_column(Integer)
+    featured_5: Mapped[list] = mapped_column(JSON)                   # item ids
+    featured_4: Mapped[list] = mapped_column(JSON)
+    version: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 # --- account data (sync overwrites) ----------------------------------------
@@ -171,6 +187,48 @@ class WeeklyBossDone(Base):
     __tablename__ = "weekly_boss_done"
     boss: Mapped[str] = mapped_column(String, primary_key=True)
     week_start: Mapped[datetime] = mapped_column(DateTime, primary_key=True)
+
+
+class Wish(Base):
+    __tablename__ = "wish"
+    __table_args__ = (
+        UniqueConstraint("id", name="uq_wish_id"),
+        Index("ix_wish_pool_time_seq", "pool", "time", "seq"),
+    )
+    pk: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[str | None] = mapped_column(String, nullable=True)     # real pull id; None for paimon rows
+    pool: Mapped[str] = mapped_column(String)
+    gacha_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    time: Mapped[str] = mapped_column(String)                        # server-local "YYYY-MM-DD HH:MM:SS"
+    seq: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String)
+    item_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    item_type: Mapped[str] = mapped_column(String)                   # character | weapon
+    rarity: Mapped[int] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(String)                      # game | uigf | paimon
+    imported_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class WishImport(Base):
+    __tablename__ = "wish_import"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    source: Mapped[str] = mapped_column(String)
+    ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)   # None while running
+    added: Mapped[int] = mapped_column(Integer)
+    upgraded: Mapped[int] = mapped_column(Integer)
+    skipped: Mapped[int] = mapped_column(Integer)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
+    backup_file: Mapped[str | None] = mapped_column(String, nullable=True)
+    snapshot_file: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class WishChart(Base):
+    __tablename__ = "wish_chart"
+    pool: Mapped[str] = mapped_column(String, primary_key=True)      # weapon | chronicled
+    item_id: Mapped[int] = mapped_column(Integer)
+    set_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class Setting(Base):

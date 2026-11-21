@@ -52,3 +52,36 @@ def test_json_round_trip(session_factory):
         s.add(Setting(key="default_targets", value={"level": 90}))
     with session_factory() as s:
         assert s.get(Setting, "default_targets").value == {"level": 90}
+
+
+def test_phase3_tables_exist(paths):
+    engine = make_engine(paths.db_file)
+    migrate(engine)
+    insp = inspect(engine)
+    assert {"wish", "wish_import", "wish_chart", "game_banner"} <= set(insp.get_table_names())
+    cols = {c["name"] for c in insp.get_columns("wish")}
+    assert cols == {"pk", "id", "pool", "gacha_type", "time", "seq", "name", "item_id", "item_type",
+                    "rarity", "source", "imported_at"}
+    engine.dispose()
+
+
+def test_wish_id_unique_but_nullable(session_factory):
+    from datetime import datetime
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+    from app.db.models import Wish
+
+    def row(id_):
+        return Wish(id=id_, pool="standard", gacha_type="200", time="2024-01-01 10:00:00", seq=0,
+                    name="Slingshot", item_id=None, item_type="weapon", rarity=3, source="paimon",
+                    imported_at=datetime(2024, 1, 1))
+    with session_factory.begin() as s:
+        s.add_all([row(None), row(None)])          # many id-less rows are fine
+    with pytest.raises(IntegrityError):
+        with session_factory.begin() as s:
+            s.add_all([row("1704067200000000001"), row("1704067200000000001")])
+
+
+def test_paths_create_wish_backups(paths):
+    assert paths.wish_backups == paths.backups / "wishes"
+    assert paths.wish_backups.is_dir()

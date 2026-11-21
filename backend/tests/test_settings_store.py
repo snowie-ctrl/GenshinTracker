@@ -66,3 +66,12 @@ def test_cookies_from_env():
 )
 def test_connection_status(env, stored, expected):
     assert connection_status(env, stored) == expected
+
+
+def test_game_install_path_defaults_empty(session_factory):
+    from app.settings.store import get_setting, set_setting
+    with session_factory.begin() as s:
+        assert get_setting(s, "game_install_path") == ""
+        set_setting(s, "game_install_path", "D:/Games/Genshin Impact")
+    with session_factory() as s:
+        assert get_setting(s, "game_install_path") == "D:/Games/Genshin Impact"

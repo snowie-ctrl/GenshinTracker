@@ -10,6 +10,7 @@ DEFAULTS: dict[str, object] = {
     "sync_interval_minutes": DEFAULT_SYNC_INTERVAL_MINUTES,
     "default_targets": DEFAULT_TARGETS,
     "hoyolab_status": None,  # None | "connected" | "expired"
+    "game_install_path": "",   # blank = auto-detect from the game's log file
 }
 
 

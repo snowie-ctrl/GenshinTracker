@@ -19,6 +19,11 @@ GAPS_DEBOUNCE_SECONDS = 3.0
 # Set from the phase 2 live check (docs/superpowers/notes/2026-11-19-phase2-calculator-findings.md):
 # True if HoYoLAB's lack_num already subtracts what can be crafted from spare lower tiers.
 LACK_INCLUDES_CRAFTING = False
+WISH_BACKUPS_KEPT = 10
+WISH_UPLOAD_MAX_BYTES = 20 * 1024 * 1024
+WISH_PAGE_DELAY = 0.3          # seconds between gacha-log pages (be gentle with the API)
+WISH_HISTORY_PAGE_SIZE = 50
+BANNERS_URL = "https://raw.githubusercontent.com/MadeBaruna/paimon-moe/main/src/data/banners.js"
 
 
 @dataclass(frozen=True)
@@ -45,8 +50,12 @@ class Paths:
     def env_file(self) -> Path:
         return self.root / ".env"
 
+    @property
+    def wish_backups(self) -> Path:
+        return self.backups / "wishes"
+
     def ensure(self) -> None:
-        for d in (self.data, self.backups, self.img_cache):
+        for d in (self.data, self.backups, self.wish_backups, self.img_cache):
             d.mkdir(parents=True, exist_ok=True)
 
 
