@@ -80,7 +80,7 @@ async def wishes() -> None:
         link = load_wish_link(game_path, default_locallow())
     except ImportFailed as e:
         sys.exit(e.message)
-    print(f"check 1 (wish link): found, cached at {link.cached_at:%Y-%m-%d %H:%M} UTC, region {link.region}")
+    print(f"check 1 (wish link): found, cached at {link.cached_at:%Y-%m-%d %H:%M} UTC")
     raw = await fetch_new(genshin_page_fn(link), set())
     env_uid = read_env(paths.env_file).get("GENSHIN_UID")
     print(f"  records: {len(raw)}; uid matches .env: {str(record_uid(raw)) == env_uid}")
