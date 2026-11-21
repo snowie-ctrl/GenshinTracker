@@ -71,6 +71,51 @@ def test_not_uigf():
     assert e.value.message == NOT_UIGF
 
 
+def test_non_dict_hk4e_entry_is_ignored_for_uid_lookup():
+    data = v4([rec("1", "200", "2024-01-01 09:00:00", "Slingshot", 3)])
+    data["hk4e"].insert(0, "junk")
+    assert len(parse_uigf(data, UID, 1)) == 1
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf({"hk4e": ["junk"]}, UID, 1)
+    assert e.value.message == UID_MISMATCH
+
+
+def test_non_dict_row_is_reported_not_raised():
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(v4(["junk"]), UID, 1)
+    assert "row 1: not an object" in e.value.message
+
+
+def test_non_numeric_timezone_is_not_uigf():
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(v4([], tz="abc"), UID, 1)
+    assert e.value.message == NOT_UIGF
+    data = {"info": {"uid": str(UID), "region_time_zone": "abc"}, "list": []}
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(data, UID, 1)
+    assert e.value.message == NOT_UIGF
+
+
+@pytest.mark.parametrize("bad_list", ["abc", {"time": "2024-01-01 09:00:00"}])
+def test_non_list_records_is_not_uigf(bad_list):
+    data = {"info": {"export_timestamp": 1}, "hk4e": [{"uid": UID, "timezone": 1, "lang": "en-us", "list": bad_list}]}
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(data, UID, 1)
+    assert e.value.message == NOT_UIGF
+
+
+def test_build_then_parse_round_trips():
+    rows = [Wish(id=None, pool="character", gacha_type=None, time="2024-01-01 09:00:00", seq=0, name="Furina",
+                 item_id=10000089, item_type="character", rarity=5, source="paimon", imported_at=datetime(2024, 1, 2)),
+            Wish(id="1704096000000000002", pool="weapon", gacha_type="302", time="2024-01-01 09:01:00", seq=0,
+                 name="Slingshot", item_id=None, item_type="weapon", rarity=3, source="game",
+                 imported_at=datetime(2024, 1, 2))]
+    out = parse_uigf(build_uigf(rows, UID, 1, datetime(2024, 1, 3), "0.3.0"), UID, 1)
+    assert [(w.id, w.pool, w.time, w.name, w.rarity, w.item_type) for w in out] == [
+        (None, "character", "2024-01-01 09:00:00", "Furina", 5, "character"),
+        ("1704096000000000002", "weapon", "2024-01-01 09:01:00", "Slingshot", 3, "weapon")]
+
+
 def test_generated_ids_read_back_as_idless():
     gid = generated_id("2024-01-01 09:00:00", 0, 1)
     assert parse_uigf(v4([rec(gid, "200", "2024-01-01 09:00:00", "Slingshot", 3)]), UID, 1)[0].id is None

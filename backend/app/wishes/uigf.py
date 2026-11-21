@@ -22,19 +22,34 @@ def is_generated(id_: str, time: str, offset: int) -> bool:
             and id_[:10] == f"{to_utc_seconds(time, offset):010d}")
 
 
+def _tz(value) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ImportFailed(NOT_UIGF)
+
+
+def _rows(value) -> list:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ImportFailed(NOT_UIGF)
+    return value
+
+
 def _entries(data: dict, uid: int) -> tuple[list, int | None]:
     if isinstance(data.get("hk4e"), list):
-        mine = [e for e in data["hk4e"] if str(e.get("uid")) == str(uid)]
+        mine = [e for e in data["hk4e"] if isinstance(e, dict) and str(e.get("uid")) == str(uid)]
         if not mine:
             raise ImportFailed(UID_MISMATCH)
-        tz = mine[0].get("timezone")
-        return list(mine[0].get("list") or []), int(tz) if tz is not None else None
+        return _rows(mine[0].get("list")), _tz(mine[0].get("timezone"))
     info = data.get("info")
     if isinstance(info, dict) and isinstance(data.get("list"), list):
         if str(info.get("uid")) != str(uid):
             raise ImportFailed(UID_MISMATCH)
-        tz = info.get("region_time_zone")
-        return list(data["list"]), int(tz) if tz is not None else None
+        return list(data["list"]), _tz(info.get("region_time_zone"))
     raise ImportFailed(NOT_UIGF)
 
 
@@ -45,6 +60,9 @@ def parse_uigf(data: dict, uid: int, offset: int) -> list[IncomingWish]:
     tz = offset if tz is None else tz
     out, errors = [], []
     for i, r in enumerate(rows, start=1):
+        if not isinstance(r, dict):
+            errors.append(f"row {i}: not an object")
+            continue
         try:
             gacha_type = str(r.get("gacha_type") or "")
             uigf_type = str(r.get("uigf_gacha_type") or gacha_type)
