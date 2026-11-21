@@ -1,7 +1,7 @@
 # Phase 5 — Events, Profile, Map: Design
 
 **Date:** 2026-11-21
-**Status:** Draft for review
+**Status:** Approved 2026-11-21
 **Parent:** [Overview design](2026-11-19-genshintracker-overview-design.md). Builds on [Phase 1](2026-11-19-phase1-foundation-design.md), [Phase 2](2026-11-19-phase2-planner-design.md), [Phase 3](2026-11-20-phase3-wishes-design.md) and [Phase 4](2026-11-21-phase4-teams-design.md); stays within the overview's architecture, data model and rules (§3, §4, §6, §7).
 
 ---
