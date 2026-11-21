@@ -134,17 +134,18 @@ def build_banners(parsed: dict, slugs: dict[str, int],
                   overrides: dict[str, str] = SLUG_OVERRIDES) -> tuple[list[BannerData], set[str]]:
     unmapped: set[str] = set()
 
-    def ids(values) -> list[int]:
-        out = []
+    def ids(values) -> tuple[list[int], bool]:
+        out, missing = [], False
         for slug in values or []:
             if not isinstance(slug, str):
                 raise BannerParseError("non-string slug in a featured list")
             item = slugs.get(overrides.get(slug, slug))
             if item is None:
                 unmapped.add(slug)
+                missing = True
             else:
                 out.append(item)
-        return out
+        return out, missing
 
     banners: dict[str, BannerData] = {}
     for key, pool in POOL_BY_KEY.items():
@@ -154,12 +155,16 @@ def build_banners(parsed: dict, slugs: dict[str, int],
                 start = str(b["start"])
                 order = seen_starts[start] if pool == "character" else 0
                 seen_starts[start] += 1
+                f5, f5_missing = ids(b.get("featured"))
+                f4, _ = ids(b.get("featuredRare"))
                 data = BannerData(
                     key=f"{pool}|{start}|{order}", pool=pool, name=str(b["name"]),
                     short_name=str(b.get("shortName") or b["name"]), start=start, end=str(b["end"]),
                     timezone_dependent=bool(b.get("timezoneDependent", False)),
                     timezone_dependent_end=bool(b.get("timezoneDependentEnd", False)), order=order,
-                    featured_5=ids(b.get("featured")), featured_4=ids(b.get("featuredRare")),
+                    # A partly mapped 5★ list would make a missing featured item look Lost, so it is
+                    # stored empty (outcomes become Unknown); the slugs still appear in `unmapped`.
+                    featured_5=[] if f5_missing else f5, featured_4=f4,
                     version=str(b["version"]) if b.get("version") is not None else None)
             except (KeyError, TypeError, AttributeError, ValueError) as e:
                 raise BannerParseError(f"malformed banner entry in {key!r} ({type(e).__name__})") from None

@@ -128,3 +128,14 @@ async def test_refresh_banners_non_string_slug_keeps_cache(session_factory):
     with session_factory() as s:
         assert s.query(GameBanner).count() == 7
         assert gamedata_status(s)["banners"]["last_error"].startswith("BannerParseError")
+
+
+def test_partly_mapped_featured_5_list_is_stored_empty():
+    parsed = {"weapons": [{"name": "Mix", "shortName": "Mix", "start": "2024-01-01 00:00:00",
+                           "end": "2024-01-02 00:00:00", "featured": ["mistsplitter_reforged", "no_such_weapon"],
+                           "featuredRare": ["favonius_sword", "no_such_rare"]}]}
+    slugs = {"mistsplitter_reforged": 11509, "favonius_sword": 11401}
+    banners, unmapped = build_banners(parsed, slugs)
+    assert banners[0].featured_5 == []                          # never half a featured list
+    assert banners[0].featured_4 == [11401]                     # 4★ lists are not used for outcomes
+    assert unmapped == {"no_such_weapon", "no_such_rare"}

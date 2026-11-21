@@ -138,3 +138,17 @@ def test_radiance_counts_losses_since_5_0(monkeypatch):
     won[0].pk = 90
     r = summ("character", before + after + pulls("character", [(5, FURINA)], start="2024-09-20 10:00:00") + won, cw)
     assert r.radiance["losses"] == 0
+
+
+def test_weapon_banner_with_incomplete_featured_list_is_unknown():
+    wb = [banner("weapon", "2024-01-10 06:00:00", "2024-01-30 17:59:00", 0, [], name="Mist")]
+    r = summ("weapon", pulls("weapon", [(5, DREAMS)], gacha_type="302"), wb)
+    assert [p.outcome for p in r.fives] == ["unknown"] and r.next_state == "unknown"
+
+
+def test_wanted_banner_order_missing_is_unattributed_not_guessed():
+    # Two overlapping character banners, both order 0: a 400 (second banner) pull has no banner to match.
+    cb = [banner("character", "2024-01-10 06:00:00", "2024-01-30 17:59:00", 0, [FURINA], name="Furina"),
+          banner("character", "2024-01-12 06:00:00", "2024-01-30 17:59:00", 0, [NAHIDA], name="Nahida")]
+    r = summ("character", pulls("character", [(5, NAHIDA)], gacha_type="400"), cb)
+    assert r.fives[0].outcome == "unknown" and r.fives[0].banner is None and r.next_state == "unknown"

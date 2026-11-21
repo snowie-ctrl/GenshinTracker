@@ -87,12 +87,11 @@ def attribute(w: Wish, windows: list[BannerWindow]) -> BannerWindow | None:
         return hits[0]
     if w.gacha_type in ("301", "400"):
         want = 1 if w.gacha_type == "400" else 0
-    else:
-        featured = next((b for b in hits if w.item_id is not None and w.item_id in b.featured_5), None)
-        if featured is not None:
-            return featured
-        want = 0
-    return next((b for b in hits if b.order == want), hits[0])
+        return next((b for b in hits if b.order == want), None)     # no such banner: unattributed
+    featured = next((b for b in hits if w.item_id is not None and w.item_id in b.featured_5), None)
+    if featured is not None:
+        return featured
+    return next((b for b in hits if b.order == 0), hits[0])
 
 
 def _outcome(w: Wish, banner: BannerWindow | None, prev_lost: bool | None) -> tuple[str, bool | None]:
