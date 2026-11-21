@@ -38,3 +38,35 @@ def make_game_install(root: Path, *, versions=("2.40.0.0",), urls: tuple[str, ..
             f"[Subsystems] Discovering subsystems at path {data_dir.as_posix()}/UnitySubsystems\n",
             encoding="utf-8")
     return game_dir, locallow
+
+
+def raw_wish(id_: str, gacha_type: str, time: str, name: str, rarity: int,
+             item_type: str = "Weapon", uid: int = FAKE_UID) -> dict:
+    """One record as the gacha log API returns it."""
+    return {"uid": str(uid), "gacha_type": gacha_type, "item_id": "", "count": "1", "time": time,
+            "name": name, "lang": "en-us", "item_type": item_type, "rank_type": str(rarity), "id": id_}
+
+
+class FakeGachaApi:
+    """Pages of 20, newest first, per queried gacha type. Querying 301 or 400 returns both
+    (as the real API does); other types return only their own records."""
+
+    def __init__(self, records: list[dict], expire_after: int | None = None, rate_limit_times: int = 0):
+        self.records = sorted(records, key=lambda r: int(r["id"]), reverse=True)
+        self.calls: list[tuple[str, str]] = []
+        self.expire_after = expire_after
+        self.rate_limit_times = rate_limit_times
+
+    async def page(self, gacha_type: str, end_id: str) -> list[dict]:
+        from app.wishes.fetch import RateLimited, WishLinkExpired
+        self.calls.append((gacha_type, end_id))
+        if self.rate_limit_times > 0:
+            self.rate_limit_times -= 1
+            raise RateLimited()
+        if self.expire_after is not None and len(self.calls) > self.expire_after:
+            raise WishLinkExpired()
+        group = {"301", "400"} if gacha_type in ("301", "400") else {gacha_type}
+        rows = [r for r in self.records if r["gacha_type"] in group]
+        if end_id != "0":
+            rows = [r for r in rows if int(r["id"]) < int(end_id)]
+        return rows[:20]
