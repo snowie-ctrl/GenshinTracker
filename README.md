@@ -22,6 +22,9 @@ python run.py
 
 Open http://127.0.0.1:8765. The first `python run.py` builds the frontend (needs `npm`).
 
+After a `git pull`, just run `python run.py` again: it installs any new Python packages and rebuilds the
+frontend when its files changed. `--no-install` and `--no-build` skip those steps.
+
 ## Connect HoYoLAB
 
 1. Log in at hoyolab.com in your browser.
