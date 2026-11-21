@@ -137,7 +137,17 @@
 						{/each}
 					</span>
 					{#if t.more > 0}<a href="/teams#team-{t.id}">+{t.more} more</a>{/if}
-					{#if t.has_shortfall && t.top.length === 0 && gapsSettled(data.gaps)}<span class="ok">Everything in the bag ✓</span>{/if}
+					{#if t.has_shortfall && t.top.length === 0}
+							{#if t.all_calculated && t.short_count === 0 && data.connection.status === 'connected' && !data.gaps.stale && gapsSettled(data.gaps)}
+								<span class="ok">Everything in the bag ✓</span>
+							{:else if data.gaps.stale || data.gaps.pending}
+								<span class="muted">Updating…</span>
+							{:else if t.short_count > 0 && t.all_calculated}
+								<span class="muted">Everything left is craftable from your bag</span>
+							{:else}
+								<span class="muted">{notCalculatedLabel(data.gaps, now)}</span>
+							{/if}
+						{/if}
 				</div>
 			{/each}
 		{/if}

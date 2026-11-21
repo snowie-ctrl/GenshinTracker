@@ -138,3 +138,14 @@ def test_character_detail_and_dashboard(paths):
     assert [m["id"] for m in card["members"]] == [BEN]
     assert [(m["id"], m["to_farm"]) for m in card["top"]] == [(104302, 4), (113003, 2)]   # most missing first
     assert card["has_shortfall"] is True and card["more"] == 0
+
+
+def test_dashboard_card_calculation_flags(paths):
+    sf = setup(paths)
+    with make_client(paths) as client:
+        client.post("/api/teams", json=body(members=(BEN,), tags=(1,), name="Pyro"))
+        card = client.get("/api/dashboard").json()["build_teams"][0]
+        assert card["all_calculated"] is False and card["short_count"] == 0 and card["top"] == []
+        mark_calculated(sf)
+        card = client.get("/api/dashboard").json()["build_teams"][0]
+    assert card["all_calculated"] is True and card["short_count"] == 2

@@ -23,6 +23,7 @@
 	let snapshot = $state('');
 	let loading = $state(true);
 	let missing = $state(false);
+	let loadFailed = $state(false);
 	let saving = $state(false);
 	let error = $state<string | null>(null);
 	let fieldError = $state<string | null>(null);
@@ -35,7 +36,10 @@
 	const formState = () => JSON.stringify({ name, notes, members, tagIds, newTags });
 	const dirty = $derived(!loading && formState() !== snapshot);
 
-	onMount(async () => {
+	async function load() {
+		loading = true;
+		loadFailed = false;
+		error = null;
 		try {
 			const [c, t] = await Promise.all([api.characters(), api.tags()]);
 			chars = c;
@@ -50,12 +54,17 @@
 			}
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 404) missing = true;
-			else error = errorMessage(e);
+			else {
+				loadFailed = true;
+				error = errorMessage(e);
+			}
 		} finally {
 			loading = false;
 			snapshot = formState();
 		}
-	});
+	}
+
+	onMount(load);
 
 	beforeNavigate(({ cancel }) => {
 		if (dirty && !saving && !confirm('Leave without saving this team?')) cancel();
@@ -102,7 +111,8 @@
 			snapshot = formState();
 			await goto(`/teams?saved=${encodeURIComponent(msg)}#team-${res.team.id}`);
 		} catch (e) {
-			if (e instanceof ApiError && e.status === 422) fieldError = e.message;
+			if (e instanceof ApiError && e.status === 404) missing = true;
+			else if (e instanceof ApiError && e.status === 422) fieldError = e.message;
 			else error = errorMessage(e);
 		} finally {
 			saving = false;
@@ -117,7 +127,8 @@
 			snapshot = formState();
 			await goto('/teams');
 		} catch (e) {
-			error = errorMessage(e);
+			if (e instanceof ApiError && e.status === 404) missing = true;
+			else error = errorMessage(e);
 		} finally {
 			saving = false;
 		}
@@ -128,6 +139,9 @@
 	<p class="muted">Loading…</p>
 {:else if missing}
 	<p>This team no longer exists. <a href="/teams">Back to Teams</a></p>
+{:else if loadFailed}
+	<div class="toast error">Could not load the team editor: {error} <button type="button" onclick={load}>Retry</button></div>
+	<p><a href="/teams">Back to Teams</a></p>
 {:else}
 	<h1>{teamId === null ? 'New team' : 'Edit team'}</h1>
 	{#if error}<div class="toast error">{error} <button type="button" onclick={() => (error = null)}>Dismiss</button></div>{/if}

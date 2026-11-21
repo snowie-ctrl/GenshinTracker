@@ -47,7 +47,10 @@ def build_team_cards(views: list[dict]) -> list[dict]:
             continue
         farm = sorted((m for m in (v["shortfall"] or []) if m["to_farm"] > 0),
                       key=lambda m: (-m["to_farm"], m["name"]))
+        build = [m for m in v["members"] if m["goal"] == "build"]
         cards.append({"id": v["id"], "name": v["name"],
+                      "all_calculated": all(not m["not_calculated"] for m in build),
+                      "short_count": sum(1 for m in (v["shortfall"] or []) if m["short"] > 0),
                       "members": [{k: m[k] for k in ("id", "name", "slug", "icon")} for m in v["members"]],
                       "progress": v["progress"], "top": farm[:TOP_MATERIALS],
                       "more": max(0, len(farm) - TOP_MATERIALS), "has_shortfall": v["shortfall"] is not None})

@@ -168,6 +168,6 @@ export interface TeamBody { name: string; notes: string; members: MemberDraft[];
 export interface SaveTeamResponse { team: Team; raised: number[] }
 export interface BuildTeamCard {
 	id: number; name: string; members: CharRef[]; progress: number | null; top: TeamMaterial[]; more: number;
-	has_shortfall: boolean;
+	has_shortfall: boolean; all_calculated: boolean; short_count: number;
 }
 export interface TeamRef { id: number; name: string; tags: Tag[] }

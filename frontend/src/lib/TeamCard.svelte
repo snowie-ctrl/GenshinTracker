@@ -52,7 +52,7 @@
 				{#if m.artifact_line}<div class="line muted">{m.artifact_line}</div>{/if}
 				{#if m.role}<div class="role">{m.role}</div>{/if}
 				{#if m.not_building}
-					<div class="warn">Not building <button type="button" onclick={() => onBuildAgain(m)}>Build again</button></div>
+					<div class="warn">Not building {#if m.slug !== null}<button type="button" onclick={() => onBuildAgain(m)}>Build again</button>{/if}</div>
 				{/if}
 				{#if m.not_calculated}<div class="muted small">Not calculated</div>{/if}
 			</div>

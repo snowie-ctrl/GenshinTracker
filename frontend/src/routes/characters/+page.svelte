@@ -25,7 +25,7 @@
 
 	async function load() {
 		try {
-			[chars, tags] = await Promise.all([api.characters(), api.tags()]);
+			[chars, tags] = await Promise.all([api.characters(), api.tags().catch(() => [] as Tag[])]);
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
