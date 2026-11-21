@@ -180,8 +180,10 @@ async def refresh_banners(session_factory: sessionmaker, http: httpx.AsyncClient
     with session_factory() as s:
         if not force and not banners_need_refresh(s, now):
             return False
+    with session_factory() as s:
+        slugs = slug_index(s)
     try:
-        parsed = parse_banners(await fetch_banners_js(http))
+        banners, unmapped = build_banners(parse_banners(await fetch_banners_js(http)), slugs)
     except (*FETCH_ERRORS, BannerParseError) as e:
         message = f"{type(e).__name__}: {e}"[:300]
         log.warning("Banner data refresh failed: %s", message)
@@ -189,7 +191,6 @@ async def refresh_banners(session_factory: sessionmaker, http: httpx.AsyncClient
             _set_meta(s, META_BANNERS_ERROR, message)
         return False
     with session_factory.begin() as s:
-        banners, unmapped = build_banners(parsed, slug_index(s))
         s.execute(delete(GameBanner))
         for b in banners:
             s.add(GameBanner(key=b.key, pool=b.pool, name=b.name, short_name=b.short_name, start=b.start,

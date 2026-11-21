@@ -148,16 +148,19 @@ def build_banners(parsed: dict, slugs: dict[str, int],
     for key, pool in POOL_BY_KEY.items():
         seen_starts: dict[str, int] = defaultdict(int)
         for b in parsed.get(key, []):
-            start = str(b["start"])
-            order = seen_starts[start] if pool == "character" else 0
-            seen_starts[start] += 1
-            data = BannerData(
-                key=f"{pool}|{start}|{order}", pool=pool, name=str(b["name"]),
-                short_name=str(b.get("shortName") or b["name"]), start=start, end=str(b["end"]),
-                timezone_dependent=bool(b.get("timezoneDependent", False)),
-                timezone_dependent_end=bool(b.get("timezoneDependentEnd", False)), order=order,
-                featured_5=ids(b.get("featured")), featured_4=ids(b.get("featuredRare")),
-                version=str(b["version"]) if b.get("version") is not None else None)
+            try:
+                start = str(b["start"])
+                order = seen_starts[start] if pool == "character" else 0
+                seen_starts[start] += 1
+                data = BannerData(
+                    key=f"{pool}|{start}|{order}", pool=pool, name=str(b["name"]),
+                    short_name=str(b.get("shortName") or b["name"]), start=start, end=str(b["end"]),
+                    timezone_dependent=bool(b.get("timezoneDependent", False)),
+                    timezone_dependent_end=bool(b.get("timezoneDependentEnd", False)), order=order,
+                    featured_5=ids(b.get("featured")), featured_4=ids(b.get("featuredRare")),
+                    version=str(b["version"]) if b.get("version") is not None else None)
+            except (KeyError, TypeError, AttributeError, ValueError) as e:
+                raise BannerParseError(f"malformed banner entry in {key!r} ({type(e).__name__})") from None
             banners[data.key] = data
     return list(banners.values()), unmapped
 

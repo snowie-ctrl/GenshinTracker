@@ -99,3 +99,17 @@ async def test_refresh_banners_failure_keeps_cache(session_factory):
     with session_factory() as s:
         assert s.query(GameBanner).count() == 7
         assert gamedata_status(s)["banners"]["last_error"].startswith("BannerParseError")
+
+
+async def test_refresh_banners_malformed_entry_keeps_cache(session_factory):
+    seed_game(session_factory)
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_banners(session_factory, http, force=True)
+
+    def malformed(request):
+        return httpx.Response(200, text="export const banners = { characters: [ { name: 'X' } ] };")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(malformed)) as http:
+        assert await refresh_banners(session_factory, http, force=True) is False
+    with session_factory() as s:
+        assert s.query(GameBanner).count() == 7
+        assert gamedata_status(s)["banners"]["last_error"].startswith("BannerParseError")
