@@ -5,7 +5,8 @@ from pathlib import Path
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
+from app.db.models import (CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
+                           Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
 from app.sync.persist import save_details, save_gaps, save_notes, save_roster
@@ -146,6 +147,21 @@ def seed(root: Path) -> None:
         s.merge(GameMeta(key="banners_fetched_at", value=iso(now)))
         s.flush()
         merge(s, demo_wishes(start), "game", now)
+    with sf.begin() as s:
+        ids = {c[2]: c[0] for c in CHARACTERS}             # slug -> id
+        s.add(Tag(id=2, name="abyss", name_key="abyss", color="red", builtin=False))
+        teams = [
+            (1, "Abyss Furina", "Demo: Build + abyss.", [("furina", "on-field"), ("bennett", "battery"),
+                                                         ("xingqiu", "off-field hydro")], [1, 2]),
+            (2, "Archons only", "", [("furina", ""), ("nahida", ""), ("raiden-shogun", "")], []),
+        ]
+        for order, (tid, name, notes, members, tags) in enumerate(teams):
+            s.add(Team(id=tid, name=name, notes=notes, sort_order=order, created_at=now, updated_at=now))
+            s.flush()
+            for slot, (slug, role) in enumerate(members):
+                s.add(TeamMember(team_id=tid, slot=slot, character_id=ids[slug], role=role))
+            for tag_id in tags:
+                s.add(TeamTag(team_id=tid, tag_id=tag_id))
     engine.dispose()
 
 

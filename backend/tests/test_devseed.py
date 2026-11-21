@@ -58,3 +58,17 @@ def test_devseed_wishes(tmp_path):
     assert (r["weapon"].total, r["weapon"].pity5) == (12, 12)
     assert [c["name"] for c in r["weapon"].fate["choices"]] == ["Mistsplitter Reforged", "A Thousand Floating Dreams"]
     assert (r["standard"].total, r["standard"].pity5) == (60, 15)
+
+
+def test_devseed_teams(tmp_path):
+    seed(tmp_path)
+    with make_client(Paths(tmp_path)) as client:
+        teams = client.get("/api/teams").json()["teams"]
+        tags = client.get("/api/tags").json()
+    assert [t["name"] for t in teams] == ["Abyss Furina", "Archons only"]
+    abyss = teams[0]
+    assert [t["name"] for t in abyss["tags"]] == ["Build", "abyss"]
+    assert [m["slug"] for m in abyss["members"]] == ["furina", "bennett", "xingqiu"]
+    assert [m["not_building"] for m in abyss["members"]] == [False, False, True]
+    assert abyss["shortfall"] and teams[1]["tags"] == []
+    assert [(t["name"], t["team_count"]) for t in tags] == [("Build", 1), ("abyss", 1)]
