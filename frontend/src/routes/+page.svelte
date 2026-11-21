@@ -5,6 +5,7 @@
 	import { sync } from '$lib/sync.svelte';
 	import { formatDuration, timeAgo } from '$lib/time';
 	import type { Dashboard } from '$lib/types';
+	import { pityLine } from '$lib/wishes';
 	import MaterialPopover from '$lib/MaterialPopover.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
 	import {
@@ -97,6 +98,19 @@
 			<a href="/characters">Characters →</a>
 		</section>
 	</div>
+
+	<section class="panel" data-testid="pity-card">
+		<h2>Pity</h2>
+		{#if data.pity.length === 0}
+			<p class="muted"><a href="/wishes">Import your wish history</a></p>
+		{:else}
+			<ul class="pity-lines">
+				{#each data.pity as line (line.pool)}
+					<li><a href="/wishes">{pityLine(line)}</a></li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
 
 	{#if notes}
 		<section class="panel">
@@ -244,6 +258,7 @@
 	.bar span { display: block; height: 100%; background: var(--building); }
 	section.panel { margin-top: 12px; }
 	.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
+	.pity-lines { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
 	.big { font-size: 28px; font-weight: 700; }
 	.big .muted { font-size: 16px; font-weight: 400; }
 	.expeditions { display: flex; flex-wrap: wrap; gap: 12px; }

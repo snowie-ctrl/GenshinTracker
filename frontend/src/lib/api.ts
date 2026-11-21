@@ -1,7 +1,8 @@
 import type {
-	Character, CharacterDetail, ConnectResponse, Dashboard, Goal, Inventory, Settings, SyncStatus, Targets,
-	WeaponOption
+	CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
+	ImportStatus, Inventory, Pool, PoolSummary, Settings, SyncStatus, Targets, WeaponOption, WishSummary
 } from './types';
+import { historyQuery } from './wishes';
 
 export class ApiError extends Error {
 	constructor(public status: number, message: string) {
@@ -9,12 +10,7 @@ export class ApiError extends Error {
 	}
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-	const res = await fetch(`/api${path}`, {
-		method,
-		headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-		body: body === undefined ? undefined : JSON.stringify(body)
-	});
+async function parse<T>(res: Response): Promise<T> {
 	if (!res.ok) {
 		let message = res.statusText;
 		try {
@@ -28,6 +24,20 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 	return (await res.json()) as T;
 }
 
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+	return parse<T>(await fetch(`/api${path}`, {
+		method,
+		headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+		body: body === undefined ? undefined : JSON.stringify(body)
+	}));
+}
+
+async function upload<T>(path: string, file: File): Promise<T> {
+	const form = new FormData();
+	form.append('file', file);
+	return parse<T>(await fetch(`/api${path}`, { method: 'POST', body: form }));
+}
+
 export const api = {
 	characters: () => request<Character[]>('GET', '/characters'),
 	character: (slug: string) => request<CharacterDetail>('GET', `/characters/${encodeURIComponent(slug)}`),
@@ -39,14 +49,21 @@ export const api = {
 		request<{ name: string; done: boolean }>('PUT', `/weekly-bosses/${encodeURIComponent(name)}`, { done }),
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
 	settings: () => request<Settings>('GET', '/settings'),
-	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets }) =>
+	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string }) =>
 		request<Settings>('PUT', '/settings', body),
 	connect: (body: Record<string, string | number>) =>
 		request<ConnectResponse>('POST', '/settings/hoyolab', body),
 	refreshGamedata: () => request<{ refreshed: boolean }>('POST', '/gamedata/refresh'),
 	startSync: (trigger: 'auto' | 'manual') =>
 		request<{ run_id: number | null; started: boolean; reason: string }>('POST', `/sync?trigger=${trigger}`),
-	syncStatus: () => request<SyncStatus>('GET', '/sync/status')
+	syncStatus: () => request<SyncStatus>('GET', '/sync/status'),
+	wishSummary: () => request<WishSummary>('GET', '/wishes/summary'),
+	wishHistory: (f: HistoryFilters, page: number) => request<HistoryPage>('GET', `/wishes?${historyQuery(f, page)}`),
+	importStatus: () => request<ImportStatus>('GET', '/wishes/import/status'),
+	importGame: () => request<{ import_id: number }>('POST', '/wishes/import/game'),
+	uploadWishes: (file: File) => upload<ImportStatus>('/wishes/import/file', file),
+	setChart: (pool: Pool, item_id: number | null) => request<PoolSummary>('PUT', `/wishes/chart/${pool}`, { item_id }),
+	cacheStatus: () => request<CacheStatus>('GET', '/wishes/cache-status')
 };
 
 export function errorMessage(e: unknown): string {

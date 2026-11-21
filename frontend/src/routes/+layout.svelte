@@ -15,7 +15,7 @@
 		{ label: 'Inventory', href: '/inventory' },
 		{ label: 'Events', phase: 5 },
 		{ label: 'Map', phase: 5 },
-		{ label: 'Wishes', phase: 3 },
+		{ label: 'Wishes', href: '/wishes' },
 		{ label: 'Profile', phase: 5 },
 		{ label: 'Settings', href: '/settings' }
 	];

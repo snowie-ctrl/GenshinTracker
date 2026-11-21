@@ -62,15 +62,18 @@ export interface Dashboard {
 	weekly_bosses: { discounts_left: number | null; discounts_max: number | null; bosses: WeeklyBoss[] };
 	building_cards: BuildingCard[];
 	gaps: GapStatus;
+	pity: PityLine[];
 }
 export interface Settings {
 	connection: Connection;
 	sync_interval_minutes: number;
 	default_targets: Targets;
 	level_caps: number[];
+	game_install_path: string;
 	gamedata: {
 		fetched_at: string | null; last_error: string | null; count: number;
 		materials: { fetched_at: string | null; last_error: string | null; count: number };
+		banners: { fetched_at: string | null; last_error: string | null; count: number; unmapped: string[] };
 	};
 }
 export interface Account { uid: number; server: string; nickname: string; level: number }
@@ -97,3 +100,44 @@ export interface WeeklyBoss { name: string; done: boolean; materials: Material[]
 export interface BuildingCard { character: CharRef; progress: number | null; materials: CharMaterial[]; skipped: boolean; calculated: boolean }
 export interface WeaponOption { id: number; name: string; icon: string; rarity: number; weapon_type: string }
 export interface PlannedWeapon { id: number; name: string; icon: string; rarity: number; equipped: boolean }
+
+export type Pool = 'character' | 'weapon' | 'chronicled' | 'standard' | 'beginner';
+export type Outcome = 'won' | 'lost' | 'guaranteed' | 'unknown' | 'charted' | 'not_charted';
+export interface WishPull {
+	name: string; item_id: number | null; icon: string | null; item_type: 'character' | 'weapon';
+	rarity: number; time: string; pity: number; outcome: Outcome | null; banner: string | null;
+}
+export interface Fate {
+	points: number | null; max: number; chart_item_id: number | null; chart_name: string | null;
+	choices: { item_id: number; name: string }[]; banner: string | null;
+}
+export interface Radiance { losses: number | null; likely: boolean | null; estimate: boolean }
+export interface WishStats {
+	pulls: number; primogems: number; five: number; four: number; avg_five_pity: number | null;
+	won: number; lost: number; win_rate: number | null;
+}
+export interface PoolSummary {
+	pool: Pool; total: number; pity5: number; pity4: number; hard: number; soft: number | null; in_soft: boolean;
+	next_state: string | null; fate: Fate | null; radiance: Radiance | null; stats: WishStats;
+	fives: WishPull[]; fours: WishPull[];
+}
+export interface WishImport {
+	id: number; source: 'game' | 'uigf' | 'paimon'; started_at: string; finished_at: string | null;
+	ok: boolean | null; added: number; upgraded: number; skipped: number; error: string | null;
+}
+export interface ImportStatus { running: boolean; last: WishImport | null }
+export interface MonthRow { month: string; character: number; weapon: number; chronicled: number; standard: number; beginner: number }
+export interface BannerRow { key: string; pool: Pool; name: string; short_name: string; start: string; pulls: number; fives: string[] }
+export interface WishSummary {
+	pools: PoolSummary[]; overall: WishStats;
+	charts: { monthly: MonthRow[]; pity_histogram: { bucket: string; count: number }[]; banners: BannerRow[] };
+	banners_available: boolean; import: ImportStatus;
+}
+export interface HistoryRow {
+	time: string; name: string; item_id: number | null; icon: string | null; item_type: 'character' | 'weapon';
+	rarity: number; pool: Pool; banner: string | null; banner_key: string | null; pity: number | null;
+}
+export interface HistoryPage { total: number; page: number; page_size: number; rows: HistoryRow[] }
+export interface HistoryFilters { pool: Pool | ''; rarity: number | ''; type: 'character' | 'weapon' | ''; banner: string; q: string }
+export interface CacheStatus { status: 'found' | 'no_link' | 'not_found' | 'locked'; cached_at: string | null }
+export interface PityLine { pool: Pool; pity5: number; hard: number; next_state: string | null; fate_points: number | null }

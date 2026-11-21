@@ -3,7 +3,8 @@
 	import { sync } from '$lib/sync.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import { timeAgo } from '$lib/time';
-	import type { Account, Settings, SyncRun, Targets } from '$lib/types';
+	import type { Account, CacheStatus, Settings, SyncRun, Targets } from '$lib/types';
+	import { cacheStatusLabel } from '$lib/wishes';
 
 	const FIELDS = [
 		{ key: 'ltuid_v2', required: true },
@@ -26,6 +27,27 @@
 	let savedNote = $state<string | null>(null);
 	let refreshing = $state(false);
 	const now = Date.now();
+	let gamePath = $state('');
+	let gamePathNote = $state<string | null>(null);
+	let cache = $state<CacheStatus | null>(null);
+
+	async function loadCache() {
+		try {
+			cache = await api.cacheStatus();
+		} catch {
+			cache = null;
+		}
+	}
+
+	async function saveGamePath() {
+		try {
+			settings = await api.saveSettings({ game_install_path: gamePath });
+			gamePathNote = 'Saved.';
+			await loadCache();
+		} catch (e) {
+			gamePathNote = errorMessage(e);
+		}
+	}
 
 	$effect(() => {
 		void sync.version;
@@ -38,11 +60,13 @@
 			settings = s;
 			runs = st.runs;
 			interval = s.sync_interval_minutes;
+			gamePath = s.game_install_path;
 			showForm = showForm || s.connection.status !== 'connected';
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
 		}
+		void loadCache();
 	}
 
 	async function submit(uid?: number) {
@@ -177,6 +201,17 @@
 	</section>
 
 	<section class="panel">
+		<h2>Wishes</h2>
+		<label>
+			Game install path (leave blank to detect it automatically)
+			<input type="text" bind:value={gamePath} placeholder="D:\Games\Genshin Impact" />
+		</label>
+		<button type="button" onclick={saveGamePath}>Save</button>
+		{#if gamePathNote}<span class="muted">{gamePathNote}</span>{/if}
+		<p class="muted" data-testid="wish-cache">{cache ? cacheStatusLabel(cache, now) : 'Checking the game cache…'}</p>
+	</section>
+
+	<section class="panel">
 		<h2>Game data</h2>
 		<p>
 			{settings.gamedata.count} characters ·
@@ -188,6 +223,14 @@
 			{settings.gamedata.materials.fetched_at ? `updated ${timeAgo(settings.gamedata.materials.fetched_at, now)}` : 'never downloaded'}
 		</p>
 		{#if settings.gamedata.materials.last_error}<p class="error">Materials: {settings.gamedata.materials.last_error}</p>{/if}
+		<p>
+			{settings.gamedata.banners.count} banners ·
+			{settings.gamedata.banners.fetched_at ? `updated ${timeAgo(settings.gamedata.banners.fetched_at, now)}` : 'never downloaded'}
+		</p>
+		{#if settings.gamedata.banners.last_error}<p class="error">Banners: {settings.gamedata.banners.last_error}</p>{/if}
+		{#if settings.gamedata.banners.unmapped.length}
+			<p class="muted">Banner items not matched to game data: {settings.gamedata.banners.unmapped.join(', ')}</p>
+		{/if}
 		<button type="button" onclick={refreshGamedata} disabled={refreshing}>
 			{refreshing ? 'Refreshing…' : 'Refresh game data'}
 		</button>
