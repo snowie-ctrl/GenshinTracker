@@ -27,7 +27,7 @@ def _tz(value) -> int | None:
         return None
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise ImportFailed(NOT_UIGF)
 
 
@@ -85,7 +85,7 @@ def parse_uigf(data: dict, uid: int, offset: int) -> list[IncomingWish]:
                                     time=time, name=name, item_type=item_type_of(r["item_type"]), rarity=rarity))
         except KeyError as e:
             errors.append(f"row {i}: missing {e.args[0]}")
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError, OverflowError) as e:
             errors.append(f"row {i}: {e}")
     if errors:
         raise ImportFailed(bad_rows_message(errors))

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import pytest
@@ -94,6 +95,29 @@ def test_non_numeric_timezone_is_not_uigf():
     with pytest.raises(ImportFailed) as e:
         parse_uigf(data, UID, 1)
     assert e.value.message == NOT_UIGF
+
+
+def test_infinite_v4_timezone_is_not_uigf():
+    data = json.loads('{"info": {"export_app": "x"}, "hk4e": [{"uid": 800000001, "timezone": Infinity, "list": []}]}')
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(data, UID, 1)
+    assert e.value.message == NOT_UIGF
+
+
+def test_infinite_v3_timezone_is_not_uigf():
+    data = json.loads('{"info": {"uid": "800000001", "region_time_zone": Infinity}, "list": []}')
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(data, UID, 1)
+    assert e.value.message == NOT_UIGF
+
+
+def test_infinite_rank_type_is_a_bad_row():
+    data = json.loads('{"info": {"export_app": "x"}, "hk4e": [{"uid": 800000001, "timezone": 1, "list": '
+                      '[{"gacha_type": "200", "item_id": "", "count": "1", "time": "2024-01-01 09:00:00", '
+                      '"name": "X", "item_type": "Weapon", "rank_type": Infinity, "id": "1"}]}]}')
+    with pytest.raises(ImportFailed) as e:
+        parse_uigf(data, UID, 1)
+    assert "1 row(s)" in e.value.message and "row 1:" in e.value.message
 
 
 @pytest.mark.parametrize("bad_list", ["abc", {"time": "2024-01-01 09:00:00"}])
