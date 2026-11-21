@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { api, errorMessage } from '$lib/api';
 	import { shouldPoll } from '$lib/materials';
 	import { sync } from '$lib/sync.svelte';
@@ -15,6 +16,7 @@
 	let tags = $state<TagWithCount[]>([]);
 	let error = $state<string | null>(null);
 	let toast = $state<string | null>(null);
+	let saved = $state<string | null>(page.url.searchParams.get('saved'));
 	let filter = $state<TeamFilter>(loadTeamFilter());
 	let showTags = $state(false);
 	let dragId = $state<number | null>(null);
@@ -27,6 +29,7 @@
 	});
 
 	onMount(() => {
+		if (saved) history.replaceState(history.state, '', `/teams${location.hash}`);
 		const t = setInterval(() => {
 			now = Date.now();
 			if (shouldPoll(data?.gaps)) load();
@@ -98,6 +101,7 @@
 
 {#if showTags}<TagManager onChange={load} />{/if}
 {#if toast}<div class="toast error">{toast} <button type="button" onclick={() => (toast = null)}>Dismiss</button></div>{/if}
+{#if saved}<div class="toast ok" role="status">{saved} <button type="button" onclick={() => (saved = null)}>Dismiss</button></div>{/if}
 {#if error}<p class="error">{error}</p>{/if}
 
 {#if data}
@@ -126,6 +130,7 @@
 	.head { display: flex; align-items: center; gap: 12px; }
 	.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; align-items: center; }
 	.toast { margin-bottom: 10px; }
+	.ok { color: var(--accent); }
 	a.button.primary {
 		background: var(--accent); color: #111; border: 1px solid var(--accent); border-radius: 6px;
 		padding: 4px 10px; font-weight: 600; text-decoration: none;
