@@ -22,7 +22,9 @@ def test_settings_defaults(paths):
     assert body["default_targets"] == {"level": 90, "normal": 8, "skill": 8, "burst": 8, "weapon_level": 90}
     assert body["level_caps"] == [20, 40, 50, 60, 70, 80, 90]
     assert body["gamedata"] == {"fetched_at": None, "last_error": None, "count": 0,
-                               "materials": {"fetched_at": None, "last_error": None, "count": 0}}
+                               "materials": {"fetched_at": None, "last_error": None, "count": 0},
+                               "banners": {"fetched_at": None, "last_error": None, "count": 0,
+                                           "unmapped": []}}
 
 
 def test_put_settings_validates_and_saves(paths):

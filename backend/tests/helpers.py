@@ -28,11 +28,14 @@ def yatta_transport(status: int = 200, fail_details: frozenset[int] = frozenset(
     details = load_fixture("yatta_material_details.json")
     dungeon = load_fixture("yatta_daily_dungeon.json")
     weapon = load_fixture("yatta_weapon.json")
+    banners_js = (FIXTURES / "paimon_banners.js").read_text(encoding="utf-8")
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if status != 200:
             return httpx.Response(status, json={})
+        if path.endswith("banners.js"):
+            return httpx.Response(200, text=banners_js)
         if path.endswith("/avatar"):
             return httpx.Response(200, json=avatar)
         if path.endswith("/material"):

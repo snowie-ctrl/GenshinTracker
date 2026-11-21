@@ -42,7 +42,8 @@ async def test_refresh_stores_rows_and_meta(session_factory):
         assert s.get(GameCharacter, 10000032).element == "Pyro"
         status = gamedata_status(s)
         assert status == {"fetched_at": "2026-11-19T12:00:00Z", "last_error": None, "count": 6,
-                      "materials": {"fetched_at": None, "last_error": None, "count": 0}}
+                      "materials": {"fetched_at": None, "last_error": None, "count": 0},
+                      "banners": {"fetched_at": None, "last_error": None, "count": 0, "unmapped": []}}
 
 
 async def test_refresh_skipped_when_fresh_and_forced_when_asked(session_factory):
