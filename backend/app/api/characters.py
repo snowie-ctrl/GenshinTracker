@@ -13,6 +13,7 @@ from app.gamedata.yatta import splash_for
 from app.planner.characters import character_shortfall
 from app.schemas import TargetsIn
 from app.settings.store import default_targets
+from app.teams.store import memberships
 from app.timeutil import utcnow
 
 router = APIRouter()
@@ -95,7 +96,13 @@ def _all(s: Session) -> list[tuple[GameCharacter | None, OwnedCharacter | None, 
 @router.get("/characters")
 def list_characters(ctx: AppContext = Depends(get_ctx)) -> list[dict]:
     with ctx.session_factory() as s:
-        return [character_payload(g, o, r) for g, o, r in _all(s)]
+        teams = memberships(s)
+        rows = []
+        for g, o, r in _all(s):
+            p = character_payload(g, o, r)
+            p["team_tags"] = [[t["id"] for t in m["tags"]] for m in teams.get(p["id"], [])]
+            rows.append(p)
+        return rows
 
 
 @router.get("/characters/{slug}")
@@ -115,6 +122,7 @@ def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
             ]
             payload["stats"] = o.stats if o is not None else []
             payload["planned_weapon"] = planned_weapon(s, r, o)
+            payload["teams"] = memberships(s).get(payload["id"], [])
             if payload["goal"] == "build":
                 data, index = planner_view(s)
                 payload["shortfall"] = {"gaps": gaps_for(ctx, s),

@@ -1,4 +1,4 @@
-from app.api import characters, dashboard, img, planner, settings, sync, wishes
+from app.api import characters, dashboard, img, planner, settings, sync, teams, wishes
 
 ROUTERS = [settings.router, sync.router, characters.router, dashboard.router, planner.router, wishes.router,
-           img.router]
+           teams.router, img.router]

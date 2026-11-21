@@ -131,13 +131,18 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
                                          "weapon_level": 90}}).text,
             client.put("/api/weekly-bosses/Stormterror", json={"done": True}).text,
         ]
+        bodies += [
+            client.post("/api/teams", json={"name": "Leak check", "notes": "", "tag_ids": [1], "new_tags": ["abyss"],
+                                            "members": [{"character_id": 10000032, "role": ""}]}).text,
+            client.get("/api/tags").text,
+        ]
         deadline = time.monotonic() + 5
         while sync.gaps_pending or sync.running:          # let the scheduled gaps-only run finish too
             assert time.monotonic() < deadline, "gaps run never finished"
             time.sleep(0.02)
         bodies += [client.get(p).text for p in
                    ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
-                    "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett")]
+                    "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett", "/api/teams")]
     assert sum(1 for c in source.calls if isinstance(c, tuple) and c[0] == "gaps") == 2
     for text in [*bodies, caplog.text]:
         assert not any(secret in text for secret in SECRETS)

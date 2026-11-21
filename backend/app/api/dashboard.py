@@ -3,12 +3,14 @@ from sqlalchemy import select
 
 from app.api.characters import goal_targets
 from app.api.planner import gaps_for, planner_view, region
+from app.api.teams import team_views
 from app.api.wishes import pity_lines
 from app.context import AppContext, get_ctx
 from app.db.models import CharacterGoal, LiveNotes, OwnedCharacter, WeeklyBossDone
 from app.domain import Current, progress
 from app.planner.characters import building_cards
 from app.planner.today import farm_today, weekly_bosses
+from app.teams.view import build_team_cards
 from app.servertime import offset_hours, server_weekday, week_start
 from app.settings.envfile import connection_status, read_env
 from app.settings.store import get_setting
@@ -56,6 +58,7 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
                 "bosses": weekly_bosses(data, done, index),
             },
             "building_cards": building_cards(data, progress_by_id, index),
+            "build_teams": build_team_cards(team_views(s)),
             "gaps": gaps_for(ctx, s),
             "pity": pity_lines(summarize(s, now, offset_hours(reg))),
         }
