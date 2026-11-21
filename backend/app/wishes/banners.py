@@ -137,6 +137,8 @@ def build_banners(parsed: dict, slugs: dict[str, int],
     def ids(values) -> list[int]:
         out = []
         for slug in values or []:
+            if not isinstance(slug, str):
+                raise BannerParseError("non-string slug in a featured list")
             item = slugs.get(overrides.get(slug, slug))
             if item is None:
                 unmapped.add(slug)
