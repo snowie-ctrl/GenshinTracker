@@ -11,6 +11,7 @@ DEFAULTS: dict[str, object] = {
     "default_targets": DEFAULT_TARGETS,
     "hoyolab_status": None,  # None | "connected" | "expired"
     "game_install_path": "",   # blank = auto-detect from the game's log file
+    "default_map": "hoyolab",  # hoyolab | appsample
 }
 
 

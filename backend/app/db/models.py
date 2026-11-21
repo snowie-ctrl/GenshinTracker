@@ -169,6 +169,13 @@ class GapRun(Base):
     skipped: Mapped[list] = mapped_column(JSON)
 
 
+class HoyolabSnapshot(Base):
+    __tablename__ = "hoyolab_snapshot"
+    part: Mapped[str] = mapped_column(String, primary_key=True)          # calendar | profile
+    data: Mapped[dict] = mapped_column(JSON)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 # --- user data (sync never writes, except setting.hoyolab_status) ----------
 class CharacterGoal(Base):
     __tablename__ = "character_goal"
@@ -270,3 +277,21 @@ class Setting(Base):
     __tablename__ = "setting"
     key: Mapped[str] = mapped_column(String, primary_key=True)
     value: Mapped[object | None] = mapped_column(JSON, nullable=True)
+
+
+class ChallengeRun(Base):
+    __tablename__ = "challenge_run"
+    kind: Mapped[str] = mapped_column(String, primary_key=True)          # abyss | theater | stygian
+    season: Mapped[str] = mapped_column(String, primary_key=True)        # HoYoLAB period id
+    start: Mapped[str | None] = mapped_column(String, nullable=True)     # iso UTC "...Z"
+    end: Mapped[str | None] = mapped_column(String, nullable=True)
+    summary: Mapped[dict] = mapped_column(JSON)
+    teams: Mapped[list] = mapped_column(JSON)
+    seen_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class EventDone(Base):
+    __tablename__ = "event_done"
+    event_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    done_at: Mapped[datetime] = mapped_column(DateTime)

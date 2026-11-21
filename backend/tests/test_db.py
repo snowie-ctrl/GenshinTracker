@@ -116,3 +116,20 @@ def test_team_delete_cascades(session_factory):
     with session_factory() as s:
         assert s.scalar(select(func.count()).select_from(TeamMember)) == 0
         assert s.scalar(select(func.count()).select_from(TeamTag)) == 0
+
+
+def test_phase5_tables_exist(paths):
+    engine = make_engine(paths.db_file)
+    migrate(engine)
+    names = set(inspect(engine).get_table_names())
+    engine.dispose()
+    assert {"hoyolab_snapshot", "challenge_run", "event_done"} <= names
+
+
+def test_default_map_setting(session_factory):
+    from app.settings.store import get_setting, set_setting
+    with session_factory.begin() as s:
+        assert get_setting(s, "default_map") == "hoyolab"
+        set_setting(s, "default_map", "appsample")
+    with session_factory() as s:
+        assert get_setting(s, "default_map") == "appsample"
