@@ -1,7 +1,7 @@
 # Phase 3 — Wishes: Design
 
 **Date:** 2026-11-20
-**Status:** Approved 2026-11-20
+**Status:** Approved 2026-11-20; corrected during planning (see §16)
 **Parent:** [Overview design](2026-11-19-genshintracker-overview-design.md). Builds on [Phase 1 — Foundation](2026-11-19-phase1-foundation-design.md) and [Phase 2 — Planner](2026-11-19-phase2-planner-design.md); stays within the overview's architecture, data model, and rules (§4.3, §6, §7).
 
 ---
@@ -89,7 +89,7 @@ Index on `(pool, time, seq)`.
 
 ### Game data
 
-**`game_banner`**: `key` PK (stable: pool + start + order), `pool`, `name`, `short_name`, `start`, `end` (stored as given), `timezone_dependent` (bool), `order` (0/1 for the two parallel character banners; 0 otherwise), `featured_5` (JSON list of item ids), `featured_4` (JSON list), `version`.
+**`game_banner`**: `key` PK (stable: pool + start + order), `pool`, `name`, `short_name`, `start`, `end` (stored as given), `timezone_dependent` (bool, start), `timezone_dependent_end` (bool, end), `order` (0/1 for the two parallel character banners; 0 otherwise), `featured_5` (JSON list of item ids), `featured_4` (JSON list), `version`.
 
 The UID is never stored in `wish`. The account UID is `GENSHIN_UID` from `.env`.
 
@@ -109,7 +109,7 @@ All imports go through `WishImporter`: one at a time; a second request returns t
 
 1. Find `data_2`. Not found → "Couldn't find the game's web cache. Set the game install path in Settings." File locked → "Close Genshin Impact and try again."
 2. Take the last wish-history URL. None → "Open Wish History in-game once, then press Import again."
-3. If the URL carries a UID and it differs from `GENSHIN_UID` → "This wish link belongs to a different account." Nothing changes.
+3. The wish URL carries no UID, so after fetching (step 4) the records' `uid` field is compared with `GENSHIN_UID`; a mismatch → "This wish history belongs to a different account." Nothing changes.
 4. Back up, then fetch each gacha type incrementally (§2 `fetch.py`).
 5. Authkey rejected (gacha API retcode `-101` "authkey timeout" or `-100` "authkey error", or the genshin.py equivalent) → "Your wish link has expired. Open Wish History in-game once, then press Import again." Nothing changes.
 6. Merge, snapshot, record.
@@ -134,6 +134,7 @@ For each incoming row, in source order:
 1. **Incoming row with a real id**
    - id already stored → skip.
    - Otherwise, if an existing row with the same key is **id-less**, or has an id from a file (`source` `uigf`/`paimon`) while the incoming row comes from the **game** → **upgrade** that row: set `id`, `gacha_type`, `item_id`, `source`. (Game ids are authoritative; this also absorbs fake ids other trackers invented for imported paimon data.)
+   - Otherwise, if the incoming row comes from a **file** and an unclaimed stored row with the same key already holds an id → skip it (same pull; protects against trackers that invent ids).
    - Otherwise insert.
 2. **Incoming row without a real id** (paimon.moe, or a UIGF row whose id is one of our generated ids, see §9): insert only the surplus over existing rows with the same key.
 
@@ -147,11 +148,11 @@ Result counts: `added`, `upgraded`, `skipped`.
 
 ## 6. Banner data (`banners.py`)
 
-- **Source:** `https://raw.githubusercontent.com/MadeBaruna/paimon-moe/main/src/data/banners.js`, an `export const banners = {...}` object literal with keys `beginners`, `standard`, `characters`, `weapons`, `chronicled`. Each banner has `name`, `shortName`, `start`, `end`, optional `timezoneDependent`, `featured` (5★ slugs), `featuredRare` (4★ slugs), `version`.
+- **Source:** `https://raw.githubusercontent.com/MadeBaruna/paimon-moe/main/src/data/banners.js`, an `export const banners = {...}` object literal with keys `beginners`, `standard`, `characters`, `weapons`, `chronicled`. Each banner has `name`, `shortName`, `start`, `end`, optional `timezoneDependent` / `timezoneDependentEnd`, `featured` (5★ slugs), `featuredRare` (4★ slugs), `version`.
 - **Conversion:** a strict, small converter for this literal (quote bare keys, single-quoted strings to JSON strings, drop trailing commas and the `export const` wrapper) followed by `json.loads`. Anything it does not understand raises, and cached banners stay.
 - **Slug → id:** normalise Yatta names (lowercase, non-alphanumerics to `_`, collapse repeats) and match; a short override table handles exceptions. Unmapped slugs are recorded in `game_meta` and shown in Settings; the banner still loads.
 - **Parallel character banners:** banners in `characters` sharing the same start get `order` 0 and 1 in file order.
-- **Time windows:** `timezoneDependent` banners are in server-local time; others are UTC+8 and are converted to server-local using the `GENSHIN_REGION` offset (America UTC−5, Europe UTC+1, Asia/TW-HK-MO UTC+8).
+- **Time windows** (as paimon.moe's own `src/functions/wish.js` reads them): a start marked `timezoneDependent` (an end marked `timezoneDependentEnd`) is a UTC+8 instant and is converted to server-local time with the `GENSHIN_REGION` offset (America UTC−5, Europe UTC+1, Asia/TW-HK-MO UTC+8); unmarked times are already server-local clock times.
 - **Attribution:** a pull belongs to the banner of its pool whose window contains its time; for `character`, gacha type 301 → `order` 0, 400 → `order` 1. When `gacha_type` is null (paimon rows), the banner whose `featured_5` contains the pulled 5★ is chosen, otherwise `order` 0. No match → **unattributed**.
 
 ---
@@ -348,3 +349,12 @@ Against the user's real cache and paimon.moe export (results written to `docs/su
 3. Pity for every pool matches a manual count from the in-game history.
 4. Exporting UIGF and importing it again adds 0 pulls.
 5. All tests pass; the repository contains no UID, authkey, wish URL, nickname, or personal wish data.
+
+---
+
+## 16. Corrections made during planning (2026-11-20)
+
+1. **Banner time zones (§6) were reversed.** paimon.moe's own code treats `timezoneDependent` (start) and `timezoneDependentEnd` (end) times as UTC+8 instants to convert; unmarked times are server-local. `game_banner` gains `timezone_dependent_end`.
+2. **UID check for game imports (§4.1)** uses the fetched records' `uid` field, because the wish URL carries no UID.
+3. **Merge (§5)** skips an incoming file row whose key matches a stored row that already holds an id, instead of inserting a duplicate.
+4. All imports require `GENSHIN_UID` (HoYoLAB connected); without it they fail with "Connect HoYoLAB in Settings first, so imports can be checked against your UID."
