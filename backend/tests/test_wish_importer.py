@@ -123,6 +123,7 @@ async def test_paimon_file_twice(paths, session_factory):
     content = make_paimon_xlsx({"Weapon Event": [("Weapon", "Slingshot", "2024-01-10 10:00:00", 3),
                                                  ("Weapon", "Mystery Blade", "2024-01-10 10:00:00", 3)]})
     assert (await imp.import_file("paimon.xlsx", content))["last"]["added"] == 2
+    await imp.wait()
     assert imp.unknown == [{"Slingshot", "Mystery Blade"}]
     assert (await imp.import_file("paimon.xlsx", content))["last"]["added"] == 0
 
@@ -167,3 +168,35 @@ def test_interrupted_imports_are_closed_on_start(paths, session_factory):
 def test_cache_status_hides_link(paths, session_factory):
     assert make(paths, session_factory).cache_status()["status"] == "found"
     assert make(paths, session_factory, link_error=CACHE_LOCKED).cache_status()["status"] == "locked"
+
+
+async def test_refresh_after_import_does_not_hold_the_import_lock(paths, session_factory):
+    write_env(paths)
+    gate = asyncio.Event()
+    ran = []
+
+    async def slow_refresh(names):
+        await gate.wait()
+        ran.append(names)
+
+    imp = make(paths, session_factory)
+    imp._on_unknown = slow_refresh
+    content = make_paimon_xlsx({"Weapon Event": [("Weapon", "Mystery Blade", "2024-01-10 10:00:00", 3)]})
+    status = await asyncio.wait_for(imp.import_file("paimon.xlsx", content), 5)
+    assert status["last"]["ok"] is True and imp.running is False and ran == []
+    gate.set()
+    await imp.wait()
+    assert ran == [{"Mystery Blade"}]
+
+
+async def test_snapshot_failure_keeps_the_import_ok(paths, session_factory, monkeypatch):
+    write_env(paths)
+    imp = make(paths, session_factory)
+
+    def boom(uid, offset):
+        raise RuntimeError("disk exploded")
+    monkeypatch.setattr(imp, "_write_snapshot", boom)
+    status = await imp.import_file("u.json", uigf_bytes([]))
+    assert status["last"]["ok"] is True and status["last"]["error"] is None
+    with session_factory() as s:
+        assert s.scalars(select(WishImport)).first().snapshot_file is None

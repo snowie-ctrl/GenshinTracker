@@ -64,3 +64,14 @@ def test_cache_status(tmp_path):
     assert ak.cache_status("", tmp_path / "missing")["status"] == "not_found"
     _, empty_ll = make_game_install(tmp_path / "b", urls=())
     assert ak.cache_status("", empty_ll)["status"] == "no_link"
+
+
+def test_unreadable_cache_dir_is_not_found(tmp_path, monkeypatch):
+    game_dir, _ = make_game_install(tmp_path)
+
+    def denied(self):
+        raise PermissionError("denied")
+    monkeypatch.setattr(Path, "iterdir", denied)
+    with pytest.raises(ImportFailed) as e:
+        ak.find_data_2(str(game_dir), tmp_path / "nowhere")
+    assert e.value.message == ak.CACHE_NOT_FOUND

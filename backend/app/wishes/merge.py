@@ -22,10 +22,27 @@ class MergeResult:
     unknown_names: set[str] = field(default_factory=set)
 
 
+def backfill_item_ids(session: Session) -> int:
+    """Resolve stored rows whose item_id is still null (e.g. game data arrived after the import)."""
+    rows = list(session.scalars(select(Wish).where(Wish.item_id.is_(None))))
+    if not rows:
+        return 0
+    resolver = ItemResolver.from_session(session)
+    filled = 0
+    for row in rows:
+        item_id = resolver.resolve(row.name)
+        if item_id is not None:
+            row.item_id = item_id
+            filled += 1
+    session.flush()
+    return filled
+
+
 def merge(session: Session, incoming: list[IncomingWish], source: str, now: datetime) -> MergeResult:
     result = MergeResult()
     if not incoming:
         return result
+    backfill_item_ids(session)
     resolver = ItemResolver.from_session(session)
     pools = {w.pool for w in incoming}
     existing = list(session.scalars(select(Wish).where(Wish.pool.in_(pools)).order_by(Wish.time, Wish.seq)))
@@ -90,6 +107,8 @@ def merge(session: Session, incoming: list[IncomingWish], source: str, now: date
             cand.id, cand.source = w.id, source
             cand.gacha_type = w.gacha_type or cand.gacha_type
             cand.item_id = cand.item_id or resolver.resolve(w.name)
+            if cand.item_id is None:
+                result.unknown_names.add(w.name)
             by_id[w.id] = cand
             touched.add((w.pool, w.time))
             result.upgraded += 1

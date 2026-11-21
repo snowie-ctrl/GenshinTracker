@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import BANNERS_URL
 from app.db.models import GameCharacter, GameWeapon
+from app.wishes.types import normalize_time
 
 POOL_BY_KEY = {"beginners": "beginner", "standard": "standard", "characters": "character",
                "weapons": "weapon", "chronicled": "chronicled"}
@@ -139,7 +140,7 @@ def build_banners(parsed: dict, slugs: dict[str, int],
         for slug in values or []:
             if not isinstance(slug, str):
                 raise BannerParseError("non-string slug in a featured list")
-            item = slugs.get(overrides.get(slug, slug))
+            item = slugs.get(overrides.get(slug) or name_slug(slug))
             if item is None:
                 unmapped.add(slug)
                 missing = True
@@ -152,14 +153,15 @@ def build_banners(parsed: dict, slugs: dict[str, int],
         seen_starts: dict[str, int] = defaultdict(int)
         for b in parsed.get(key, []):
             try:
-                start = str(b["start"])
+                start = normalize_time(b["start"])
+                end = normalize_time(b["end"])
                 order = seen_starts[start] if pool == "character" else 0
                 seen_starts[start] += 1
                 f5, f5_missing = ids(b.get("featured"))
                 f4, _ = ids(b.get("featuredRare"))
                 data = BannerData(
                     key=f"{pool}|{start}|{order}", pool=pool, name=str(b["name"]),
-                    short_name=str(b.get("shortName") or b["name"]), start=start, end=str(b["end"]),
+                    short_name=str(b.get("shortName") or b["name"]), start=start, end=end,
                     timezone_dependent=bool(b.get("timezoneDependent", False)),
                     timezone_dependent_end=bool(b.get("timezoneDependentEnd", False)), order=order,
                     # A partly mapped 5★ list would make a missing featured item look Lost, so it is

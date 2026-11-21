@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import select
 
 from app.db.models import GameWeapon, Wish
-from app.wishes.merge import merge
+from app.wishes.merge import backfill_item_ids, merge
 from helpers import seed_game
 from wishdata import inc
 
@@ -138,3 +138,22 @@ def test_non_numeric_id_does_not_break_renumbering(session_factory):
     r = run(session_factory, rows, "uigf")
     assert r.added == 2
     assert {w.id for w in stored(session_factory)} == {"abc", "1704880800000000001"}
+
+
+def test_backfill_item_ids_after_game_data_arrives(session_factory):
+    seed_game(session_factory)
+    run(session_factory, [inc(None, "weapon", T, "Brand New Bow", 4, "302")], "paimon")
+    assert stored(session_factory)[0].item_id is None
+    with session_factory.begin() as s:
+        s.add(GameWeapon(id=15401, name="Brand New Bow", icon="x", rarity=4, weapon_type="Bow"))
+        assert backfill_item_ids(s) == 1
+    assert stored(session_factory)[0].item_id == 15401
+    with session_factory.begin() as s:
+        assert backfill_item_ids(s) == 0
+
+
+def test_upgrade_of_unresolved_row_reports_unknown_name(session_factory):
+    seed_game(session_factory)
+    run(session_factory, [inc(None, "weapon", T, "Brand New Bow", 4, "302")], "paimon")
+    r = run(session_factory, [inc("1704880800000000009", "weapon", T, "Brand New Bow", 4, "302")], "game")
+    assert r.upgraded == 1 and r.unknown_names == {"Brand New Bow"}

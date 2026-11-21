@@ -139,3 +139,31 @@ def test_partly_mapped_featured_5_list_is_stored_empty():
     assert banners[0].featured_5 == []                          # never half a featured list
     assert banners[0].featured_4 == [11401]                     # 4★ lists are not used for outcomes
     assert unmapped == {"no_such_weapon", "no_such_rare"}
+
+
+def test_hyphenated_paimon_slugs_map_to_names(session_factory):
+    with session_factory.begin() as s:
+        s.add(GameWeapon(id=11509, name="Freedom-Sworn", icon="x", rarity=5, weapon_type="Sword"))
+        s.add(GameWeapon(id=15509, name="Wolf's Gravestone", icon="x", rarity=5, weapon_type="Claymore"))
+    with session_factory() as s:
+        slugs = slug_index(s)
+    parsed = {"weapons": [{"name": "W", "shortName": "W", "start": "2024-01-01 00:00:00",
+                           "end": "2024-01-02 00:00:00", "featured": ["freedom-sworn", "wolfs_gravestone"],
+                           "featuredRare": []}]}
+    banners, unmapped = build_banners(parsed, slugs)
+    assert banners[0].featured_5 == [11509, 15509] and unmapped == set()
+
+
+async def test_refresh_banners_bad_time_keeps_cache(session_factory):
+    seed_game(session_factory)
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_banners(session_factory, http, force=True)
+
+    def soon(request):
+        return httpx.Response(200, text="export const banners = { characters: [ { name: 'X', "
+                                        "start: 'soon', end: '2024-01-02 00:00:00', featured: [] } ] };")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(soon)) as http:
+        assert await refresh_banners(session_factory, http, force=True) is False
+    with session_factory() as s:
+        assert s.query(GameBanner).count() == 7
+        assert gamedata_status(s)["banners"]["last_error"].startswith("BannerParseError")

@@ -149,10 +149,13 @@ def test_no_wish_endpoint_leaks_the_authkey(paths, caplog, tmp_path):
     with make_client(paths, wish_link_reader=lambda gp: ak.load_wish_link(gp, locallow),
                      wish_page_factory=factory) as client:
         client.put("/api/settings", json={"game_install_path": str(game_dir)})
-        bodies = []
+        bodies, outcomes = [], []
         for _ in range(2):
             bodies.append(client.post("/api/wishes/import/game").text)
-            bodies.append(json.dumps(wait_import(client)))
+            done = wait_import(client)
+            outcomes.append(done["last"]["ok"])
+            bodies.append(json.dumps(done))
+        assert attempts["n"] == 2 and outcomes == [False, True]
         bodies += [client.get(p).text for p in ("/api/wishes/summary", "/api/wishes", "/api/wishes/export",
                                                  "/api/wishes/cache-status", "/api/settings", "/api/dashboard")]
     files = [f.read_bytes().decode("utf-8", "replace") for f in paths.wish_backups.glob("uigf-*.json")]

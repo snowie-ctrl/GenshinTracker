@@ -54,6 +54,7 @@ class WishImporter:
         self._source: str | None = None
         self._current_id: int | None = None
         self._task: asyncio.Task | None = None
+        self._refresh_task: asyncio.Task | None = None
         with session_factory.begin() as s:
             s.execute(update(WishImport).where(WishImport.ok.is_(None))
                       .values(ok=False, error=INTERRUPTED, finished_at=clock()))
@@ -89,6 +90,14 @@ class WishImporter:
     async def wait(self) -> None:
         if self._task is not None:
             await asyncio.gather(self._task, return_exceptions=True)
+        if self._refresh_task is not None:
+            await asyncio.gather(self._refresh_task, return_exceptions=True)
+
+    async def _refresh_unknown(self, names: set[str]) -> None:
+        try:
+            await self._on_unknown(names)
+        except Exception as e:  # noqa: BLE001
+            log.warning("Game-data refresh after a wish import failed: %s", type(e).__name__)
 
     def status(self) -> dict:
         with self._sf() as s:
@@ -186,14 +195,12 @@ class WishImporter:
             snapshot = None
             try:
                 snapshot = await asyncio.to_thread(self._write_snapshot, uid, offset)
-            except OSError as e:
+            except Exception as e:  # noqa: BLE001 - the merge is already committed
                 log.warning("Wish snapshot failed: %s", type(e).__name__)
             self._finish(import_id, ok=True, result=result, backup=backup_name, snapshot=snapshot)
             if result.unknown_names:
-                try:
-                    await self._on_unknown(result.unknown_names)
-                except Exception as e:  # noqa: BLE001
-                    log.warning("Game-data refresh after a wish import failed: %s", type(e).__name__)
+                # in the background: the import lock and the upload request must not wait for the network
+                self._refresh_task = asyncio.create_task(self._refresh_unknown(result.unknown_names))
         except ImportFailed as e:
             self._finish(import_id, ok=False, error=e.message, backup=backup_name)
         except Exception as e:  # noqa: BLE001 - never str(e): network errors can carry the wish URL

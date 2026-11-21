@@ -23,6 +23,7 @@ from app.timeutil import utcnow
 from app.wishes.authkey import default_locallow, load_wish_link
 from app.wishes.fetch import genshin_page_fn
 from app.wishes.importer import WishImporter
+from app.wishes.merge import backfill_item_ids
 
 log = logging.getLogger(__name__)
 USER_AGENT = "GenshinTracker/0.1 (local personal tool)"
@@ -56,6 +57,8 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
             if not claim_unknown_ids_refresh(s, names, utcnow(), meta_key=META_WISH_UNKNOWN_REFRESH):
                 return
         await refresh_all(session_factory, http, force=True)
+        with session_factory.begin() as s:
+            backfill_item_ids(s)
 
     wishes = WishImporter(session_factory, paths,
                           wish_link_reader or (lambda game_path: load_wish_link(game_path, default_locallow())),

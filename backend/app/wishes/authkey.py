@@ -47,14 +47,17 @@ def _version_key(p: Path) -> tuple[int, ...]:
 
 
 def _data_2_in(data_dir: Path) -> Path | None:
-    caches = data_dir / "webCaches"
-    if not caches.is_dir():
+    try:
+        caches = data_dir / "webCaches"
+        if not caches.is_dir():
+            return None
+        versions = sorted((d for d in caches.iterdir() if d.is_dir()), key=_version_key, reverse=True)
+        for v in versions:
+            f = v / "Cache" / "Cache_Data" / "data_2"
+            if f.is_file():
+                return f
+    except OSError:
         return None
-    versions = sorted((d for d in caches.iterdir() if d.is_dir()), key=_version_key, reverse=True)
-    for v in versions:
-        f = v / "Cache" / "Cache_Data" / "data_2"
-        if f.is_file():
-            return f
     return None
 
 
@@ -71,12 +74,16 @@ def _data_dirs_from_log(locallow: Path) -> list[Path]:
     for company, game in LOG_DIRS:
         for name in LOG_NAMES:
             log = locallow / company / game / name
-            if log.is_file():
-                try:
-                    text = log.read_text(encoding="utf-8", errors="replace")
-                except OSError:
+            try:
+                if not log.is_file():
                     continue
-                return [Path(m) for m in dict.fromkeys(LOG_DATA_RE.findall(text))]
+            except OSError:
+                continue
+            try:
+                text = log.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            return [Path(m) for m in dict.fromkeys(LOG_DATA_RE.findall(text))]
     return []
 
 
