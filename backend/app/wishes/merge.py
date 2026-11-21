@@ -29,7 +29,9 @@ def merge(session: Session, incoming: list[IncomingWish], source: str, now: date
     resolver = ItemResolver.from_session(session)
     pools = {w.pool for w in incoming}
     existing = list(session.scalars(select(Wish).where(Wish.pool.in_(pools)).order_by(Wish.time, Wish.seq)))
-    by_id = {w.id: w for w in existing if w.id}
+    incoming_ids = {w.id for w in incoming if w.id}
+    # any stored row with an incoming id, in any pool, so a cross-pool id is skipped rather than re-inserted
+    by_id = {w.id: w for w in session.scalars(select(Wish).where(Wish.id.in_(incoming_ids)))} if incoming_ids else {}
     by_key: dict[tuple, list[Wish]] = defaultdict(list)
     by_time: dict[tuple, list[Wish]] = defaultdict(list)
     for w in existing:
@@ -97,7 +99,7 @@ def merge(session: Session, incoming: list[IncomingWish], source: str, now: date
     # 3) id-less rows: insert only the surplus per key, keeping the last occurrences
     idless = [(i, w) for i, w in enumerate(incoming) if not w.id]
     wanted = Counter((w.pool, w.time, w.name) for _, w in idless)
-    have = {k: len(by_key[k]) for k in wanted}
+    have = {k: sum(1 for r in by_key[k] if id(r) not in claimed) for k in wanted}
     remaining = dict(wanted)
     for index, w in idless:
         k = (w.pool, w.time, w.name)
@@ -113,7 +115,7 @@ def merge(session: Session, incoming: list[IncomingWish], source: str, now: date
     for key in touched:
         group = by_time[key]
         if all(r.id for r in group):
-            group.sort(key=lambda r: int(r.id))
+            group.sort(key=lambda r: (0, int(r.id)) if r.id.isdigit() else (1, r.id))
         else:
             group.sort(key=lambda r: r.seq)
         for i, r in enumerate(group):

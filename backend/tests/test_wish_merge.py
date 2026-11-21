@@ -96,3 +96,45 @@ def test_pools_are_separate(session_factory):
     run(session_factory, [inc(None, "weapon", T, "Slingshot", gacha_type="302")], "paimon")
     r = run(session_factory, [inc(None, "standard", T, "Slingshot", gacha_type="200")], "paimon")
     assert r.added == 1
+
+
+def test_mixed_input_same_key_empty_db_stores_both(session_factory):
+    rows = [inc("1704880800000000001", "weapon", T, "Slingshot", gacha_type="302"),
+            inc(None, "weapon", T, "Slingshot", gacha_type="302")]
+    r = run(session_factory, rows, "uigf")
+    assert (r.added, r.skipped) == (2, 0)
+    assert len(stored(session_factory)) == 2
+
+
+def test_mixed_input_same_key_with_id_row_stored_adds_idless(session_factory):
+    run(session_factory, [inc("1704880800000000001", "weapon", T, "Slingshot", gacha_type="302")], "game")
+    rows = [inc("1704880800000000001", "weapon", T, "Slingshot", gacha_type="302"),
+            inc(None, "weapon", T, "Slingshot", gacha_type="302")]
+    r = run(session_factory, rows, "game")
+    assert (r.added, r.skipped) == (1, 1)
+    assert len(stored(session_factory)) == 2
+
+
+def test_remerging_mixed_export_adds_nothing(session_factory):
+    rows = [inc("1704880800000000001", "weapon", T, "Slingshot", gacha_type="302"),
+            inc(None, "weapon", T, "Slingshot", gacha_type="302")]
+    assert run(session_factory, rows, "uigf").added == 2
+    r = run(session_factory, rows, "uigf")
+    assert (r.added, r.upgraded) == (0, 0)
+    assert len(stored(session_factory)) == 2
+
+
+def test_id_stored_in_other_pool_is_skipped_not_inserted(session_factory):
+    run(session_factory, [inc("1704880800000000005", "standard", T, "Slingshot", gacha_type="200")], "game")
+    r = run(session_factory, [inc("1704880800000000005", "weapon", T, "Slingshot", gacha_type="302")], "game")
+    assert (r.added, r.skipped) == (0, 1)
+    rows = stored(session_factory)
+    assert [(w.pool, w.id) for w in rows] == [("standard", "1704880800000000005")]
+
+
+def test_non_numeric_id_does_not_break_renumbering(session_factory):
+    rows = [inc("abc", "weapon", T, "Slingshot", gacha_type="302"),
+            inc("1704880800000000001", "weapon", T, "Favonius Sword", 4, "302")]
+    r = run(session_factory, rows, "uigf")
+    assert r.added == 2
+    assert {w.id for w in stored(session_factory)} == {"abc", "1704880800000000001"}
