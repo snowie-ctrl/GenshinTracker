@@ -63,6 +63,14 @@ Live check of the calculator against your account: `cd backend; ..\.venv\Scripts
 - **Privacy:** the wish link's authkey is read from the game cache into memory only; it is never stored, logged, or shown.
 - **Estimates:** the Capturing Radiance counter is a community estimate. Pity and the 50/50 guarantee are exact once banner data has been downloaded (Settings → Game data). Banner data comes from paimon.moe's open-source banner list (MIT).
 
+## Teams
+
+Group up to four characters into a team and label it with tags (for example *abyss*, *exploration*, *main*, or none for fun teams). Tags are yours to create, rename, recolour and delete under **Teams → Manage tags**.
+
+**Build** is a built-in tag. Adding it to a team sets every member to Build, so the planner starts farming for them; adding a member to a Build team does the same for that member. Removing the tag, a member or a team never lowers a goal. If you later set a member back to Want or None, the team marks them **Not building** with a **Build again** button.
+
+Each team with Build members shows what is still left to farm **to finish just that team**, as if it got your whole bag first. Materials other Build characters also need are marked *shared*. Build teams also appear on the Dashboard, and the Characters page can filter by team tag.
+
 ## Development
 
 ```powershell

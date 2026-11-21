@@ -250,3 +250,14 @@ An **In teams** panel: each team's name, tag chips and a link to it on `/teams`;
 3. Teams only ever raise goals; nothing a team does lowers one.
 4. Dashboard shows Build teams with their top materials; character pages list their teams.
 5. All tests pass; the repository contains no cookie values, UID, nickname, or personal data.
+
+---
+
+## 13. Refinements made during planning (2026-11-21)
+
+1. Tags get a `name_key` column (lower-cased name, unique) to enforce case-insensitive uniqueness.
+2. Notes are capped at 2000 characters.
+3. A typed new tag that matches an existing tag case-insensitively reuses that tag instead of failing.
+4. Member ids are validated on save, so an unknown member can only appear if the catalogue later drops a character; it renders as a placeholder and no extra game-data refresh is triggered.
+5. `GET /api/teams` returns `{gaps, connected, teams}` and `GET /api/teams/{id}` returns `{gaps, connected, team}`; tag filtering happens in the page.
+6. The Characters page filters are not persisted, so the Team tag filter is not persisted either.
