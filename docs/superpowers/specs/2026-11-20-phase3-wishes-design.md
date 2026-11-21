@@ -358,3 +358,8 @@ Against the user's real cache and paimon.moe export (results written to `docs/su
 2. **UID check for game imports (§4.1)** uses the fetched records' `uid` field, because the wish URL carries no UID.
 3. **Merge (§5)** skips an incoming file row whose key matches a stored row that already holds an id, instead of inserting a duplicate.
 4. All imports require `GENSHIN_UID` (HoYoLAB connected); without it they fail with "Connect HoYoLAB in Settings first, so imports can be checked against your UID."
+
+## 17. Additions from the live check (2026-11-21)
+
+1. **paimon.moe data backup (`paimon-moe-local-data.json`) is also accepted** by Upload file. Each `wish-counter-*` key maps to a pool; a pull's `code` is its gacha type (301/400 kept apart); items are slugs, matched to game data with the banner slug normalisation for name, type and rarity. An unknown slug fails the whole import with "Refresh game data in Settings". A `wish-uid` that differs from `GENSHIN_UID` is refused. Rows carry no ids, so they merge like the `.xlsx` rows.
+2. **The web cache is read with read/write/delete sharing on Windows**, because the running game holds `data_2` with delete access and a plain open fails.

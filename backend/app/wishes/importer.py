@@ -20,6 +20,7 @@ from app.wishes.authkey import WishLink, link_status
 from app.wishes.fetch import (LINK_EXPIRED, FetchFailed, PageFn, WishLinkExpired, fetch_new, record_uid,
                               to_incoming)
 from app.wishes.merge import merge
+from app.wishes.paimon_json import is_paimon_backup, item_index, parse_paimon_json
 from app.wishes.paimon_xlsx import parse_paimon_xlsx
 from app.wishes.types import NEEDS_UID, UID_MISMATCH, ImportFailed, IncomingWish
 from app.wishes.uigf import NOT_UIGF, build_uigf, parse_uigf
@@ -27,6 +28,17 @@ from app.wishes.uigf import NOT_UIGF, build_uigf, parse_uigf
 log = logging.getLogger(__name__)
 FETCH_FAILED = "Couldn't read the wish history ({kind}). Try again in a minute."
 INTERRUPTED = "Interrupted: the app was closed during the import."
+
+
+_NOT_JSON = object()
+
+
+def _load_json(content: bytes) -> object:
+    """Parsed JSON, or _NOT_JSON when the upload isn't JSON at all."""
+    try:
+        return json.loads(content.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
+        return _NOT_JSON
 
 
 class ImportBusy(Exception):
@@ -75,14 +87,18 @@ class WishImporter:
     async def import_file(self, filename: str, content: bytes) -> dict:
         if self._busy:
             raise ImportBusy()
-        source = "paimon" if filename.lower().endswith(".xlsx") else "uigf"
+        is_xlsx = filename.lower().endswith(".xlsx")
+        data = None if is_xlsx else await asyncio.to_thread(_load_json, content)
+        source = "paimon" if is_xlsx or is_paimon_backup(data) else "uigf"
+        if self._busy:                                  # another import began while the file was parsed
+            raise ImportBusy()
         import_id = self._begin(source)
 
         async def prepare():
             return None
 
         async def read(_ctx, uid: int, offset: int) -> list[IncomingWish]:
-            return await asyncio.to_thread(self._parse_file, source, content, uid, offset)
+            return await asyncio.to_thread(self._parse_file, content, data, uid, offset)
 
         await self._run(import_id, source, prepare, read)
         return self.status()
@@ -151,13 +167,15 @@ class WishImporter:
         except (KeyError, ValueError, TypeError) as e:
             raise ImportFailed(f"Unexpected wish data from the server ({type(e).__name__}).") from None
 
-    def _parse_file(self, source: str, content: bytes, uid: int, offset: int) -> list[IncomingWish]:
-        if source == "paimon":
+    def _parse_file(self, content: bytes, data: object, uid: int, offset: int) -> list[IncomingWish]:
+        if data is _NOT_JSON:
+            raise ImportFailed(NOT_UIGF)
+        if data is None:
             return parse_paimon_xlsx(content)
-        try:
-            data = json.loads(content.decode("utf-8-sig"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            raise ImportFailed(NOT_UIGF) from None
+        if is_paimon_backup(data):
+            with self._sf() as s:
+                items = item_index(s)
+            return parse_paimon_json(data, uid, items)
         return parse_uigf(data, uid, offset)
 
     def _write_snapshot(self, uid: int, offset: int) -> str:

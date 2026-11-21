@@ -6,13 +6,13 @@ from datetime import datetime
 import pytest
 from sqlalchemy import func, select
 
-from app.db.models import Wish, WishImport
+from app.db.models import GameCharacter, GameWeapon, Wish, WishImport
 from app.wishes import importer as importer_mod
 from app.wishes.authkey import CACHE_LOCKED
 from app.wishes.fetch import LINK_EXPIRED
 from app.wishes.importer import INTERRUPTED, ImportBusy, WishImporter
 from app.wishes.types import NEEDS_UID, UID_MISMATCH, ImportFailed
-from wishdata import (FakeGachaApi, fake_link, make_paimon_xlsx, raw_wish, uigf_bytes, wish_url,
+from wishdata import (FakeGachaApi, fake_link, make_paimon_xlsx, paimon_backup, raw_wish, uigf_bytes, wish_url,
                       write_env)
 
 GAME = [raw_wish(str(1704880800000000000 + i), "302", f"2024-01-10 10:00:{i:02d}", "Slingshot", 3)
@@ -126,6 +126,40 @@ async def test_paimon_file_twice(paths, session_factory):
     await imp.wait()
     assert imp.unknown == [{"Slingshot", "Mystery Blade"}]
     assert (await imp.import_file("paimon.xlsx", content))["last"]["added"] == 0
+
+
+def seed_items(sf):
+    with sf.begin() as s:
+        s.add(GameWeapon(id=15304, name="Slingshot", icon="i", rarity=3, weapon_type="Bow"))
+        s.add(GameCharacter(id=10000089, name="Furina", slug="furina", rarity=5, element="Hydro",
+                            weapon_type="Sword", region=None, icon="i", splash="s",
+                            release_at=datetime(2023, 11, 8)))
+
+
+async def test_paimon_backup_overlapping_game_import_adds_nothing(paths, session_factory):
+    write_env(paths)
+    seed_items(session_factory)
+    imp = make(paths, session_factory, api=FakeGachaApi(GAME))
+    assert (await run_game(imp))["added"] == 6
+    backup = paimon_backup({
+        "wish-counter-weapon-event": [("slingshot", "302", f"2024-01-10 10:00:{i:02d}") for i in range(5)],
+        "wish-counter-character-event": [("furina", "301", "2024-01-10 11:00:00")],
+    })
+    last = (await imp.import_file("paimon-moe-local-data.json", json.dumps(backup).encode()))["last"]
+    assert last["ok"] is True and last["source"] == "paimon"
+    assert last["added"] == 0 and count(session_factory) == 6
+
+
+async def test_paimon_backup_twice(paths, session_factory):
+    write_env(paths)
+    seed_items(session_factory)
+    imp = make(paths, session_factory)
+    content = json.dumps(paimon_backup({"wish-counter-weapon-event": [("slingshot", "302", "2024-01-10 10:00:00")] * 2,
+                                        "wish-counter-standard": [("furina", "200", "2024-01-11 10:00:00")]})).encode()
+    assert (await imp.import_file("backup.json", content))["last"]["added"] == 3
+    assert (await imp.import_file("backup.json", content))["last"]["added"] == 0
+    with session_factory() as s:
+        assert sorted(s.scalars(select(Wish.item_id))) == [15304, 15304, 10000089]
 
 
 async def test_bad_json_file(paths, session_factory):

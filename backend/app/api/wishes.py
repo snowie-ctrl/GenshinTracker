@@ -69,7 +69,7 @@ async def import_game(ctx: AppContext = Depends(get_ctx)) -> dict:
 async def import_file(file: UploadFile, ctx: AppContext = Depends(get_ctx)) -> dict:
     name = file.filename or ""
     if not name.lower().endswith((".json", ".xlsx")):
-        raise HTTPException(400, "Upload a UIGF .json file or a paimon.moe .xlsx export.")
+        raise HTTPException(400, "Upload a UIGF .json file, a paimon.moe data backup (.json) or a paimon.moe .xlsx export.")
     content = await file.read(WISH_UPLOAD_MAX_BYTES + 1)
     if len(content) > WISH_UPLOAD_MAX_BYTES:
         raise HTTPException(413, "The file is larger than 20 MB.")

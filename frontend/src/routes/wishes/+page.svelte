@@ -155,7 +155,7 @@
 			<h2>No wishes yet</h2>
 			<ol>
 				<li><strong>From the game:</strong> open Wish History in-game once (any banner), then press <em>Import from game</em>. Close the game first if the import says the cache is locked.</li>
-				<li><strong>From paimon.moe:</strong> Settings → Export to Excel, then <em>Upload file</em> with the .xlsx.</li>
+				<li><strong>From paimon.moe:</strong> Settings → Export data (the .json backup) or Export to Excel (.xlsx), then <em>Upload file</em>.</li>
 				<li><strong>From another tracker:</strong> export UIGF JSON, then <em>Upload file</em>.</li>
 			</ol>
 		</section>

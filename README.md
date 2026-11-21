@@ -54,7 +54,7 @@ Live check of the calculator against your account: `cd backend; ..\.venv\Scripts
 ## Wishes
 
 - **Import from game:** open Wish History in-game once (any banner), then press **Import from game** on the Wishes page. The link the game caches is valid for about a day; if the import says it expired, open Wish History again. If it says the cache is locked, close the game and retry. If the game cache isn't found, set the game install path in Settings.
-- **Older history:** paimon.moe → Settings → *Export to Excel*, then **Upload file** with the `.xlsx`. UIGF JSON (v3/v4) from other trackers works the same way. Pulls are de-duplicated, so importing overlapping files is safe.
+- **Older history:** from paimon.moe, upload either its data backup (Settings → *Export data*, `paimon-moe-local-data.json`) or its *Export to Excel* `.xlsx` with **Upload file**. Backup items are matched by name to game data, so refresh game data first if the upload lists unknown items. UIGF JSON (v3/v4) from other trackers works the same way. Pulls are de-duplicated, so importing overlapping files is safe.
 - **Export:** **Export UIGF** downloads your whole history as UIGF v4 JSON.
 - **Backups:** before every import the database is copied to `data/backups/wishes/`, and after every import a UIGF snapshot is written there (10 of each are kept). Sync backups in `data/backups/` are separate.
 - **Privacy:** the wish link's authkey is read from the game cache into memory only; it is never stored, logged, or shown.

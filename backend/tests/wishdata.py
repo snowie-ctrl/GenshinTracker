@@ -112,3 +112,14 @@ def uigf_bytes(records: list[dict], uid: int = FAKE_UID, tz: int = 1) -> bytes:
     return json.dumps({"info": {"export_timestamp": 1, "export_app": "test", "export_app_version": "1",
                                 "version": "v4.0"},
                        "hk4e": [{"uid": uid, "timezone": tz, "lang": "en-us", "list": records}]}).encode()
+
+
+def paimon_backup(counters: dict[str, list[tuple]], uid: str | None = str(FAKE_UID)) -> dict:
+    """A paimon.moe data backup: counters map 'wish-counter-*' keys to (slug, code, time) pulls."""
+    data: dict = {"server": "Europe", "wish-counter-setting": {"firstTime": False, "manualInput": False}}
+    if uid is not None:
+        data["wish-uid"] = uid
+    for key, pulls in counters.items():
+        data[key] = {"total": len(pulls), "legendary": 0, "rare": 0,
+                     "pulls": [{"type": "weapon", "code": c, "id": s, "time": t, "pity": 1} for s, c, t in pulls]}
+    return data
