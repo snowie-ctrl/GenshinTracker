@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
+	import Countdown from '$lib/Countdown.svelte';
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
 	import { formatDuration, timeAgo } from '$lib/time';
@@ -151,6 +152,39 @@
 				</div>
 			{/each}
 		{/if}
+	</section>
+
+	<section class="panel" data-testid="dash-banners">
+		<h2><a href="/events">Live banners</a></h2>
+		{#if data.live_banners.length === 0}
+			<p class="muted">{data.calendar_fetched_at ? 'No live banners.' : 'Sync to load the event calendar'}</p>
+		{:else}
+			<div class="tiles-row">
+				{#each data.live_banners as b (b.id)}
+					<span class="dash-banner">
+						{#each b.items.filter((i) => i.rarity === 5) as it (it.id)}<img src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/each}
+						<span>{b.name}</span> <Countdown at={b.end} {now} />
+					</span>
+				{/each}
+			</div>
+		{/if}
+	</section>
+
+	<section class="panel" data-testid="dash-events">
+		<h2><a href="/events">Events</a></h2>
+		{#if !data.calendar_fetched_at}
+			<p class="muted">Sync to load the event calendar</p>
+		{:else if data.events_left.count === 0}
+			<p>All events done ✓</p>
+		{:else}
+			<p>{data.events_left.count} events left · {data.events_left.primogems} primos</p>
+			<ul>{#each data.events_left.next as e (e.id)}<li>{e.name} · <Countdown at={e.end} {now} /></li>{/each}</ul>
+		{/if}
+	</section>
+
+	<section class="panel" data-testid="dash-resets">
+		<h2>Resets</h2>
+		<div class="resets">{#each data.resets as r (r.key)}<span>{r.label}: <Countdown at={r.at} {now} /></span>{/each}</div>
 	</section>
 
 	{#if notes}
@@ -304,6 +338,9 @@
 	.team-row:last-child { border-bottom: none; }
 	.team-row .avatars img { width: 32px; height: 32px; border-radius: 50%; }
 	.ok { color: var(--accent); }
+	.dash-banner { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px; }
+	.dash-banner img { width: 36px; height: 36px; border-radius: 50%; }
+	.resets { display: flex; flex-wrap: wrap; gap: 14px; }
 	.big { font-size: 28px; font-weight: 700; }
 	.big .muted { font-size: 16px; font-weight: 400; }
 	.expeditions { display: flex; flex-wrap: wrap; gap: 12px; }

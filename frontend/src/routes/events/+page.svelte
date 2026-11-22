@@ -46,11 +46,15 @@
 		}
 	}
 
+	let historyRequest = 0;
+
 	async function loadHistory(p: string, query: string, pg: number) {
+		const mine = ++historyRequest;
 		try {
-			history = await api.bannerHistory(p, query, pg);
+			const res = await api.bannerHistory(p, query, pg);
+			if (mine === historyRequest) history = res;
 		} catch (e) {
-			toast = `Could not load banner history: ${errorMessage(e)}`;
+			if (mine === historyRequest) toast = `Could not load banner history: ${errorMessage(e)}`;
 		}
 	}
 
@@ -79,7 +83,7 @@
 	{#if data.fetched_at}
 		<p class="muted">as of {timeAgo(data.fetched_at, now)}{#if data.error} · ⚠ last update failed: {data.error}{/if}</p>
 	{:else}
-		<p class="muted">{data.connected ? 'Sync to load the event calendar' : 'Connect HoYoLAB in Settings to load events'}</p>
+		<p class="muted">{data.connected ? 'Sync to load the event calendar' : 'Connect HoYoLAB in Settings to load events'}{#if data.error}<br />⚠ last update failed: {data.error}{/if}</p>
 	{/if}
 
 	<section class="panel" data-testid="live-banners">
