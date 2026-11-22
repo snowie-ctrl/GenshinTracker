@@ -28,3 +28,29 @@ test('unobtained section starts collapsed and expands', async ({ page }) => {
 	await section.getByRole('button', { name: /Unobtained/ }).click();
 	await expect(section.getByTestId('card-xingqiu')).toBeVisible();
 });
+
+test('element pills filter and report their state', async ({ page }) => {
+	await page.goto('/characters');
+	const pyro = page.getByRole('button', { name: 'Pyro', exact: true });
+	await expect(pyro).toHaveAttribute('aria-pressed', 'false');
+	await pyro.click();
+	await expect(pyro).toHaveAttribute('aria-pressed', 'true');
+	// dev seed: Xiangling (Pyro, obtained), Bennett (Pyro, building), Nahida (Dendro, obtained), Furina (Hydro, building)
+	await expect(page.getByTestId('card-xiangling')).toBeVisible();
+	await expect(page.getByTestId('card-bennett')).toBeVisible();
+	await expect(page.getByTestId('card-nahida')).toHaveCount(0);
+	await expect(page.getByTestId('card-furina')).toHaveCount(0);
+	await pyro.click();
+	await expect(pyro).toHaveAttribute('aria-pressed', 'false');
+	await expect(page.getByTestId('card-nahida')).toBeVisible();
+});
+
+test('a pill whose element icon fails to load still shows its label and filters', async ({ page }) => {
+	await page.route('**/api/img/UI_Buff_Element_*', (route) => route.fulfill({ status: 404, body: '' }));
+	await page.goto('/characters');
+	const pyro = page.getByRole('button', { name: 'Pyro', exact: true });
+	await expect(pyro).toBeVisible();
+	await expect(pyro.locator('img')).toHaveCount(0);
+	await pyro.click();
+	await expect(page.getByTestId('card-xiangling')).toBeVisible();
+});

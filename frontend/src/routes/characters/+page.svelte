@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { api, errorMessage } from '$lib/api';
 	import CharacterCard from '$lib/CharacterCard.svelte';
+	import FilterPill from '$lib/FilterPill.svelte';
 	import TagChip from '$lib/TagChip.svelte';
 	import { loadCollapsed, saveCollapsed } from '$lib/collapse';
+	import { RARITY_STYLE, elementStyle } from '$lib/elements';
 	import {
 		ELEMENTS, SECTIONS, WEAPON_TYPES, deriveStatus, emptyFilters, groupCharacters, type Filters
 	} from '$lib/status';
@@ -68,16 +70,15 @@
 <div class="filters">
 	<input placeholder="Search name" bind:value={filters.search} aria-label="Search characters" />
 	{#each ELEMENTS as el (el)}
-		<button type="button" class="chip" class:on={filters.elements.includes(el)}
-			onclick={() => (filters.elements = toggle(filters.elements, el))}>{el}</button>
+		<FilterPill label={el} on={filters.elements.includes(el)} color={elementStyle(el).color}
+			image={elementStyle(el).icon} onclick={() => (filters.elements = toggle(filters.elements, el))} />
 	{/each}
 	{#each WEAPON_TYPES as w (w)}
-		<button type="button" class="chip" class:on={filters.weapons.includes(w)}
-			onclick={() => (filters.weapons = toggle(filters.weapons, w))}>{w}</button>
+		<FilterPill label={w} on={filters.weapons.includes(w)} onclick={() => (filters.weapons = toggle(filters.weapons, w))} />
 	{/each}
 	{#each [5, 4] as r (r)}
-		<button type="button" class="chip" class:on={filters.rarities.includes(r)}
-			onclick={() => (filters.rarities = toggle(filters.rarities, r))}>{r}★</button>
+		<FilterPill label="{r}★" on={filters.rarities.includes(r)} color={RARITY_STYLE[r].color} ink={RARITY_STYLE[r].ink}
+			onclick={() => (filters.rarities = toggle(filters.rarities, r))} />
 	{/each}
 </div>
 
