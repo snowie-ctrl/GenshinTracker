@@ -57,3 +57,17 @@ async def test_cached_value_used_offline(session_factory):
     http = httpx.MockTransport(lambda r: httpx.Response(200))
     got = {m["key"]: m["allowed"] for m in await map_status(session_factory, NOW, True, ORIGIN, http)}
     assert got == {"hoyolab": False, "appsample": None}
+
+
+async def test_malformed_cached_checked_at_is_stale(session_factory):
+    with session_factory.begin() as s:
+        s.add(GameMeta(key="map_embed_hoyolab", value={"allowed": False, "checked_at": "not-a-date"}))
+        s.add(GameMeta(key="map_embed_appsample", value={"allowed": False}))
+    calls = []
+
+    def handler(request):
+        calls.append(str(request.url))
+        return httpx.Response(200)
+    got = {m["key"]: m["allowed"]
+           for m in await map_status(session_factory, NOW, False, ORIGIN, httpx.MockTransport(handler))}
+    assert got == {"hoyolab": True, "appsample": True} and len(calls) == 2

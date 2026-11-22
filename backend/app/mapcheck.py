@@ -43,6 +43,14 @@ async def check(url: str, origin: str = "http://127.0.0.1",
     return frame_allowed(response.headers, origin)
 
 
+def _fresh(cached: dict | None, now: datetime) -> bool:
+    """A cached check younger than CACHE. A malformed cache entry counts as stale."""
+    try:
+        return now - datetime.fromisoformat(cached["checked_at"].rstrip("Z")) < CACHE
+    except (TypeError, KeyError, AttributeError, ValueError):
+        return False
+
+
 async def map_status(session_factory: sessionmaker, now: datetime, offline: bool, origin: str,
                      transport: httpx.AsyncBaseTransport | None = None) -> list[dict]:
     cached: dict[str, dict | None] = {}
@@ -50,14 +58,12 @@ async def map_status(session_factory: sessionmaker, now: datetime, offline: bool
         for key in MAPS:
             row = s.get(GameMeta, f"map_embed_{key}")
             cached[key] = row.value if row is not None else None
-    stale = [key for key in MAPS if not offline and not (
-        cached[key] is not None
-        and now - datetime.fromisoformat(cached[key]["checked_at"].rstrip("Z")) < CACHE)]
+    stale = [key for key in MAPS if not offline and not _fresh(cached[key], now)]
     checked = dict(zip(stale, await asyncio.gather(*(check(MAPS[k][1], origin, transport) for k in stale))))
     if checked:
         with session_factory.begin() as s:
             for key, allowed in checked.items():
                 s.merge(GameMeta(key=f"map_embed_{key}", value={"allowed": allowed, "checked_at": iso(now)}))
     return [{"key": key, "name": name, "url": url,
-             "allowed": checked[key] if key in checked else (cached[key]["allowed"] if cached[key] else None)}
+             "allowed": checked[key] if key in checked else (cached[key].get("allowed") if isinstance(cached[key], dict) else None)}
             for key, (name, url) in MAPS.items()]
