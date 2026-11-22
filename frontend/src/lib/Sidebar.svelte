@@ -9,7 +9,7 @@
 	{@const active = isActive(item.href, page.url.pathname)}
 	<a href={item.href} class="item" class:active aria-current={active ? 'page' : undefined}>
 		<Icon name={item.icon} />
-		<span>{item.label}</span>
+		<span class="lbl">{item.label}</span>
 	</a>
 {/snippet}
 
@@ -33,6 +33,15 @@
 	.item {
 		position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px;
 		padding: 7px 0; color: var(--cream-dim); text-decoration: none; font-size: 10.5px;
+	}
+	@media (max-height: 700px) {
+		.sidebar { padding: 6px 0; }
+		.logo { width: 32px; height: 32px; margin-bottom: 6px; }
+		.item { padding: 4px 0; gap: 1px; font-size: 9.5px; }
+	}
+	@media (max-height: 560px) {
+		.lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+		.item { padding: 6px 0; }
 	}
 	.item:hover, .item:focus-visible { color: var(--cream); }
 	.item.active { color: var(--gold); }
