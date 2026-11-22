@@ -135,3 +135,13 @@ def test_unmatched_is_capped_at_200(session_factory):
     body = {"format": "GOOD", "version": 2, "materials": {f"Nope{i:04d}": 1 for i in range(300)}}
     m = match_file(parse_good(json.dumps(body).encode()), index(session_factory))
     assert len(m.unmatched) == 200 and m.counts["materials"]["unmatched"] == 300
+
+
+def test_check_cli_prints_only_the_summary(session_factory, paths, capsys):
+    from app.good.check import main
+    seed_catalogue(session_factory)
+    assert main(["--db", str(paths.db_file), str(FIXTURES / "good_sample.json")]) == 0
+    out = capsys.readouterr().out
+    assert "materials: 4 matched, 1 ignored, 1 unmatched" in out
+    assert "weapon:UnknownBlade" in out
+    assert "1234567" not in out and "Test_Scanner" not in out
