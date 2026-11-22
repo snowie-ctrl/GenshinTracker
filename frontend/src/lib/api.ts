@@ -1,6 +1,6 @@
 import type {
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
-	ImportStatus, Inventory, MapKey, MapsResponse, Pool, PoolSummary, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
+	GoodArtifact, GoodStatus, GoodSummary, GoodWeapon, ImportStatus, Inventory, MapKey, MapsResponse, Pool, PoolSummary, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
 	TeamBody, TeamResponse, TeamsResponse, WeaponOption, WishSummary
 } from './types';
 import { historyQuery } from './wishes';
@@ -22,6 +22,7 @@ async function parse<T>(res: Response): Promise<T> {
 		}
 		throw new ApiError(res.status, message);
 	}
+	if (res.status === 204) return undefined as T;
 	return (await res.json()) as T;
 }
 
@@ -51,8 +52,13 @@ export const api = {
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
 	profile: () => request<ProfileResponse>('GET', '/profile'),
 	settings: () => request<Settings>('GET', '/settings'),
-	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string; default_map?: MapKey }) =>
+	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string; default_map?: MapKey; good_import_enabled?: boolean }) =>
 		request<Settings>('PUT', '/settings', body),
+	goodStatus: () => request<GoodStatus>('GET', '/good/status'),
+	importGood: (file: File) => upload<GoodSummary>('/good/import', file),
+	deleteGood: () => request<void>('DELETE', '/good'),
+	goodWeapons: () => request<GoodWeapon[]>('GET', '/good/weapons'),
+	goodArtifacts: () => request<GoodArtifact[]>('GET', '/good/artifacts'),
 	maps: () => request<MapsResponse>('GET', '/map'),
 	connect: (body: Record<string, string | number>) =>
 		request<ConnectResponse>('POST', '/settings/hoyolab', body),

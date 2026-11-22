@@ -1,7 +1,7 @@
 import type { CharMaterial, GapStatus, Material } from './types';
 import { timeAgo } from './time';
 
-export type InventoryFilter = 'all' | 'needed' | 'farm';
+export type InventoryFilter = 'all' | 'needed' | 'farm' | 'owned';
 export type Tone = 'short' | 'met' | 'none';
 export interface TileView { main: string; badge: string | null; hint: string | null; tone: Tone }
 
@@ -14,8 +14,16 @@ export function tileView(m: Material): TileView {
 			tone: 'short'
 		};
 	}
-	if (m.state === 'met') return { main: `✓ ${m.need}`, badge: null, hint: null, tone: 'met' };
-	return { main: '', badge: null, hint: null, tone: 'none' };
+	if (m.state === 'met') {
+		const main = m.scan != null && m.scan >= m.need ? `${m.scan}/${m.need} ✓` : `✓ ${m.need}`;
+		return { main, badge: null, hint: null, tone: 'met' };
+	}
+	return { main: m.scan != null ? String(m.scan) : '', badge: null, hint: null, tone: 'none' };
+}
+
+/** Unneeded tiles are dimmed unless a GOOD scan says you own some. */
+export function tileDim(m: Material): boolean {
+	return m.state === 'unneeded' && !((m.scan ?? 0) > 0);
 }
 
 export function charTileView(m: CharMaterial): TileView {
@@ -40,7 +48,11 @@ export function groupByCategory(ms: CharMaterial[]): CharMaterialGroup[] {
 export function filterMaterials(ms: Material[], filter: InventoryFilter, query: string): Material[] {
 	const q = query.trim().toLowerCase();
 	return ms.filter((m) => {
-		const passes = filter === 'all' ? true : filter === 'needed' ? m.state !== 'unneeded' : m.to_farm > 0;
+		const passes =
+			filter === 'all' ? true
+			: filter === 'needed' ? m.state !== 'unneeded'
+			: filter === 'owned' ? (m.scan ?? 0) > 0
+			: m.to_farm > 0;
 		return passes && (!q || m.name.toLowerCase().includes(q));
 	});
 }

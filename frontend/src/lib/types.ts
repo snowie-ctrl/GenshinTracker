@@ -89,7 +89,9 @@ export interface Settings {
 	default_targets: Targets;
 	level_caps: number[];
 	game_install_path: string;
+	good_import_enabled: boolean;
 	gamedata: {
+		artifact_sets: { fetched_at: string | null; last_error: string | null; count: number };
 		fetched_at: string | null; last_error: string | null; count: number;
 		materials: { fetched_at: string | null; last_error: string | null; count: number };
 		banners: { fetched_at: string | null; last_error: string | null; count: number; unmapped: string[] };
@@ -106,6 +108,7 @@ export interface Material {
 	id: number; name: string; icon: string; rarity: number; category: string; state: MaterialState;
 	need: number; short: number; have: number | null; craftable: number; to_farm: number;
 	sources: MaterialSource[]; characters: Needer[];
+	scan?: number | null;
 }
 export interface CharMaterial {
 	id: number; name: string; icon: string; rarity: number; category: string; category_label: string;
@@ -113,11 +116,11 @@ export interface CharMaterial {
 }
 export interface GapStatus { computed_at: string | null; ok: boolean | null; error: string | null; stale: boolean; pending: boolean; skipped: string[] }
 export interface InventoryCategory { key: string; label: string; materials: Material[] }
-export interface Inventory { gaps: GapStatus; categories: InventoryCategory[] }
+export interface Inventory { gaps: GapStatus; categories: InventoryCategory[]; good: GoodRef | null }
 export interface FarmDomain { id: number; name: string; kind: 'talent' | 'weapon'; weekdays: number[]; materials: Material[]; characters: CharRef[] }
 export interface WeeklyBoss { name: string; done: boolean; materials: Material[]; characters: CharRef[] }
 export interface BuildingCard { character: CharRef; progress: number | null; materials: CharMaterial[]; skipped: boolean; calculated: boolean }
-export interface WeaponOption { id: number; name: string; icon: string; rarity: number; weapon_type: string }
+export interface WeaponOption { id: number; name: string; icon: string; rarity: number; weapon_type: string; owned?: OwnedWeapon | null }
 export interface PlannedWeapon { id: number; name: string; icon: string; rarity: number; equipped: boolean }
 
 export type Pool = 'character' | 'weapon' | 'chronicled' | 'standard' | 'beginner';
@@ -212,3 +215,23 @@ export interface HistoryBanner {
 	featured_5: HistoryItem[]; featured_4: HistoryItem[]; pulls: BannerPulls | null;
 }
 export interface BannerHistoryPage { total: number; page: number; page_size: number; rows: HistoryBanner[] }
+
+export interface GoodRef { imported_at: string; source: string | null }
+export interface GoodCounts {
+	materials: { matched: number; ignored: number; unmatched: number };
+	weapons: { matched: number; unmatched: number };
+	artifacts: { matched: number; unmatched: number };
+}
+export interface GoodSummary { imported_at: string; source: string | null; counts: GoodCounts; unmatched: string[] }
+export interface GoodStatus { enabled: boolean; imported_at: string | null; source: string | null; counts: GoodCounts | null; unmatched: string[] }
+export interface OwnedWeapon { count: number; best_level: number; best_refinement: number }
+export interface GoodWeapon {
+	id: number; weapon_id: number; name: string; icon: string; rarity: number; weapon_type: string; level: number;
+	ascension: number; refinement: number; lock: boolean; location: string | null; holder: CharRef | null;
+}
+export type ArtifactSlot = 'flower' | 'plume' | 'sands' | 'goblet' | 'circlet';
+export interface GoodArtifact {
+	id: number; set_id: number; set_name: string; icon: string; slot: ArtifactSlot; rarity: number; level: number;
+	main_stat: string; substats: { key: string; value: number }[]; lock: boolean; location: string | null;
+	holder: CharRef | null;
+}

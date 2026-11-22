@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CharMaterial, GapStatus, Material } from './types';
 import {
-	charTileView, filterMaterials, gapLabel, gapsSettled, groupByCategory, notCalculatedLabel, shouldPoll, tileView,
-	weekdayNames
+	charTileView, filterMaterials, gapLabel, gapsSettled, groupByCategory, notCalculatedLabel, shouldPoll, tileDim,
+	tileView, weekdayNames
 } from './materials';
 
 function m(over: Partial<Material>): Material {
@@ -91,5 +91,31 @@ describe('labels', () => {
 		expect(notCalculatedLabel(gaps({ stale: true }), 0)).toBe('Not calculated yet');
 		expect(notCalculatedLabel(gaps({ ok: false, error: 'boom' }), 0))
 			.toBe('Not calculated yet · ⚠ Shortfall update failed: boom');
+	});
+});
+
+describe('tileView with a GOOD scan', () => {
+	it('short keeps the live count even when the scan disagrees', () => {
+		const x = m({ state: 'short', need: 15, short: 7, have: 8, to_farm: 7, scan: 2 });
+		expect(tileView(x).main).toBe('8/15');
+		expect(tileView(x).badge).toBe('−7');
+	});
+	it('met shows the scan when it agrees, else ✓ need', () => {
+		expect(tileView(m({ state: 'met', need: 20, scan: 120 })).main).toBe('120/20 ✓');
+		expect(tileView(m({ state: 'met', need: 20, scan: 5 })).main).toBe('✓ 20');
+		expect(tileView(m({ state: 'met', need: 20 })).main).toBe('✓ 20');
+	});
+	it('unneeded shows the scan and is only dimmed at zero or without a scan', () => {
+		expect(tileView(m({ scan: 37 })).main).toBe('37');
+		expect(tileDim(m({ scan: 37 }))).toBe(false);
+		expect(tileView(m({ scan: 0 })).main).toBe('0');
+		expect(tileDim(m({ scan: 0 }))).toBe(true);
+		expect(tileView(m({ scan: null })).main).toBe('');
+		expect(tileDim(m({}))).toBe(true);
+		expect(tileDim(m({ state: 'met', need: 2 }))).toBe(false);
+	});
+	it('owned filter keeps scan > 0 only', () => {
+		const ms = [m({ id: 1, scan: 3 }), m({ id: 2, scan: 0 }), m({ id: 3 })];
+		expect(filterMaterials(ms, 'owned', '').map((x) => x.id)).toEqual([1]);
 	});
 });
