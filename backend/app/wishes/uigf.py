@@ -108,7 +108,7 @@ def build_uigf(rows: Sequence[Wish], uid: int, offset: int, now: datetime, app_v
             "id": w.id or generated_id(w.time, w.seq, offset),
         })
     return {
-        "info": {"export_timestamp": calendar.timegm(now.timetuple()), "export_app": "GenshinTracker",
+        "info": {"export_timestamp": calendar.timegm(now.timetuple()), "export_app": "AdAstra",
                  "export_app_version": app_version, "version": "v4.0"},
         "hk4e": [{"uid": uid, "timezone": offset, "lang": "en-us", "list": records}],
     }

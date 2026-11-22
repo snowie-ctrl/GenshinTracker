@@ -1,6 +1,6 @@
-# GenshinTracker
+# Ad Astra
 
-A personal, locally run Genshin Impact tracker: your roster syncs from HoYoLAB automatically,
+A personal, locally run Genshin Impact tracker (formerly GenshinTracker): your roster syncs from HoYoLAB automatically,
 grouped by what you're building, own, want, or don't have yet.
 
 > Fan project. Not affiliated with or endorsed by HoYoverse. Game data comes from community

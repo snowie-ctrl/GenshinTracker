@@ -27,7 +27,7 @@ from app.wishes.importer import WishImporter
 from app.wishes.merge import backfill_item_ids
 
 log = logging.getLogger(__name__)
-USER_AGENT = "GenshinTracker/0.1 (local personal tool)"
+USER_AGENT = "AdAstra/0.2 (local personal tool)"
 
 
 def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetcher=None,
@@ -82,7 +82,7 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
             await http.aclose()
         engine.dispose()
 
-    app = FastAPI(title="GenshinTracker", lifespan=lifespan)
+    app = FastAPI(title="Ad Astra", lifespan=lifespan)
     app.state.ctx = ctx
 
     @app.get("/api/health")

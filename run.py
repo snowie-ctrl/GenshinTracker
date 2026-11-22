@@ -1,4 +1,4 @@
-"""Start GenshinTracker on http://127.0.0.1:<port>.  Usage: python run.py [--no-build] [--no-install]
+"""Start Ad Astra on http://127.0.0.1:<port>.  Usage: python run.py [--no-build] [--no-install]
 
 Before starting, it installs missing Python packages (from backend/pyproject.toml) and rebuilds the
 frontend when its sources are newer than the build, so the app runs straight after a `git pull`."""
@@ -112,7 +112,7 @@ def main() -> None:
 
     import uvicorn
 
-    print(f"GenshinTracker running at http://127.0.0.1:{port}")
+    print(f"Ad Astra running at http://127.0.0.1:{port}")
     uvicorn.run("app.main:create_app", factory=True, host="127.0.0.1", port=port)
 
 

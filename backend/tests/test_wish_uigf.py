@@ -145,6 +145,13 @@ def test_generated_ids_read_back_as_idless():
     assert parse_uigf(v4([rec(gid, "200", "2024-01-01 09:00:00", "Slingshot", 3)]), UID, 1)[0].id is None
 
 
+def test_exports_from_the_old_app_name_still_import():
+    data = v4([rec("1704096000000000001", "301", "2024-01-01 09:00:00", "Slingshot", 3)])
+    data["info"]["export_app"] = "GenshinTracker"
+    rows = parse_uigf(data, UID, 1)
+    assert [r.name for r in rows] == ["Slingshot"]
+
+
 def test_build_v4():
     rows = [Wish(id=None, pool="character", gacha_type=None, time="2024-01-01 09:00:00", seq=0, name="Furina",
                  item_id=10000089, item_type="character", rarity=5, source="paimon", imported_at=datetime(2024, 1, 2)),
@@ -152,7 +159,7 @@ def test_build_v4():
                  name="Slingshot", item_id=None, item_type="weapon", rarity=3, source="game",
                  imported_at=datetime(2024, 1, 2))]
     out = build_uigf(rows, UID, 1, datetime(2024, 1, 3), "0.3.0")
-    assert out["info"]["version"] == "v4.0" and out["info"]["export_app"] == "GenshinTracker"
+    assert out["info"]["version"] == "v4.0" and out["info"]["export_app"] == "AdAstra"
     entry = out["hk4e"][0]
     assert entry["uid"] == UID and entry["timezone"] == 1 and entry["lang"] == "en-us"
     first, second = entry["list"]
