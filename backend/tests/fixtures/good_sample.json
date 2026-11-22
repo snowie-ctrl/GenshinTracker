@@ -1,0 +1,29 @@
+{
+  "format": "GOOD",
+  "version": 2,
+  "source": "Test_Scanner",
+  "materials": {
+    "Mora": 1234567,
+    "TeachingsOfFreedom": 40,
+    "GuideToFreedom": 12,
+    "DvalinsPlume": 3,
+    "Fowl": 9,
+    "NotARealItem": 1
+  },
+  "weapons": [
+    {"key": "FavoniusSword", "level": 90, "ascension": 6, "refinement": 3, "location": "Bennett", "lock": true},
+    {"key": "MistsplitterReforged", "level": 1, "ascension": 0, "refinement": 1, "location": "", "lock": false},
+    {"key": "FavoniusSword", "level": 20, "ascension": 1, "refinement": 1, "location": "", "lock": false},
+    {"key": "UnknownBlade", "level": 1, "ascension": 0, "refinement": 1, "location": "", "lock": false}
+  ],
+  "artifacts": [
+    {"setKey": "GladiatorsFinale", "slotKey": "flower", "rarity": 5, "level": 20, "mainStatKey": "hp",
+     "location": "TravelerAnemo", "lock": true,
+     "substats": [{"key": "critRate_", "value": 3.9}, {"key": "atk_", "value": 5.8}, {"key": "", "value": 0}]},
+    {"setKey": "NoblesseOblige", "slotKey": "goblet", "rarity": 5, "level": 16, "mainStatKey": "hydro_dmg_",
+     "location": "", "lock": false, "substats": [{"key": "critDMG_", "value": 7.8}]},
+    {"setKey": "NoblesseOblige", "slotKey": "sands", "rarity": 4, "level": 0, "mainStatKey": "enerRech_",
+     "location": "SomeNewCharacter", "lock": false, "substats": []}
+  ],
+  "characters": [{"key": "Bennett", "level": 80}]
+}
