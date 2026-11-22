@@ -63,7 +63,7 @@ The Inventory page works without this: the HoYoLAB calculator already reports wh
 
 Each import replaces the previous one. Live HoYoLAB data always wins where it is exact, and to-farm numbers never use the scan. Turning the option off hides everything imported (it is kept until you press **Delete imported data**).
 
-**Risk:** this app only reads the file. The scanner that creates it is third-party software, which HoYoverse's terms forbid; use at your own risk.
+**Risk:** The import only reads a file. The scanner that creates it is third-party software, which HoYoverse's terms forbid; use at your own risk.
 
 To see how a real export matches the game data without importing it: `python -m app.good.check --db <copy of the database> --refresh <file>` (from `backend/`; prints only counts and unrecognised keys).
 
