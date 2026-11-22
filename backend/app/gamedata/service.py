@@ -7,9 +7,10 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import GAMEDATA_MAX_AGE_DAYS
-from app.db.models import GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
-from app.gamedata.materials import (CATEGORIES, fetch_daily_dungeon, fetch_material_detail,
-                                    fetch_material_list, fetch_weapon_list)
+from app.db.models import GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
+from app.gamedata.artifacts import fetch_reliquary_list
+from app.gamedata.materials import (CATEGORIES, fetch_daily_dungeon, fetch_material_catalogue,
+                                    fetch_material_detail, fetch_weapon_list)
 from app.gamedata.yatta import CharacterData, fetch_avatar_list
 from app.timeutil import iso, utcnow
 
@@ -67,6 +68,7 @@ async def refresh(session_factory: sessionmaker, http: httpx.AsyncClient,
 
 META_MAT_FETCHED = "materials_fetched_at"
 META_MAT_ERROR = "materials_last_error"
+META_MAT_KEYS = "material_keys_all"
 DETAIL_CONCURRENCY = 4
 FETCH_ERRORS = (httpx.HTTPError, KeyError, ValueError, TypeError)
 
@@ -74,6 +76,8 @@ FETCH_ERRORS = (httpx.HTTPError, KeyError, ValueError, TypeError)
 def materials_need_refresh(session: Session, now: datetime) -> bool:
     fetched = _get_meta(session, META_MAT_FETCHED)
     if not fetched or session.scalar(select(func.count()).select_from(GameMaterial)) == 0:
+        return True
+    if _get_meta(session, META_MAT_KEYS) is None:
         return True
     if session.scalar(select(func.count()).select_from(GameMaterial).where(GameMaterial.detail_fetched.is_(False))):
         return True
@@ -121,7 +125,7 @@ async def refresh_materials(session_factory: sessionmaker, http: httpx.AsyncClie
         if not force and not materials_need_refresh(s, now):
             return False
     try:
-        mats = await fetch_material_list(http)
+        mats, all_keys = await fetch_material_catalogue(http)
         weapons = await fetch_weapon_list(http)
         domains = await fetch_daily_dungeon(http, {m.id for m in mats if m.category in ("talent", "weapon")})
     except FETCH_ERRORS as e:
@@ -132,6 +136,7 @@ async def refresh_materials(session_factory: sessionmaker, http: httpx.AsyncClie
         return False
     with session_factory.begin() as s:
         todo = _store_catalogue(s, mats, weapons, domains)
+        _set_meta(s, META_MAT_KEYS, all_keys)
 
     sem = asyncio.Semaphore(DETAIL_CONCURRENCY)
 
@@ -157,6 +162,39 @@ async def refresh_materials(session_factory: sessionmaker, http: httpx.AsyncClie
         _set_meta(s, META_MAT_FETCHED, iso(now))
         _set_meta(s, META_MAT_ERROR,
                   f"{failures} material detail(s) failed; retried on next refresh" if failures else None)
+    return True
+
+
+META_SETS_FETCHED = "artifact_sets_fetched_at"
+META_SETS_ERROR = "artifact_sets_last_error"
+
+
+def artifact_sets_need_refresh(session: Session, now: datetime) -> bool:
+    fetched = _get_meta(session, META_SETS_FETCHED)
+    if not fetched or session.scalar(select(func.count()).select_from(GameArtifactSet)) == 0:
+        return True
+    return now - datetime.fromisoformat(fetched.rstrip("Z")) > timedelta(days=GAMEDATA_MAX_AGE_DAYS)
+
+
+async def refresh_artifact_sets(session_factory: sessionmaker, http: httpx.AsyncClient,
+                                now: datetime | None = None, force: bool = False) -> bool:
+    now = now or utcnow()
+    with session_factory() as s:
+        if not force and not artifact_sets_need_refresh(s, now):
+            return False
+    try:
+        sets = await fetch_reliquary_list(http)
+    except FETCH_ERRORS as e:
+        message = f"{type(e).__name__}: {e}"[:300]
+        log.warning("Artifact set refresh failed: %s", message)
+        with session_factory.begin() as s:
+            _set_meta(s, META_SETS_ERROR, message)
+        return False
+    with session_factory.begin() as s:
+        for a in sets:
+            s.merge(GameArtifactSet(id=a.id, name=a.name, icon=a.icon, sort_order=a.sort_order))
+        _set_meta(s, META_SETS_FETCHED, iso(now))
+        _set_meta(s, META_SETS_ERROR, None)
     return True
 
 
@@ -207,8 +245,9 @@ async def refresh_all(session_factory: sessionmaker, http: httpx.AsyncClient,
                       now: datetime | None = None, force: bool = False) -> bool:
     characters = await refresh(session_factory, http, now=now, force=force)
     materials = await refresh_materials(session_factory, http, now=now, force=force)
+    sets = await refresh_artifact_sets(session_factory, http, now=now, force=force)
     banners = await refresh_banners(session_factory, http, now=now, force=force or characters or materials)
-    return characters or materials or banners
+    return characters or materials or sets or banners
 
 
 META_UNKNOWN_REFRESH = "unknown_ids_refresh"
@@ -240,6 +279,11 @@ def gamedata_status(session: Session) -> dict:
             "fetched_at": _get_meta(session, META_MAT_FETCHED),
             "last_error": _get_meta(session, META_MAT_ERROR),
             "count": session.scalar(select(func.count()).select_from(GameMaterial)) or 0,
+        },
+        "artifact_sets": {
+            "fetched_at": _get_meta(session, META_SETS_FETCHED),
+            "last_error": _get_meta(session, META_SETS_ERROR),
+            "count": session.scalar(select(func.count()).select_from(GameArtifactSet)) or 0,
         },
         "banners": {
             "fetched_at": _get_meta(session, META_BANNERS_FETCHED),

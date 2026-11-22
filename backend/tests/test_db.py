@@ -133,3 +133,10 @@ def test_default_map_setting(session_factory):
         set_setting(s, "default_map", "appsample")
     with session_factory() as s:
         assert get_setting(s, "default_map") == "appsample"
+
+
+def test_phase6_tables_exist(paths):
+    engine = make_engine(paths.db_file)
+    migrate(engine)
+    names = set(inspect(engine).get_table_names())
+    assert {"game_artifact_set", "good_import", "good_material", "good_weapon", "good_artifact"} <= names

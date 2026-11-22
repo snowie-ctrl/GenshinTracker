@@ -163,6 +163,15 @@ async def fetch_material_list(http: httpx.AsyncClient) -> list[MaterialData]:
     return parse_material_list(await _get_json(http, "material"))
 
 
+async def fetch_material_catalogue(http: httpx.AsyncClient) -> tuple[list[MaterialData], list[str]]:
+    """The eight-category catalogue plus the GOOD key of every Yatta item (food, quest items...),
+    so a GOOD import can tell 'not a planner material' apart from 'unknown'."""
+    from app.good.keys import good_key
+    payload = await _get_json(http, "material")
+    keys = sorted({good_key(str(v["name"])) for v in payload["data"]["items"].values()} - {""})
+    return parse_material_list(payload), keys
+
+
 async def fetch_material_detail(http: httpx.AsyncClient, material_id: int, rarity: int) -> MaterialDetail:
     return parse_material_detail(await _get_json(http, f"material/{material_id}"), rarity)
 

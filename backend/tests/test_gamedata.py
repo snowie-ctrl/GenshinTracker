@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 import httpx
 from sqlalchemy import select
 
-from app.db.models import GameCharacter, GameDomain, GameMaterial, GameWeapon
-from app.gamedata.service import (claim_unknown_ids_refresh, gamedata_status, needs_refresh, refresh,
-                                  refresh_all, refresh_materials)
+from app.db.models import GameArtifactSet, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
+from app.gamedata.service import (META_MAT_KEYS, _get_meta, claim_unknown_ids_refresh, gamedata_status,
+                                  needs_refresh, refresh, refresh_all, refresh_artifact_sets,
+                                  refresh_materials)
 from app.gamedata.yatta import canonical_id, parse_avatar_list, splash_for
 from helpers import load_fixture, yatta_transport
 
@@ -43,6 +44,7 @@ async def test_refresh_stores_rows_and_meta(session_factory):
         status = gamedata_status(s)
         assert status == {"fetched_at": "2026-11-19T12:00:00Z", "last_error": None, "count": 6,
                       "materials": {"fetched_at": None, "last_error": None, "count": 0},
+                      "artifact_sets": {"fetched_at": None, "last_error": None, "count": 0},
                       "banners": {"fetched_at": None, "last_error": None, "count": 0, "unmapped": []}}
 
 
@@ -137,3 +139,40 @@ def test_unknown_ids_refresh_is_throttled_per_id_set(session_factory):
     assert claim({5, 7, 9}, NOW + timedelta(minutes=31)) is True   # a different set
     assert claim({5, 7, 9}, NOW + timedelta(minutes=50)) is False
     assert claim({5, 7, 9}, NOW + timedelta(minutes=92)) is True   # an hour later: try again
+
+
+async def test_refresh_materials_remembers_every_yatta_material_key(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+    with session_factory() as s:
+        keys = set(_get_meta(s, META_MAT_KEYS))
+        assert {"Fowl", "SomeQuestItem", "Mora", "GuideToFreedom"} <= keys   # food/quest kept for matching
+        assert s.get(GameMaterial, 100001) is None                           # but not in the catalogue
+
+
+async def test_missing_material_keys_meta_forces_a_refresh(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+        with session_factory.begin() as s:
+            s.delete(s.get(GameMeta, META_MAT_KEYS))
+        assert await refresh_materials(session_factory, http) is True
+
+
+async def test_refresh_artifact_sets(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        assert await refresh_artifact_sets(session_factory, http) is True
+        assert await refresh_artifact_sets(session_factory, http) is False      # fresh
+    with session_factory() as s:
+        assert s.get(GameArtifactSet, 15001).name == "Gladiator's Finale"
+        assert s.get(GameArtifactSet, 15007).icon == "UI_RelicIcon_15007_4"
+        assert gamedata_status(s)["artifact_sets"]["count"] == 2
+
+
+async def test_artifact_set_failure_keeps_cache(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_artifact_sets(session_factory, http)
+    async with httpx.AsyncClient(transport=yatta_transport(status=503)) as http:
+        assert await refresh_artifact_sets(session_factory, http, force=True) is False
+    with session_factory() as s:
+        status = gamedata_status(s)["artifact_sets"]
+        assert status["count"] == 2 and "503" in status["last_error"]

@@ -64,6 +64,14 @@ class GameWeapon(Base):
     weapon_type: Mapped[str] = mapped_column(String)
 
 
+class GameArtifactSet(Base):
+    __tablename__ = "game_artifact_set"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(String)
+    icon: Mapped[str] = mapped_column(String)
+    sort_order: Mapped[int] = mapped_column(Integer)
+
+
 class GameBanner(Base):
     __tablename__ = "game_banner"
     key: Mapped[str] = mapped_column(String, primary_key=True)        # f"{pool}|{start}|{order}"
@@ -295,3 +303,45 @@ class EventDone(Base):
     __tablename__ = "event_done"
     event_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     done_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+# --- GOOD import (user data; sync never writes these) -----------------------
+class GoodImport(Base):
+    __tablename__ = "good_import"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)          # always 1
+    imported_at: Mapped[datetime] = mapped_column(DateTime)
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
+    counts: Mapped[dict] = mapped_column(JSON)
+    unmatched: Mapped[list] = mapped_column(JSON)
+
+
+class GoodMaterial(Base):
+    __tablename__ = "good_material"
+    material_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class GoodWeaponRow(Base):
+    __tablename__ = "good_weapon"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    weapon_id: Mapped[int] = mapped_column(Integer, index=True)
+    level: Mapped[int] = mapped_column(Integer)
+    ascension: Mapped[int] = mapped_column(Integer)
+    refinement: Mapped[int] = mapped_column(Integer)
+    location: Mapped[str | None] = mapped_column(String, nullable=True)     # raw GOOD character key
+    character_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lock: Mapped[bool] = mapped_column(Boolean)
+
+
+class GoodArtifactRow(Base):
+    __tablename__ = "good_artifact"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    set_id: Mapped[int] = mapped_column(Integer)
+    slot: Mapped[str] = mapped_column(String)
+    rarity: Mapped[int] = mapped_column(Integer)
+    level: Mapped[int] = mapped_column(Integer)
+    main_stat: Mapped[str] = mapped_column(String)
+    substats: Mapped[list] = mapped_column(JSON)
+    location: Mapped[str | None] = mapped_column(String, nullable=True)
+    character_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lock: Mapped[bool] = mapped_column(Boolean)

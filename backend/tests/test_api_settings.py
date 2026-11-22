@@ -23,6 +23,7 @@ def test_settings_defaults(paths):
     assert body["level_caps"] == [20, 40, 50, 60, 70, 80, 90]
     assert body["gamedata"] == {"fetched_at": None, "last_error": None, "count": 0,
                                "materials": {"fetched_at": None, "last_error": None, "count": 0},
+                               "artifact_sets": {"fetched_at": None, "last_error": None, "count": 0},
                                "banners": {"fetched_at": None, "last_error": None, "count": 0,
                                            "unmapped": []}}
 
