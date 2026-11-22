@@ -200,7 +200,15 @@ UIGF files exported under the old name keep importing: the importer does not che
 
 ---
 
-## 9. Out of scope
+## 9. Amendments from planning (2026-11-22)
+
+- The `close` icon is dropped; nothing in Foundation uses it.
+- Star tiles are drawn as a repeating SVG `background-image` rather than a `box-shadow` list, so the browser repeats the tile natively at any window size. Look and motion are unchanged.
+- Element icon names verified: `UI_Buff_Element_Fire`, `_Water`, `_Wind`, `_Electric`, `_Grass`, `_Ice`, `_Rock`.
+
+---
+
+## 10. Out of scope
 
 - Each page's own redesign (sub-projects 3–7), including fully fluid page widths.
 - Image-plus-label tiles, element-themed pages, and charts (added with the pages that need them).
