@@ -143,7 +143,7 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
         bodies += [client.get(p).text for p in
                    ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
                     "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett", "/api/teams",
-                    "/api/events", "/api/banners/history?pool=character", "/api/profile")]
+                    "/api/events", "/api/banners/history?pool=character", "/api/profile", "/api/map")]
     assert sum(1 for c in source.calls if isinstance(c, tuple) and c[0] == "gaps") == 2
     for text in [*bodies, caplog.text]:
         assert not any(secret in text for secret in SECRETS)

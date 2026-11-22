@@ -1,5 +1,6 @@
 import re
 from dataclasses import asdict
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
@@ -20,6 +21,7 @@ class SettingsIn(BaseModel):
     sync_interval_minutes: int | None = Field(default=None, ge=1, le=1440)
     default_targets: TargetsIn | None = None
     game_install_path: str | None = Field(default=None, max_length=500)
+    default_map: Literal["hoyolab", "appsample"] | None = None
 
 
 class HoyolabIn(BaseModel):
@@ -54,6 +56,7 @@ def settings_payload(ctx: AppContext, s: Session) -> dict:
         "sync_interval_minutes": get_setting(s, "sync_interval_minutes"),
         "default_targets": get_setting(s, "default_targets"),
         "game_install_path": get_setting(s, "game_install_path"),
+        "default_map": get_setting(s, "default_map"),
         "level_caps": LEVEL_CAPS,
         "gamedata": gamedata_status(s),
     }
@@ -74,6 +77,8 @@ def put_settings(body: SettingsIn, ctx: AppContext = Depends(get_ctx)) -> dict:
             set_setting(s, "default_targets", body.default_targets.model_dump())
         if body.game_install_path is not None:
             set_setting(s, "game_install_path", body.game_install_path.strip())
+        if body.default_map is not None:
+            set_setting(s, "default_map", body.default_map)
         return settings_payload(ctx, s)
 
 

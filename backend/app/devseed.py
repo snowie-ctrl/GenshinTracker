@@ -93,6 +93,8 @@ def seed(root: Path) -> None:
                                 splash=icon.replace("UI_AvatarIcon_", "UI_Gacha_AvatarImg_"),
                                 release_at=datetime(2020, 9, 28)))
         s.merge(GameMeta(key="characters_fetched_at", value=iso(now)))
+        s.merge(GameMeta(key="map_embed_hoyolab", value={"allowed": False, "checked_at": iso(now)}))
+        s.merge(GameMeta(key="map_embed_appsample", value={"allowed": True, "checked_at": iso(now)}))
         s.flush()
         names = {c[0]: c[1] for c in CHARACTERS}
         save_roster(s, [RosterEntry(cid, cid, names[cid], None, lvl, 1, 10, WEAPON)
