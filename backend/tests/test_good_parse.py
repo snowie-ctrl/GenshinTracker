@@ -75,3 +75,8 @@ def test_block_errors_name_the_block(over, block):
     with pytest.raises(GoodFormatError) as e:
         parse_good(raw(**over))
     assert block in str(e.value)
+
+
+def test_deeply_nested_json_is_a_format_error():
+    with pytest.raises(GoodFormatError, match="could not read JSON"):
+        parse_good(b"[" * 100_000)

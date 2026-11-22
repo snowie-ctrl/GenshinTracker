@@ -109,7 +109,7 @@ def _artifact(a: dict) -> GoodArtifact:
 def parse_good(content: bytes) -> GoodFile:
     try:
         body = json.loads(content.decode("utf-8-sig"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
         raise GoodFormatError("Not a GOOD file (could not read JSON)") from None
     if not isinstance(body, dict) or body.get("format") != "GOOD":
         raise GoodFormatError("Not a GOOD file")
