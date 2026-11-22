@@ -12,6 +12,7 @@ from app.gamedata.artifacts import fetch_reliquary_list
 from app.gamedata.materials import (CATEGORIES, fetch_daily_dungeon, fetch_material_catalogue,
                                     fetch_material_detail, fetch_weapon_list)
 from app.gamedata.yatta import CharacterData, fetch_avatar_list
+from app.settings.store import get_setting
 from app.timeutil import iso, utcnow
 
 log = logging.getLogger(__name__)
@@ -53,8 +54,9 @@ async def refresh(session_factory: sessionmaker, http: httpx.AsyncClient,
     with session_factory() as s:
         if not force and not needs_refresh(s, now):
             return False
+        body = str(get_setting(s, "traveler_body"))
     try:
-        chars = await fetch_avatar_list(http)
+        chars = await fetch_avatar_list(http, body)
     except (httpx.HTTPError, KeyError, ValueError, TypeError) as e:
         message = f"{type(e).__name__}: {e}"[:300]
         log.warning("Game data refresh failed: %s", message)

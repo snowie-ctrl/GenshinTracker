@@ -168,7 +168,7 @@ def _prop(p: Any) -> str:
 
 def to_roster_entry(c: Any) -> RosterEntry:
     return RosterEntry(
-        id=canonical_id(c.id), raw_id=int(c.id), name=c.name, element=c.element or None,
+        id=canonical_id(c.id, c.element or None), raw_id=int(c.id), name=c.name, element=c.element or None,
         level=int(c.level), constellation=int(c.constellation), friendship=int(c.friendship),
         weapon=_weapon(c.weapon),
     )

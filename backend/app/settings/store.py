@@ -14,6 +14,8 @@ DEFAULTS: dict[str, object] = {
     "default_map": "hoyolab",  # hoyolab | appsample
     "good_import_enabled": False,   # opt-in GOOD scanner import (Phase 6)
     "background_animated": True,    # Ad Astra drifting-dust background (Foundation)
+    "traveler_body": "girl",             # "boy" | "girl", from the synced Traveler (sub-project 2)
+    "traveler_current_element": None,    # e.g. "Cryo"; the element HoYoLAB reported last
 }
 
 

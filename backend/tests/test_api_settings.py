@@ -168,7 +168,7 @@ def test_manual_sync_rate_limit_and_not_connected(paths):
 def test_gamedata_refresh_endpoint(paths):
     with make_client(paths, transport=yatta_transport()) as client:
         body = client.post("/api/gamedata/refresh").json()
-    assert body["refreshed"] is True and body["gamedata"]["count"] == 6
+    assert body["refreshed"] is True and body["gamedata"]["count"] == 7
     assert body["gamedata"]["materials"]["count"] > 0
 
 

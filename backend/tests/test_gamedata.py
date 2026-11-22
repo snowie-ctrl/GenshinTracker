@@ -7,29 +7,28 @@ from app.db.models import GameArtifactSet, GameCharacter, GameDomain, GameMateri
 from app.gamedata.service import (META_MAT_KEYS, _get_meta, claim_unknown_ids_refresh, gamedata_status,
                                   needs_refresh, refresh, refresh_all, refresh_artifact_sets,
                                   refresh_materials)
-from app.gamedata.yatta import canonical_id, parse_avatar_list, splash_for
+from app.gamedata.yatta import parse_avatar_list, splash_for
 from helpers import load_fixture, yatta_transport
 
 NOW = datetime(2026, 11, 19, 12, 0, 0)
 
 
-def test_canonical_id():
-    assert canonical_id("10000005-anemo") == 10000005
-    assert canonical_id(10000007) == 10000005
-    assert canonical_id(10000118) == 10000117
-    assert canonical_id(10000032) == 10000032
-
-
-def test_parse_collapses_variants_and_maps_names():
+def test_parse_splits_traveler_per_element_and_drops_manekin():
     chars = {c.id: c for c in parse_avatar_list(load_fixture("yatta_avatar.json"))}
-    assert set(chars) == {10000032, 10000089, 10000052, 10000005, 10000117, 10000999}
-    trav = chars[10000005]
-    assert (trav.name, trav.slug, trav.element, trav.icon) == ("Traveler", "traveler", None, "UI_AvatarIcon_PlayerBoy")
-    assert trav.release_at == datetime(2020, 9, 27, 22, 0)  # earliest variant
-    assert chars[10000117].name == "Manekin"
+    assert set(chars) == {10000032, 10000089, 10000052, 1000000502, 1000000501, 1000000503, 10000999}
+    anemo = chars[1000000502]
+    assert (anemo.name, anemo.slug, anemo.element, anemo.icon) == (
+        "Anemo Traveler", "anemo-traveler", "Anemo", "UI_AvatarIcon_PlayerGirl")
+    assert anemo.splash == "UI_Gacha_AvatarImg_PlayerGirl"
+    assert chars[1000000503].name == "Geo Traveler"          # came from a 10000007-* key
     raiden = chars[10000052]
     assert (raiden.element, raiden.weapon_type, raiden.slug) == ("Electro", "Polearm", "raiden-shogun")
     assert raiden.splash == "UI_Gacha_AvatarImg_Shougun"
+
+
+def test_parse_uses_body_icon():
+    chars = {c.id: c for c in parse_avatar_list(load_fixture("yatta_avatar.json"), body="boy")}
+    assert chars[1000000501].icon == "UI_AvatarIcon_PlayerBoy"
 
 
 def test_splash_for():
@@ -42,7 +41,7 @@ async def test_refresh_stores_rows_and_meta(session_factory):
     with session_factory() as s:
         assert s.get(GameCharacter, 10000032).element == "Pyro"
         status = gamedata_status(s)
-        assert status == {"fetched_at": "2026-11-19T12:00:00Z", "last_error": None, "count": 6,
+        assert status == {"fetched_at": "2026-11-19T12:00:00Z", "last_error": None, "count": 7,
                       "materials": {"fetched_at": None, "last_error": None, "count": 0},
                       "artifact_sets": {"fetched_at": None, "last_error": None, "count": 0},
                       "banners": {"fetched_at": None, "last_error": None, "count": 0, "unmapped": []}}
@@ -67,7 +66,7 @@ async def test_refresh_failure_keeps_old_rows_and_records_error(session_factory)
         assert await refresh(session_factory, http, now=NOW, force=True) is False
     with session_factory() as s:
         status = gamedata_status(s)
-        assert status["count"] == 6
+        assert status["count"] == 7
         assert "503" in status["last_error"]
         assert status["fetched_at"] == "2026-11-19T12:00:00Z"
 

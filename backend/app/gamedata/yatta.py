@@ -9,16 +9,12 @@ import httpx
 
 YATTA_AVATAR_URL = "https://gi.yatta.moe/api/v2/en/avatar"
 
-TRAVELER_ID = 10000005
-MANEKIN_ID = 10000117
-_ALIASES = {10000005: TRAVELER_ID, 10000007: TRAVELER_ID, 10000117: MANEKIN_ID, 10000118: MANEKIN_ID}
-VARIANT_ICONS = {
-    10000005: "UI_AvatarIcon_PlayerBoy",
-    10000007: "UI_AvatarIcon_PlayerGirl",
-    10000117: "UI_AvatarIcon_MannequinBoy",
-    10000118: "UI_AvatarIcon_MannequinGirl",
-}
-_FIXED_NAMES = {TRAVELER_ID: "Traveler", MANEKIN_ID: "Manekin"}
+from app.gamedata.traveler import (BODY_IDS, MANEKIN_RAW_IDS, TRAVELER_ELEMENTS, TRAVELER_PENDING, body_icon,
+                                   traveler_id, traveler_name)
+
+TRAVELER_ID = 10000005   # legacy: removed in Task 4 (planner) and Task 5 (GOOD keys)
+MANEKIN_ID = 10000117    # legacy: removed in Task 5
+VARIANT_ICONS = {10000005: "UI_AvatarIcon_PlayerBoy", 10000007: "UI_AvatarIcon_PlayerGirl"}
 
 ELEMENTS = {
     "Electric": "Electro", "Fire": "Pyro", "Grass": "Dendro", "Ice": "Cryo",
@@ -44,9 +40,15 @@ class CharacterData:
     release_at: datetime
 
 
-def canonical_id(raw: int | str) -> int:
+def canonical_id(raw: int | str, element: str | None = None) -> int | None:
+    """Our id for a HoYoLAB/Yatta character id. Traveler: the element's id (TRAVELER_PENDING when the
+    element is missing or unknown). Manekin: None (not a character in Ad Astra)."""
     n = int(str(raw).split("-")[0])
-    return _ALIASES.get(n, n)
+    if n in MANEKIN_RAW_IDS:
+        return None
+    if n in BODY_IDS.values():
+        return traveler_id(element) if element in TRAVELER_ELEMENTS else TRAVELER_PENDING
+    return n
 
 
 def splash_for(icon: str) -> str:
@@ -57,13 +59,16 @@ def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
-def parse_avatar_list(payload: dict) -> list[CharacterData]:
+def parse_avatar_list(payload: dict, body: str = "girl") -> list[CharacterData]:
     by_id: dict[int, CharacterData] = {}
     for key, v in payload["data"]["items"].items():
-        cid = canonical_id(key)
-        name = _FIXED_NAMES.get(cid, v["name"])
-        icon = VARIANT_ICONS.get(cid, v["icon"])
-        element = None if cid in _FIXED_NAMES else ELEMENTS.get(v.get("element") or "")
+        element = ELEMENTS.get(v.get("element") or "")
+        cid = canonical_id(key, element)
+        if cid is None or cid == TRAVELER_PENDING:
+            continue  # Manekin, or a Traveler element we have no id for yet
+        traveler = int(str(key).split("-")[0]) in BODY_IDS.values()
+        name = traveler_name(element) if traveler else v["name"]
+        icon = body_icon(body) if traveler else v["icon"]
         release = datetime.fromtimestamp(int(v["release"]), tz=timezone.utc).replace(tzinfo=None)
         data = CharacterData(
             id=cid, name=name, slug=slugify(name), rarity=int(v["rank"]), element=element,
@@ -76,7 +81,7 @@ def parse_avatar_list(payload: dict) -> list[CharacterData]:
     return sorted(by_id.values(), key=lambda c: c.id)
 
 
-async def fetch_avatar_list(http: httpx.AsyncClient) -> list[CharacterData]:
+async def fetch_avatar_list(http: httpx.AsyncClient, body: str = "girl") -> list[CharacterData]:
     response = await http.get(YATTA_AVATAR_URL, timeout=30)
     response.raise_for_status()
-    return parse_avatar_list(response.json())
+    return parse_avatar_list(response.json(), body)

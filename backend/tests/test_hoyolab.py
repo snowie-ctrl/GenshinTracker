@@ -21,7 +21,7 @@ def test_roster_entry_maps_traveler_variant():
     c = NS(id=10000007, name="Traveler", element="Geo", rarity=5, icon="x", level=90,
            friendship=10, constellation=6, weapon=WEAPON)
     e = to_roster_entry(c)
-    assert (e.id, e.raw_id, e.element, e.level) == (10000005, 10000007, "Geo", 90)
+    assert (e.id, e.raw_id, e.element, e.level) == (1000000503, 10000007, "Geo", 90)
     assert e.weapon.name == "The Flute" and e.weapon.refinement == 5
 
 
