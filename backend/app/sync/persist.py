@@ -1,4 +1,5 @@
 """Write sync results. Only account-data tables are touched here."""
+import logging
 from datetime import datetime, timedelta
 
 from sqlalchemy import delete, select
@@ -11,19 +12,28 @@ from app.db.models import (
 from app.sync.chronicle import ChallengeRunInfo
 from app.gamedata.yatta import VARIANT_ICONS
 from app.sync.hoyolab import DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, TalentIds
-from app.timeutil import iso
+from app.gamedata.traveler import TRAVELER_IDS, TRAVELER_PENDING, is_traveler, traveler_name
+from app.timeutil import iso, utcnow
+from app.traveler.store import record_current, record_current_talents, refresh_owned, resolve
+
+log = logging.getLogger(__name__)
 
 
 def save_roster(session: Session, entries: list[RosterEntry], now: datetime) -> set[int]:
     known = set(session.scalars(select(GameCharacter.id)))
     seen: set[int] = set()
+    traveler_seen = False
     for e in entries:
+        if e.id == TRAVELER_PENDING:
+            log.warning("Traveler element %r is not known yet; keeping the previous Traveler rows", e.element)
+            seen |= {cid for cid in TRAVELER_IDS if session.get(OwnedCharacter, cid) is not None}
+            continue
         seen.add(e.id)
         row = session.get(OwnedCharacter, e.id)
         if row is None:
             row = OwnedCharacter(character_id=e.id, stats=[])
             session.add(row)
-        row.name = e.name
+        row.name = traveler_name(e.element) if is_traveler(e.id) else e.name
         row.element = e.element
         row.icon = VARIANT_ICONS.get(e.raw_id)
         row.level = e.level
@@ -36,7 +46,13 @@ def save_roster(session: Session, entries: list[RosterEntry], now: datetime) -> 
         row.weapon_refinement = e.weapon.refinement
         row.weapon_id = e.weapon.id or None
         row.synced_at = now
+        if is_traveler(e.id):
+            traveler_seen = True
+            session.flush()
+            record_current(session, e.id, e.raw_id, e.constellation)
     session.flush()
+    if traveler_seen:
+        seen |= refresh_owned(session, now)
     session.execute(delete(OwnedArtifact).where(OwnedArtifact.character_id.not_in(seen)))
     session.execute(delete(OwnedCharacter).where(OwnedCharacter.character_id.not_in(seen)))
     return seen - known
@@ -61,6 +77,10 @@ def save_details(session: Session, details: list[DetailEntry]) -> None:
                 character_id=d.id, slot=a.slot, set_name=a.set_name, rarity=a.rarity, level=a.level,
                 main_stat=a.main_stat, substats=list(a.substats), icon=a.icon,
             ))
+        if is_traveler(d.id):
+            record_current_talents(session, d.id, d.normal, d.skill, d.burst)
+    if any(is_traveler(d.id) for d in details):
+        refresh_owned(session, utcnow())
     session.flush()
 
 
@@ -156,14 +176,15 @@ def save_snapshot(session: Session, part: str, data: dict, now: datetime) -> Non
 
 def save_challenge_runs(session: Session, runs: list[ChallengeRunInfo], now: datetime) -> int:
     for r in runs:
+        teams = [[cid for cid in (resolve(session, c) for c in team) if cid is not None] for team in r.teams]
         row = session.get(ChallengeRun, (r.kind, r.season))
         if row is None:
             row = ChallengeRun(kind=r.kind, season=r.season, seen_at=now)
             session.add(row)
-        row.start, row.end, row.summary, row.teams, row.updated_at = r.start, r.end, r.summary, r.teams, now
+        row.start, row.end, row.summary, row.teams, row.updated_at = r.start, r.end, r.summary, teams, now
     session.flush()
     return len(runs)
 
 
 def unknown_character_ids(session: Session, ids: set[int]) -> set[int]:
-    return {i for i in ids if session.get(GameCharacter, i) is None and session.get(OwnedCharacter, i) is None}
+    return {i for i in ids if i != TRAVELER_PENDING and session.get(GameCharacter, i) is None and session.get(OwnedCharacter, i) is None}

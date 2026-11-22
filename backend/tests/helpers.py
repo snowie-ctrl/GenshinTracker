@@ -14,7 +14,9 @@ GAME_ROWS = [
     (10000089, "Furina", "furina", 5, "Hydro", "Sword", "UI_AvatarIcon_Furina"),
     (10000023, "Xiangling", "xiangling", 4, "Pyro", "Polearm", "UI_AvatarIcon_Xiangling"),
     (10000073, "Nahida", "nahida", 5, "Dendro", "Catalyst", "UI_AvatarIcon_Nahida"),
-    (10000005, "Traveler", "traveler", 5, None, "Sword", "UI_AvatarIcon_PlayerBoy"),
+    (1000000507, "Cryo Traveler", "cryo-traveler", 5, "Cryo", "Sword", "UI_AvatarIcon_PlayerGirl"),
+    (1000000502, "Anemo Traveler", "anemo-traveler", 5, "Anemo", "Sword", "UI_AvatarIcon_PlayerGirl"),
+    (1000000503, "Geo Traveler", "geo-traveler", 5, "Geo", "Sword", "UI_AvatarIcon_PlayerGirl"),
 ]
 
 

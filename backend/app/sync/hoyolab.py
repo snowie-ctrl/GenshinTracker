@@ -51,7 +51,7 @@ class WeaponInfo:
 
 @dataclass(frozen=True)
 class RosterEntry:
-    id: int        # canonical id
+    id: int        # our id (Traveler: element id)
     raw_id: int    # id HoYoLAB uses (needed for detail requests)
     name: str
     element: str | None
@@ -74,7 +74,7 @@ class ArtifactInfo:
 
 @dataclass(frozen=True)
 class DetailEntry:
-    id: int
+    id: int        # our id (Traveler: element id)
     normal: int
     skill: int
     burst: int
@@ -186,7 +186,8 @@ def to_detail_entry(c: Any) -> DetailEntry:
         for a in c.artifacts
     ]
     stats = [{"name": p.info.name, "value": p.final} for p in [*c.base_properties, *c.extra_properties]]
-    return DetailEntry(id=canonical_id(c.id), normal=normal, skill=skill, burst=burst,
+    return DetailEntry(id=canonical_id(c.id, getattr(c, "element", None) or None), normal=normal, skill=skill,
+                       burst=burst,
                        weapon=_weapon(c.weapon), artifacts=artifacts, stats=stats)
 
 
@@ -287,7 +288,7 @@ class GenshinPySource:
 
     async def get_roster(self) -> list[RosterEntry]:
         chars = await call_api(self._client.get_genshin_characters, self._uid, delays=self._delays)
-        return [to_roster_entry(c) for c in chars]
+        return [e for e in (to_roster_entry(c) for c in chars) if e.id is not None]
 
     async def get_details(self, raw_ids: Sequence[int]) -> list[DetailEntry]:
         out: list[DetailEntry] = []
@@ -295,7 +296,7 @@ class GenshinPySource:
         for i in range(0, len(ids), DETAIL_BATCH):
             result = await call_api(self._client.get_genshin_detailed_characters, self._uid,
                                     characters=ids[i:i + DETAIL_BATCH], delays=self._delays)
-            out.extend(to_detail_entry(c) for c in result.characters)
+            out.extend(e for e in (to_detail_entry(c) for c in result.characters) if e.id is not None)
         return out
 
     async def get_notes(self) -> NotesInfo:

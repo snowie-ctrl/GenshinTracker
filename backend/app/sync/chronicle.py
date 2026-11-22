@@ -131,8 +131,13 @@ def _plain(text: str) -> str:
     return " ".join(TAG.sub(" ", text or "").split())
 
 
+def _team(chars: Any) -> list[int]:
+    return [cid for c in chars if (cid := canonical_id(c.id, getattr(c, "element", None) or None)) is not None]
+
+
 def _banner(b: Any, pool: str) -> LiveBanner:
-    items = [BannerItem(canonical_id(c.id), c.name, c.icon, int(c.rarity), "character") for c in b.characters]
+    items = [BannerItem(cid, c.name, c.icon, int(c.rarity), "character") for c in b.characters
+             if (cid := canonical_id(c.id, getattr(c, "element", None) or None)) is not None]
     items += [BannerItem(int(w.id), w.name, w.icon, int(w.rarity), "weapon") for w in b.weapons]
     return LiveBanner(int(b.id), pool, b.name, str(b.version or ""), _ts(b.start_timestamp), _ts(b.end_timestamp), items)
 
@@ -169,7 +174,7 @@ def to_profile(user: Any) -> ProfileInfo:
 def to_abyss_run(a: Any) -> ChallengeRunInfo | None:
     if not a.unlocked or int(a.total_battles) == 0:
         return None
-    teams = [[canonical_id(c.id) for c in b.characters]
+    teams = [_team(b.characters)
              for f in a.floors for ch in f.chambers for b in ch.battles]
     return ChallengeRunInfo("abyss", str(a.season), _dt(a.start_time), _dt(a.end_time),
                             {"stars": int(a.total_stars), "max_floor": a.max_floor,
@@ -186,7 +191,7 @@ def to_theater_runs(t: Any) -> list[ChallengeRunInfo]:
         runs.append(ChallengeRunInfo(
             "theater", str(d.schedule.id), _dt(d.schedule.start_datetime), _dt(d.schedule.end_datetime),
             {"act": int(d.stats.best_record), "difficulty": int(d.stats.difficulty), "medals": int(d.stats.medal_num)},
-            [[canonical_id(c.id) for c in act.characters] for act in d.acts]))
+            [_team(act.characters) for act in d.acts]))
     return runs
 
 
@@ -199,7 +204,7 @@ def to_stygian_runs(items: Any) -> list[ChallengeRunInfo]:
         summary = ({"difficulty": int(data.best_record.difficulty), "time_used": int(data.best_record.time_used)}
                    if data.best_record is not None else {})
         runs.append(ChallengeRunInfo("stygian", str(h.season.id), _dt(h.season.start_at), _dt(h.season.end_at),
-                                     summary, [[canonical_id(c.id) for c in ch.team] for ch in data.challenges]))
+                                     summary, [_team(ch.team) for ch in data.challenges]))
     return runs
 
 

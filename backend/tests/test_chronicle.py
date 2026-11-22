@@ -62,7 +62,7 @@ def test_zero_timestamps_become_none_and_traveler_is_canonical():
     cal = NS(character_banners=[banner(chars=[char(10000007, name="Traveler")], start=0, end=0)],
              weapon_banners=[], chronicled_banners=[], events=[], challenges=[])
     b = to_calendar(cal).banners[0]
-    assert (b.start, b.end, b.items[0].id) == (None, None, 10000005)
+    assert (b.start, b.end, b.items[0].id) == (None, None, 1000000506)
 
 
 def test_profile_drops_identity_and_maps_regions():

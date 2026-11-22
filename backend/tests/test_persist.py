@@ -38,9 +38,9 @@ def test_save_roster_removes_characters_no_longer_reported(session_factory):
 def test_save_roster_keeps_variant_icon(session_factory):
     seed_game(session_factory)
     with session_factory.begin() as s:
-        save_roster(s, [make_roster(10000005, raw_id=10000007, name="Traveler", element="Geo")], NOW)
+        save_roster(s, [make_roster(1000000503, raw_id=10000007, name="Traveler", element="Geo")], NOW)
     with session_factory() as s:
-        row = s.get(OwnedCharacter, 10000005)
+        row = s.get(OwnedCharacter, 1000000503)
         assert (row.icon, row.element) == ("UI_AvatarIcon_PlayerGirl", "Geo")
 
 

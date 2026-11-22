@@ -26,7 +26,7 @@ def setup_data(paths):
         now = utcnow()
         save_roster(s, [make_roster(10000032, level=80, name="Bennett"),
                         make_roster(10000089, level=90, name="Furina"),
-                        make_roster(10000005, raw_id=10000007, name="Traveler", element="Geo")], now)
+                        make_roster(1000000503, raw_id=10000007, name="Traveler", element="Geo")], now)
         save_details(s, [make_detail(10000032, talents=(4, 8, 8)), make_detail(10000089)])
         save_notes(s, NOTES, now)
         s.add(CharacterGoal(character_id=10000032, goal="build", target_level=90, target_normal=8,
@@ -55,7 +55,7 @@ def test_list_statuses_and_visibility(paths):
 def test_traveler_uses_variant_icon_and_element(paths):
     setup_data(paths)
     with make_client(paths) as client:
-        trav = by_slug(client.get("/api/characters").json())["traveler"]
+        trav = by_slug(client.get("/api/characters").json())["geo-traveler"]
     assert trav["icon"] == "UI_AvatarIcon_PlayerGirl"
     assert trav["splash"] == "UI_Gacha_AvatarImg_PlayerGirl"
     assert trav["element"] == "Geo"
