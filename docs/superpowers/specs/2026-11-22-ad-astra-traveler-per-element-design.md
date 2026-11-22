@@ -1,7 +1,7 @@
 # Ad Astra sub-project 2: Traveler per element
 
 **Date:** 2026-11-22
-**Status:** Design agreed with the user 2026-11-22; spec awaiting review
+**Status:** Approved by the user 2026-11-22
 **Depends on:** sub-project 1 (Foundation), merged at e80061f
 **Parent:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 2)
 
