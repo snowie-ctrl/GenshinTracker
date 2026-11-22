@@ -7,6 +7,8 @@
 	import { scanAgeNote } from '$lib/good';
 	import { timeAgo } from '$lib/time';
 	import GoodImportButton from '$lib/GoodImportButton.svelte';
+	import WeaponsTab from '$lib/WeaponsTab.svelte';
+	import ArtifactsTab from '$lib/ArtifactsTab.svelte';
 	import type { Inventory } from '$lib/types';
 
 	const FILTER_KEY = 'gt.inventory.filter';
@@ -147,10 +149,10 @@
 				</div>
 			</section>
 		{/each}
-	{:else if activeTab === 'weapons'}
-		<!-- Task 8: WeaponsTab -->
-	{:else}
-		<!-- Task 8: ArtifactsTab -->
+	{:else if activeTab === 'weapons' && data.good}
+		<WeaponsTab version={data.good.imported_at} />
+	{:else if data.good}
+		<ArtifactsTab version={data.good.imported_at} />
 	{/if}
 {:else if !error}
 	<p class="muted">Loading…</p>

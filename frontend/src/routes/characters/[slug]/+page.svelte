@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { api, errorMessage } from '$lib/api';
 	import GoalSwitch from '$lib/GoalSwitch.svelte';
+	import { ownedLabel } from '$lib/good';
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
 	import TagChip from '$lib/TagChip.svelte';
@@ -106,7 +107,7 @@
 				<select aria-label="Planned weapon" value={c.planned_weapon_id ?? ''}
 					onchange={(e) => setPlannedWeapon(e.currentTarget.value)}>
 					<option value="">{c.owned && c.weapon ? `Equipped: ${c.weapon.name}` : 'None'}</option>
-					{#each weapons as w (w.id)}<option value={w.id}>{'★'.repeat(w.rarity)} {w.name}</option>{/each}
+					{#each weapons as w (w.id)}<option value={w.id}>{'★'.repeat(w.rarity)} {w.name}{w.owned ? ` · ${ownedLabel(w.owned)}` : ''}</option>{/each}
 				</select>
 			</label>
 		</section>
