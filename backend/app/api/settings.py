@@ -23,6 +23,7 @@ class SettingsIn(BaseModel):
     game_install_path: str | None = Field(default=None, max_length=500)
     default_map: Literal["hoyolab", "appsample"] | None = None
     good_import_enabled: bool | None = None
+    background_animated: bool | None = None
 
 
 class HoyolabIn(BaseModel):
@@ -59,6 +60,7 @@ def settings_payload(ctx: AppContext, s: Session) -> dict:
         "game_install_path": get_setting(s, "game_install_path"),
         "default_map": get_setting(s, "default_map"),
         "good_import_enabled": bool(get_setting(s, "good_import_enabled")),
+        "background_animated": bool(get_setting(s, "background_animated")),
         "level_caps": LEVEL_CAPS,
         "gamedata": gamedata_status(s),
     }
@@ -83,6 +85,8 @@ def put_settings(body: SettingsIn, ctx: AppContext = Depends(get_ctx)) -> dict:
             set_setting(s, "default_map", body.default_map)
         if body.good_import_enabled is not None:
             set_setting(s, "good_import_enabled", body.good_import_enabled)
+        if body.background_animated is not None:
+            set_setting(s, "background_animated", body.background_animated)
         return settings_payload(ctx, s)
 
 

@@ -177,3 +177,17 @@ def _sf_for(paths):
     engine = make_engine(paths.db_file)
     migrate(engine)
     return make_session_factory(engine)
+
+
+def test_background_animated_defaults_on_and_saves(paths):
+    with make_client(paths) as client:
+        assert client.get("/api/settings").json()["background_animated"] is True
+        body = client.put("/api/settings", json={"background_animated": False}).json()
+        assert body["background_animated"] is False
+        assert client.get("/api/settings").json()["background_animated"] is False
+
+
+def test_background_animated_rejects_non_boolean(paths):
+    with make_client(paths) as client:
+        assert client.put("/api/settings", json={"background_animated": [1]}).status_code == 422
+        assert client.get("/api/settings").json()["background_animated"] is True
