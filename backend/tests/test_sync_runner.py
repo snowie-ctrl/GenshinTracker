@@ -37,7 +37,9 @@ async def test_full_sync_saves_everything(paths, session_factory):
     run = last_run(session_factory)
     assert run.finished_at is not None
     assert run.parts == {"roster": {"ok": True, "count": 2}, "details": {"ok": True, "count": 2},
-                         "notes": {"ok": True}, "gaps": {"ok": True, "count": 0}}
+                         "notes": {"ok": True}, "gaps": {"ok": True, "count": 0},
+                         "calendar": {"ok": True, "count": 0}, "profile": {"ok": True},
+                         "challenges": {"ok": True, "count": 0}}
     with session_factory() as s:
         assert s.get(OwnedCharacter, 10000032).talent_burst == 8
         assert s.get(LiveNotes, 1).resin == 153

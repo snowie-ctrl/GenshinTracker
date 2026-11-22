@@ -5,9 +5,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    GameCharacter, GameMaterial, GameMeta, GapRun, LiveNotes, MaterialGap, MaterialTotal, OwnedArtifact,
-    OwnedCharacter,
+    ChallengeRun, GameCharacter, GameMaterial, GameMeta, GapRun, HoyolabSnapshot, LiveNotes, MaterialGap,
+    MaterialTotal, OwnedArtifact, OwnedCharacter,
 )
+from app.sync.chronicle import ChallengeRunInfo
 from app.gamedata.yatta import VARIANT_ICONS
 from app.sync.hoyolab import DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, TalentIds
 from app.timeutil import iso
@@ -142,3 +143,27 @@ def save_talent_ids(session: Session, ids: dict[int, TalentIds]) -> None:
     session.merge(GameMeta(key=TALENT_META,
                            value={str(k): [v.normal, v.skill, v.burst] for k, v in sorted(ids.items())}))
     session.flush()
+
+
+def save_snapshot(session: Session, part: str, data: dict, now: datetime) -> None:
+    row = session.get(HoyolabSnapshot, part)
+    if row is None:
+        session.add(HoyolabSnapshot(part=part, data=data, fetched_at=now))
+    else:
+        row.data, row.fetched_at = data, now
+    session.flush()
+
+
+def save_challenge_runs(session: Session, runs: list[ChallengeRunInfo], now: datetime) -> int:
+    for r in runs:
+        row = session.get(ChallengeRun, (r.kind, r.season))
+        if row is None:
+            row = ChallengeRun(kind=r.kind, season=r.season, seen_at=now)
+            session.add(row)
+        row.start, row.end, row.summary, row.teams, row.updated_at = r.start, r.end, r.summary, r.teams, now
+    session.flush()
+    return len(runs)
+
+
+def unknown_character_ids(session: Session, ids: set[int]) -> set[int]:
+    return {i for i in ids if session.get(GameCharacter, i) is None and session.get(OwnedCharacter, i) is None}

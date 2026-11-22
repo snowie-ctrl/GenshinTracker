@@ -17,13 +17,16 @@ from app.db.models import GapRun, SyncRun
 from app.planner.requests import build_inputs, gap_requests, has_work, snapshot
 from app.settings.store import get_setting, set_setting
 from app.sync.backup import backup_db
+from app.sync.chronicle import character_ids, to_json
 from app.sync.hoyolab import AuthExpired, HoyolabSource
-from app.sync.persist import (load_talent_ids, save_details, save_gap_failure, save_gaps, save_notes,
-                              save_roster, save_talent_ids)
+from app.sync.persist import (load_talent_ids, save_challenge_runs, save_details, save_gap_failure, save_gaps,
+                              save_notes, save_roster, save_snapshot, save_talent_ids, unknown_character_ids)
 from app.timeutil import utcnow
 
 log = logging.getLogger(__name__)
-PARTS = ("roster", "details", "notes", "gaps")
+CHRONICLE_PARTS = ("calendar", "profile", "challenges")
+PARTS = ("roster", "details", "notes", "gaps", *CHRONICLE_PARTS)
+FRESH_MINUTES = 60
 EXPIRED_MSG = "skipped: HoYoLAB login expired"
 
 
@@ -50,6 +53,16 @@ def last_successful(session: Session) -> SyncRun | None:
     for run in runs:
         if (run.parts or {}).get("roster", {}).get("ok"):
             return run
+    return None
+
+
+def last_part_success(session: Session, part: str) -> datetime | None:
+    runs = session.scalars(select(SyncRun).where(SyncRun.finished_at.is_not(None), SyncRun.trigger != "gaps")
+                           .order_by(SyncRun.id.desc()).limit(50))
+    for run in runs:
+        p = (run.parts or {}).get(part) or {}
+        if p.get("ok") and "skipped" not in p:
+            return run.started_at
     return None
 
 
@@ -172,6 +185,23 @@ class SyncManager:
                 save_gap_failure(s, failure["error"], self._clock())
             return failure, set()
 
+    async def _chronicle_part(self, part: str, source: HoyolabSource) -> tuple[dict, set[int]]:
+        now = self._clock()
+        if part == "calendar":
+            cal = await source.get_calendar()
+            with self._sf.begin() as s:
+                save_snapshot(s, "calendar", to_json(cal), now)
+                return {"ok": True, "count": len(cal.events)}, unknown_character_ids(s, character_ids(cal))
+        if part == "profile":
+            profile = await source.get_profile()
+            with self._sf.begin() as s:
+                save_snapshot(s, "profile", to_json(profile), now)
+            return {"ok": True}, set()
+        runs = await source.get_challenges()
+        with self._sf.begin() as s:
+            count = save_challenge_runs(s, runs, now)
+            return {"ok": True, "count": count}, unknown_character_ids(s, character_ids(runs))
+
     async def _run_gaps_only(self, run_id: int, source: HoyolabSource, generation: int) -> None:
         parts: dict[str, dict] = {}
         unknown: set[int] = set()
@@ -246,6 +276,7 @@ class SyncManager:
         return SyncRequestResult(run_id, True, "started")
 
     async def _run(self, run_id: int, source: HoyolabSource, generation: int) -> None:
+        trigger = self._run_trigger
         parts: dict[str, dict] = {}
         unknown: set[int] = set()
         try:
@@ -303,6 +334,24 @@ class SyncManager:
                         unknown |= gap_unknown
                     except AuthExpired:
                         expired = True
+
+            for part in CHRONICLE_PARTS:
+                if expired:
+                    break
+                if trigger != "manual":
+                    with self._sf() as s:
+                        last = last_part_success(s, part)
+                    if last is not None and self._clock() - last < timedelta(minutes=FRESH_MINUTES):
+                        parts[part] = {"ok": True, "skipped": "fresh"}
+                        continue
+                try:
+                    parts[part], found = await self._chronicle_part(part, source)
+                    unknown |= found
+                except AuthExpired:
+                    expired = True
+                except Exception as e:
+                    log.warning("Sync part %s failed: %s", part, type(e).__name__)
+                    parts[part] = _failure(e)
 
             if expired:
                 for part in PARTS:
