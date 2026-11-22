@@ -53,6 +53,12 @@ def test_shared_material_and_crafting():
     assert rows[PLUME]["category_label"] == "Weekly boss drops"
 
 
+def test_shared_ignores_characters_no_longer_set_to_build():
+    # Furina's gap rows are left over from an earlier calculation, but she is no longer Build.
+    d = replace(data(), characters={BEN: data().characters[BEN]})
+    assert rows_by_id(d, [BEN])[GUIDE]["shared"] is False
+
+
 def test_whole_roster_team_matches_combined_short():
     rows = rows_by_id(data(), [BEN, FUR])
     assert rows[GUIDE]["short"] == 7 and rows[GUIDE]["shared"] is False

@@ -5,7 +5,10 @@
 	import { imgSrc } from './img';
 	import { ELEMENTS, WEAPON_TYPES, emptyFilters, matches, type Filters } from './status';
 	import TagChip from './TagChip.svelte';
-	import { BUILD_TAG_ID, MAX_MEMBERS, addMember, moveItem, raisedMessage, removeMember, willRaise } from './teams';
+	import {
+		BUILD_TAG_ID, MAX_MEMBERS, addMember, moveItem, raisedMessage, removeMember, teamErrorField, validateTeam,
+		willRaise, type FieldError
+	} from './teams';
 	import type { Character, MemberDraft, TagWithCount } from './types';
 
 	let { teamId }: { teamId: number | null } = $props();
@@ -26,7 +29,8 @@
 	let loadFailed = $state(false);
 	let saving = $state(false);
 	let error = $state<string | null>(null);
-	let fieldError = $state<string | null>(null);
+	let fieldError = $state<FieldError | null>(null);
+	let savedName = $state('');   // the Delete confirmation names the team as saved, not as being edited
 
 	const byId = $derived(new Map(chars.map((c) => [c.id, c])));
 	const hasBuild = $derived(tagIds.includes(BUILD_TAG_ID));   // a typed "build" resolves to the Build tag itself
@@ -47,6 +51,7 @@
 			if (teamId !== null) {
 				const { team } = await api.team(teamId);
 				name = team.name;
+				savedName = team.name;
 				notes = team.notes;
 				members = team.members.map((m) => ({ character_id: m.id, role: m.role }));
 				tagIds = team.tags.map((x) => x.id);
@@ -100,9 +105,8 @@
 	}
 
 	async function save() {
-		fieldError = null;
-		if (!name.trim()) return void (fieldError = 'Team name is required');
-		if (members.length === 0) return void (fieldError = 'A team needs 1 to 4 members');
+		fieldError = validateTeam(name, members.length);
+		if (fieldError) return;
 		saving = true;
 		const body = { name, notes, members, tag_ids: tagIds, new_tags: newTags };
 		try {
@@ -112,7 +116,7 @@
 			await goto(`/teams?saved=${encodeURIComponent(msg)}#team-${res.team.id}`);
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 404) missing = true;
-			else if (e instanceof ApiError && e.status === 422) fieldError = e.message;
+			else if (e instanceof ApiError && e.status === 422) fieldError = { field: teamErrorField(e.message), message: e.message };
 			else error = errorMessage(e);
 		} finally {
 			saving = false;
@@ -120,7 +124,7 @@
 	}
 
 	async function remove() {
-		if (teamId === null || !confirm(`Delete "${name}"? Goals are not changed.`)) return;
+		if (teamId === null || !confirm(`Delete "${savedName}"? Goals are not changed.`)) return;
 		try {
 			saving = true;
 			await api.deleteTeam(teamId);
@@ -147,8 +151,12 @@
 	{#if error}<div class="toast error">{error} <button type="button" onclick={() => (error = null)}>Dismiss</button></div>{/if}
 
 	<section class="panel form">
-		<label>Team name <input bind:value={name} maxlength="60" aria-label="Team name" /></label>
-		<label>Notes <textarea bind:value={notes} maxlength="2000" rows="3" aria-label="Notes"></textarea></label>
+		<label>Team name <input bind:value={name} maxlength="60" aria-label="Team name"
+			aria-invalid={fieldError?.field === 'name'} aria-describedby={fieldError?.field === 'name' ? 'err-name' : undefined} /></label>
+		{#if fieldError?.field === 'name'}<p class="error" id="err-name" data-testid="error-name">{fieldError.message}</p>{/if}
+		<label>Notes <textarea bind:value={notes} maxlength="2000" rows="3" aria-label="Notes"
+			aria-invalid={fieldError?.field === 'notes'} aria-describedby={fieldError?.field === 'notes' ? 'err-notes' : undefined}></textarea></label>
+		{#if fieldError?.field === 'notes'}<p class="error" id="err-notes">{fieldError.message}</p>{/if}
 
 		<div class="tagrow">
 			{#each tags as t (t.id)}<TagChip tag={t} on={tagIds.includes(t.id)} onclick={() => toggleTagId(t.id)} />{/each}
@@ -160,6 +168,7 @@
 				<input bind:value={tagInput} maxlength="30" placeholder="Add or create tag" aria-label="Add tag" />
 			</form>
 		</div>
+		{#if fieldError?.field === 'tags'}<p class="error">{fieldError.message}</p>{/if}
 
 		<div class="slots">
 			{#each Array.from({ length: MAX_MEMBERS }) as _x, i (i)}
@@ -185,8 +194,9 @@
 				</div>
 			{/each}
 		</div>
+		{#if fieldError?.field === 'members'}<p class="error" data-testid="error-members">{fieldError.message}</p>{/if}
 		{#if raising.length}<p class="warn">Saving raises {raising.join(', ')} to Build</p>{/if}
-		{#if fieldError}<p class="error">{fieldError}</p>{/if}
+		{#if fieldError && fieldError.field === null}<p class="error">{fieldError.message}</p>{/if}
 
 		<div class="buttons">
 			<button type="button" class="primary" onclick={save} disabled={saving}>Save</button>

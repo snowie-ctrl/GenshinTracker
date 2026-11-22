@@ -1,9 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import type { Character, Team, TeamMaterial, TeamMember } from './types';
 import {
-	addMember, emptyTeamFilter, farmRows, filterTeams, matchesTeamTags, memberLine, moveItem, raisedMessage,
-	removeMember, teamTileView, toggleTag, toggleUntagged, weaponLine, willRaise
+	addMember, emptyTeamFilter, farmRows, filterActive, filterTeams, keepKnownTags, matchesTeamTags, memberLine,
+	moveItem, pruneTeamFilter, raisedMessage, removeMember, teamErrorField, teamTileView, toggleTag, toggleUntagged,
+	validateTeam, weaponLine, willRaise
 } from './teams';
+
+describe('deleted tags', () => {
+	it('drops selected tag ids that no longer exist', () => {
+		expect(keepKnownTags([1, 5, 7], [1, 7, 9])).toEqual([1, 7]);
+		const f = { tagIds: [1, 5], untagged: false };
+		expect(pruneTeamFilter(f, [1, 2])).toEqual({ tagIds: [1], untagged: false });
+	});
+	it('returns the same filter when nothing was pruned', () => {
+		const f = { tagIds: [1, 2], untagged: false };
+		expect(pruneTeamFilter(f, [1, 2, 3])).toBe(f);
+		const u = { tagIds: [], untagged: true };
+		expect(pruneTeamFilter(u, [])).toBe(u);
+	});
+});
+
+describe('team editor errors', () => {
+	it('checks name then members before saving', () => {
+		expect(validateTeam('  ', 0)).toEqual({ field: 'name', message: 'Team name is required' });
+		expect(validateTeam('Dendro', 0)).toEqual({ field: 'members', message: 'A team needs 1 to 4 members' });
+		expect(validateTeam('Dendro', 2)).toBeNull();
+	});
+	it('places a server 422 next to the field it is about', () => {
+		expect(teamErrorField('Team name can be at most 60 characters')).toBe('name');
+		expect(teamErrorField('Notes can be at most 2000 characters')).toBe('notes');
+		expect(teamErrorField('A team needs 1 to 4 members')).toBe('members');
+		expect(teamErrorField('A character can be in a team only once')).toBe('members');
+		expect(teamErrorField('Unknown character 10000099')).toBe('members');
+		expect(teamErrorField('Role can be at most 40 characters')).toBe('members');
+		expect(teamErrorField('Unknown tag')).toBe('tags');
+		expect(teamErrorField('Something else')).toBeNull();
+	});
+});
+
+describe('filterActive', () => {
+	it('is on for any tag or Untagged selection', () => {
+		expect(filterActive(emptyTeamFilter())).toBe(false);
+		expect(filterActive({ tagIds: [2], untagged: false })).toBe(true);
+		expect(filterActive({ tagIds: [], untagged: true })).toBe(true);
+	});
+});
 
 const tag = (id: number, name: string) => ({ id, name, color: 'red', builtin: id === 1 });
 

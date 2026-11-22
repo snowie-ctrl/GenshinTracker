@@ -35,7 +35,9 @@ def team_shortfall(data: PlannerData, build_ids: list[int], index: dict[int, dic
         if t.need <= 0 or m is None:
             continue
         c = crafted.get(mid, Crafted(0, t.short))
-        shared = any(cid not in members and mats.get(mid, (0, 0))[0] > 0 for cid, mats in data.gaps.items())
+        # Only characters still set to Build count: gap rows can outlive a goal change until the next calculation.
+        shared = any(cid not in members and cid in data.characters and mats.get(mid, (0, 0))[0] > 0
+                     for cid, mats in data.gaps.items())
         rows.append({"id": mid, "name": m["name"], "icon": m["icon"], "rarity": m["rarity"],
                      "category": m["category"], "category_label": CATEGORY_LABELS[m["category"]],
                      "need": t.need, "short": t.short, "craftable": c.craftable, "to_farm": c.to_farm,

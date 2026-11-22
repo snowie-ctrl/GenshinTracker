@@ -8,7 +8,8 @@
 	import TagManager from '$lib/TagManager.svelte';
 	import TeamCard from '$lib/TeamCard.svelte';
 	import {
-		filterTeams, loadTeamFilter, moveItem, saveTeamFilter, toggleTag, toggleUntagged, type TeamFilter
+		filterActive, filterTeams, loadTeamFilter, moveItem, pruneTeamFilter, saveTeamFilter, toggleTag, toggleUntagged,
+		type TeamFilter
 	} from '$lib/teams';
 	import type { TagWithCount, TeamMember, TeamsResponse } from '$lib/types';
 
@@ -22,6 +23,8 @@
 	let dragId = $state<number | null>(null);
 	let now = $state(Date.now());
 	const shown = $derived(data ? filterTeams(data.teams, filter) : []);
+	// Moving a team among a filtered subset would shuffle hidden teams in surprising ways.
+	const canReorder = $derived(!filterActive(filter));
 
 	$effect(() => {
 		void sync.version;
@@ -40,6 +43,8 @@
 	async function load() {
 		try {
 			[data, tags] = await Promise.all([api.teams(), api.tags()]);
+			const pruned = pruneTeamFilter(filter, tags.map((t) => t.id));
+			if (pruned !== filter) setFilter(pruned);
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
@@ -52,7 +57,7 @@
 	}
 
 	async function reorderTo(from: number, to: number) {
-		if (!data) return;
+		if (!data || !canReorder) return;
 		const before = data.teams;
 		const teams = moveItem(before, from, to);
 		if (teams === before) return;
@@ -113,12 +118,14 @@
 		</section>
 	{:else if shown.length === 0}
 		<p class="muted">No team has these tags.</p>
+	{:else if !canReorder}
+		<p class="muted" data-testid="reorder-hint">Reordering is off while a tag filter is on. Show All to reorder teams.</p>
 	{/if}
 	{#each shown as team (team.id)}
-		<div role="listitem" draggable="true" ondragstart={() => (dragId = team.id)} ondragend={() => (dragId = null)}
+		<div role="listitem" draggable={canReorder} ondragstart={() => (dragId = canReorder ? team.id : null)} ondragend={() => (dragId = null)}
 			ondragover={(e) => e.preventDefault()} ondrop={() => drop(team.id)}>
 			<TeamCard {team} gaps={data.gaps} connected={data.connected} {now} onBuildAgain={buildAgain}
-				onMove={(d) => reorderTo(indexOf(team.id), indexOf(team.id) + d)}
+				onMove={(d) => reorderTo(indexOf(team.id), indexOf(team.id) + d)} reorderable={canReorder}
 				first={indexOf(team.id) === 0} last={indexOf(team.id) === data.teams.length - 1} />
 		</div>
 	{/each}

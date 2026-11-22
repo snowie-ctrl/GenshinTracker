@@ -6,9 +6,9 @@
 	import { MAX_MEMBERS, farmRows, memberLine, teamTileView, weaponLine } from './teams';
 	import type { GapStatus, Team, TeamMember } from './types';
 
-	let { team, gaps, connected, now, onBuildAgain, onMove, first, last }: {
+	let { team, gaps, connected, now, onBuildAgain, onMove, first, last, reorderable = true }: {
 		team: Team; gaps: GapStatus; connected: boolean; now: number; onBuildAgain: (m: TeamMember) => void;
-		onMove: (delta: -1 | 1) => void; first: boolean; last: boolean;
+		onMove: (delta: -1 | 1) => void; first: boolean; last: boolean; reorderable?: boolean;
 	} = $props();
 
 	let notesOpen = $state(false);
@@ -20,12 +20,12 @@
 
 <article class="team panel" id="team-{team.id}" data-testid="team-{team.id}">
 	<header>
-		<span class="handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
+		{#if reorderable}<span class="handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>{/if}
 		<h2>{team.name}</h2>
 		<div class="tags">{#each team.tags as t (t.id)}<TagChip tag={t} />{/each}</div>
 		<div class="actions">
-			<button type="button" onclick={() => onMove(-1)} disabled={first} aria-label="Move {team.name} up">↑</button>
-			<button type="button" onclick={() => onMove(1)} disabled={last} aria-label="Move {team.name} down">↓</button>
+			<button type="button" onclick={() => onMove(-1)} disabled={!reorderable || first} aria-label="Move {team.name} up">↑</button>
+			<button type="button" onclick={() => onMove(1)} disabled={!reorderable || last} aria-label="Move {team.name} down">↓</button>
 			<a href="/teams/{team.id}">Edit</a>
 		</div>
 	</header>

@@ -25,6 +25,21 @@ export function toggleUntagged(f: TeamFilter): TeamFilter {
 	return { tagIds: [], untagged: !f.untagged };
 }
 
+export function filterActive(f: TeamFilter): boolean {
+	return f.untagged || f.tagIds.length > 0;
+}
+
+/** Selected tag ids that still exist (a tag may have been deleted). */
+export function keepKnownTags(selected: number[], known: number[]): number[] {
+	return selected.filter((id) => known.includes(id));
+}
+
+/** The filter without deleted tags; the same object when nothing changed. */
+export function pruneTeamFilter(f: TeamFilter, known: number[]): TeamFilter {
+	const tagIds = keepKnownTags(f.tagIds, known);
+	return tagIds.length === f.tagIds.length ? f : { ...f, tagIds };
+}
+
 export function filterTeams(teams: Team[], f: TeamFilter): Team[] {
 	if (f.untagged) return teams.filter((t) => t.tags.length === 0);
 	return teams.filter((t) => f.tagIds.every((id) => t.tags.some((tag) => tag.id === id)));
@@ -87,6 +102,25 @@ export function willRaise(
 		.map((m) => byId.get(m.character_id))
 		.filter((c): c is Character => !!c && c.goal !== 'build')
 		.map((c) => c.name);
+}
+
+export type TeamField = 'name' | 'notes' | 'members' | 'tags';
+export interface FieldError { field: TeamField | null; message: string }
+
+/** The editor's own checks before saving (the server repeats them). */
+export function validateTeam(name: string, memberCount: number): FieldError | null {
+	if (!name.trim()) return { field: 'name', message: 'Team name is required' };
+	if (memberCount === 0) return { field: 'members', message: 'A team needs 1 to 4 members' };
+	return null;
+}
+
+/** Which editor field a server 422 message is about (mirrors app.teams.store messages). */
+export function teamErrorField(message: string): TeamField | null {
+	if (message.startsWith('Team name')) return 'name';
+	if (message.startsWith('Notes')) return 'notes';
+	if (/member|character|^Role/i.test(message)) return 'members';
+	if (/\btag\b/i.test(message)) return 'tags';
+	return null;
 }
 
 export function raisedMessage(n: number): string {

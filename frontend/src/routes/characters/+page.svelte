@@ -7,6 +7,7 @@
 		ELEMENTS, SECTIONS, WEAPON_TYPES, deriveStatus, emptyFilters, groupCharacters, type Filters
 	} from '$lib/status';
 	import { sync } from '$lib/sync.svelte';
+	import { keepKnownTags } from '$lib/teams';
 	import type { Character, Goal, Status, Tag } from '$lib/types';
 
 	let chars = $state<Character[]>([]);
@@ -25,7 +26,13 @@
 
 	async function load() {
 		try {
-			[chars, tags] = await Promise.all([api.characters(), api.tags().catch(() => [] as Tag[])]);
+			const [c, t] = await Promise.all([api.characters(), api.tags().catch(() => null)]);
+			chars = c;
+			tags = t ?? [];
+			// drop a selected team tag that was deleted meanwhile (only when the tag list actually loaded)
+			if (t && filters.teamTags.some((id) => !t.some((x) => x.id === id))) {
+				filters.teamTags = keepKnownTags(filters.teamTags, t.map((x) => x.id));
+			}
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);

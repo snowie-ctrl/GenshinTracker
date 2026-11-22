@@ -20,19 +20,24 @@
 		}
 	}
 
-	async function run(fn: () => Promise<unknown>) {
+	async function run(fn: () => Promise<unknown>): Promise<boolean> {
 		try {
 			await fn();
 			error = null;
 			await load();
 			onChange();
+			return true;
 		} catch (e) {
 			error = errorMessage(e);
+			return false;
 		}
 	}
 
-	function rename(t: TagWithCount, name: string) {
-		if (name.trim() && name.trim() !== t.name) run(() => api.updateTag(t.id, { name: name.trim() }));
+	async function rename(t: TagWithCount, input: HTMLInputElement) {
+		const name = input.value.trim();
+		if (name === t.name) return;
+		// a blank or rejected name puts the old one back in the box
+		if (!name || !(await run(() => api.updateTag(t.id, { name })))) input.value = t.name;
 	}
 
 	function remove(t: TagWithCount) {
@@ -60,7 +65,7 @@
 					<span class="muted">built-in</span>
 				{:else}
 					<input value={t.name} aria-label="Rename {t.name}" maxlength="30"
-						onchange={(e) => rename(t, (e.currentTarget as HTMLInputElement).value)} />
+						onchange={(e) => rename(t, e.currentTarget)} />
 				{/if}
 				<span class="swatches">
 					{#each TAG_COLORS as c (c)}
