@@ -160,6 +160,14 @@ def test_character_shortfall_marks_shared():
     assert rows[50]["shared"] is False
 
 
+def test_character_shortfall_shared_ignores_characters_no_longer_set_to_build():
+    d = planner_fixture()
+    d.characters = {cid: ref for cid, ref in d.characters.items() if cid != 20}   # 20's gap rows are left over
+    assert 10 in d.characters
+    rows = {r["id"]: r for r in character_shortfall(d, 10, material_index(d))}
+    assert rows[2]["shared"] is False
+
+
 def test_building_cards_only_short_and_fully_built():
     d = planner_fixture()
     d.characters[30] = CharRef(30, "Xiangling", "xiangling", None)

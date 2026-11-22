@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
 	import { sync } from '$lib/sync.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
@@ -36,6 +37,7 @@
 	const intervalNotes = noteTimer((v) => (savedNote = v));
 	const gamePathNotes = noteTimer((v) => (gamePathNote = v));
 	const mapNotes = noteTimer((v) => (mapNote = v));
+	onDestroy(() => [intervalNotes, gamePathNotes, mapNotes].forEach((n) => n.cancel()));
 
 	async function loadCache() {
 		try {

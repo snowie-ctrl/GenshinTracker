@@ -12,7 +12,9 @@ def character_shortfall(data: PlannerData, character_id: int, index: dict[int, d
         m = index.get(mid)
         if m is None:
             continue
-        others = any(cid != character_id and mats.get(mid, (0, 0))[0] > 0 for cid, mats in data.gaps.items())
+        # Only characters still set to Build count: gap rows can outlive a goal change until the next calculation.
+        others = any(cid != character_id and cid in data.characters and mats.get(mid, (0, 0))[0] > 0
+                     for cid, mats in data.gaps.items())
         combined = data.totals.get(mid, Total(0, 0, 0)).short
         rows.append({"id": mid, "name": m["name"], "icon": m["icon"], "rarity": m["rarity"],
                      "category": m["category"], "category_label": CATEGORY_LABELS[m["category"]],

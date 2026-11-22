@@ -25,6 +25,16 @@ describe('noteTimer', () => {
 		expect(note).toBe('Boom');
 	});
 
+	it('cancel drops a pending clear', () => {
+		let note: string | null = null;
+		const n = noteTimer((v) => (note = v), 3000);
+		n.saved();
+		n.cancel();
+		vi.advanceTimersByTime(10_000);
+		expect(note).toBe('Saved.');
+		expect(vi.getTimerCount()).toBe(0);
+	});
+
 	it('a second save restarts the timer', () => {
 		let note: string | null = null;
 		const n = noteTimer((v) => (note = v), 3000);

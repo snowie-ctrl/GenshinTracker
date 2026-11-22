@@ -118,8 +118,9 @@ export function validateTeam(name: string, memberCount: number): FieldError | nu
 export function teamErrorField(message: string): TeamField | null {
 	if (message.startsWith('Team name')) return 'name';
 	if (message.startsWith('Notes')) return 'notes';
-	if (/member|character|^Role/i.test(message)) return 'members';
-	if (/\btag\b/i.test(message)) return 'tags';
+	// anchored: "Tag name can be at most 30 characters" is about tags, not members
+	if (/^(Tag\b|Unknown tag\b)/i.test(message)) return 'tags';
+	if (/^(Role\b|A team needs|A character\b|Unknown character\b)/i.test(message)) return 'members';
 	return null;
 }
 

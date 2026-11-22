@@ -34,6 +34,8 @@ describe('team editor errors', () => {
 		expect(teamErrorField('Unknown character 10000099')).toBe('members');
 		expect(teamErrorField('Role can be at most 40 characters')).toBe('members');
 		expect(teamErrorField('Unknown tag')).toBe('tags');
+		expect(teamErrorField('Tag name can be at most 30 characters')).toBe('tags');
+		expect(teamErrorField('Tag name is required')).toBe('tags');
 		expect(teamErrorField('Something else')).toBeNull();
 	});
 });

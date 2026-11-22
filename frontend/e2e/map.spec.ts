@@ -19,3 +19,20 @@ test('map tabs are a proper tablist controlling one tabpanel', async ({ page }) 
 	await expect(tab).toHaveAttribute('aria-controls', 'map-panel');
 	await expect(page.getByRole('tabpanel', { name: 'AppSample' })).toBeVisible();
 });
+
+test('map tabs use a roving tabindex and arrow keys', async ({ page }) => {
+	await page.goto('/map');
+	const hoyolab = page.getByRole('tab', { name: 'HoYoLAB Interactive Map' });
+	const appsample = page.getByRole('tab', { name: 'AppSample' });
+	await hoyolab.click();
+	await expect(hoyolab).toHaveAttribute('tabindex', '0');
+	await expect(appsample).toHaveAttribute('tabindex', '-1');
+	await page.keyboard.press('ArrowRight');
+	await expect(appsample).toBeFocused();
+	await expect(appsample).toHaveAttribute('aria-selected', 'true');
+	await expect(appsample).toHaveAttribute('tabindex', '0');
+	await expect(page.getByTestId('map-frame')).toHaveAttribute('src', /appsample/);
+	await page.keyboard.press('ArrowLeft');
+	await expect(hoyolab).toBeFocused();
+	await expect(hoyolab).toHaveAttribute('aria-selected', 'true');
+});

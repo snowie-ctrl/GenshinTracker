@@ -23,6 +23,6 @@ export function syncLabel(s: SyncStatus | null, now: number): string {
 /** 'fresh' is the hourly throttle skip; a list names characters the gaps part could not plan. */
 export function skippedNote(part: SyncPart): string {
 	if (part.skipped === 'fresh') return 'skipped: fresh';
-	if (Array.isArray(part.skipped) && part.skipped.length) return `skipped: ${part.skipped.join(', ')}`;
+	if (Array.isArray(part.skipped) && part.skipped.length) return `not planned: ${part.skipped.join(', ')}`;
 	return '';
 }

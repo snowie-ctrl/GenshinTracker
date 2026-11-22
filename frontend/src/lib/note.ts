@@ -10,6 +10,11 @@ export function noteTimer(set: (v: string | null) => void, ms = 3000) {
 		error(message: string) {
 			clearTimeout(timer);
 			set(message);
+		},
+		/** Drop a pending clear (on unmount). */
+		cancel() {
+			clearTimeout(timer);
+			timer = undefined;
 		}
 	};
 }

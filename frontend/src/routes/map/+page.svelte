@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
-	import { initialTab, loadLastMap, saveLastMap } from '$lib/maps';
+	import { initialTab, loadLastMap, nextTab, saveLastMap } from '$lib/maps';
 	import type { MapKey, MapsResponse } from '$lib/types';
 
 	let data = $state<MapsResponse | null>(null);
@@ -22,6 +22,16 @@
 		tab = key;
 		saveLastMap(key);
 	}
+
+	// roving tabindex: arrows (and Home/End) select and focus the neighbouring tab
+	function keydown(e: KeyboardEvent) {
+		if (!data) return;
+		const key = nextTab(data.maps.map((m) => m.key), tab, e.key);
+		if (key === null) return;
+		e.preventDefault();
+		choose(key);
+		document.getElementById(`map-tab-${key}`)?.focus();
+	}
 </script>
 
 <h1>Map</h1>
@@ -30,7 +40,7 @@
 	<div class="tabs" role="tablist" aria-label="Maps">
 		{#each data.maps as m (m.key)}
 			<button type="button" role="tab" class="chip" class:on={tab === m.key} aria-selected={tab === m.key}
-				id="map-tab-{m.key}" aria-controls="map-panel"
+				id="map-tab-{m.key}" aria-controls="map-panel" tabindex={tab === m.key ? 0 : -1} onkeydown={keydown}
 				data-testid="map-tab-{m.key}" onclick={() => choose(m.key)}>{m.name}</button>
 		{/each}
 	</div>
