@@ -16,4 +16,4 @@ def test_profile_endpoint(paths):
         body = client.get("/api/profile").json()
         dash = client.get("/api/dashboard").json()
     assert body["profile"]["ar"] == 60 and set(body["challenges"]) == {"abyss", "theater", "stygian"}
-    assert dash["profile_summary"]["ar"] == 60
+    assert dash["profile_summary"]["ar"] == 60 and dash["profile_summary"]["fetched_at"].endswith("Z")

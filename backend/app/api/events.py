@@ -38,12 +38,12 @@ def challenge_periods(session: Session) -> dict[str, str | None]:
     return out
 
 
-def events_payload(ctx: AppContext, s: Session) -> dict:
+def events_payload(ctx: AppContext, s: Session, results=None) -> dict:
     now, reg = utcnow(), region(ctx)
     snap = s.get(HoyolabSnapshot, "calendar")
     calendar = snap.data if snap is not None else {"banners": [], "events": [], "challenges": []}
     offset = offset_hours(reg)
-    pulls = pulls_by_banner(summarize(s, now, offset))
+    pulls = pulls_by_banner(results if results is not None else summarize(s, now, offset))
     windows = banner_windows(list(s.scalars(select(GameBanner))), offset)
     done = set(s.scalars(select(EventDone.event_id)))
     rows = event_rows(calendar, done, now)

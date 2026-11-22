@@ -190,20 +190,20 @@
 		<button type="button" onclick={saveInterval}>Save</button>
 		{#if savedNote}<span class="muted">{savedNote}</span>{/if}
 		<table>
-			<thead><tr><th>When</th><th>Trigger</th><th>Roster</th><th>Details</th><th>Notes</th></tr></thead>
+			<thead><tr><th>When</th><th>Trigger</th><th>Roster</th><th>Details</th><th>Notes</th><th>Calendar</th><th>Profile</th><th>Challenges</th></tr></thead>
 			<tbody>
 				{#each runs as r (r.id)}
 					<tr>
 						<td>{timeAgo(r.started_at, now)}</td>
 						<td>{r.trigger}</td>
-						{#each ['roster', 'details', 'notes'] as p (p)}
+						{#each ['roster', 'details', 'notes', 'calendar', 'profile', 'challenges'] as p (p)}
 							<td title={r.parts[p]?.error ?? ''} class:error={r.parts[p] && !r.parts[p].ok}>
-								{#if !r.finished_at}…{:else if !r.parts[p]}—{:else if r.parts[p].ok}ok{:else}failed{/if}
+								{#if !r.finished_at}…{:else if !r.parts[p]}—{:else if r.parts[p].skipped}fresh{:else if r.parts[p].ok}ok{:else}failed{/if}
 							</td>
 						{/each}
 					</tr>
 				{:else}
-					<tr><td colspan="5" class="muted">No syncs yet.</td></tr>
+					<tr><td colspan="8" class="muted">No syncs yet.</td></tr>
 				{/each}
 			</tbody>
 		</table>

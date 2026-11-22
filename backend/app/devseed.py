@@ -170,7 +170,7 @@ def seed(root: Path) -> None:
         b_end = datetime.strptime(end, "%Y-%m-%d %H:%M:%S") - timedelta(hours=8)
         primo = {"id": 201, "name": "Primogem", "icon": "", "count": 0, "rarity": 5}
         calendar = {
-            "banners": [{"pool": "character", "name": "Tide of Furina", "start": iso(b_start), "end": iso(b_end),
+            "banners": [{"id": 1, "version": "6.2", "pool": "character", "name": "Tide of Furina", "start": iso(b_start), "end": iso(b_end),
                          "items": [{"id": 10000089, "name": "Furina", "icon": "UI_AvatarIcon_Furina", "rarity": 5},
                                    {"id": 10000032, "name": "Bennett", "icon": "UI_AvatarIcon_Bennett",
                                     "rarity": 4}]}],

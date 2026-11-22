@@ -84,6 +84,8 @@ Calendar, profile and challenge data refresh with the normal sync at most once a
 python -m pytest
 # live check against your account (from backend/, after connecting)
 python -m app.smoke
+# read-only calendar, profile and challenge check
+python -m app.smoke --chronicle
 # frontend (from frontend/)
 npm run dev      # http://localhost:5173, proxies /api to the backend on 8765
 npm run check

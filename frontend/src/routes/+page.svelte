@@ -162,11 +162,12 @@
 			<div class="tiles-row">
 				{#each data.live_banners as b (b.id)}
 					<span class="dash-banner">
-						{#each b.items.filter((i) => i.rarity === 5) as it (it.id)}<img src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/each}
+						{#each b.items.filter((i) => i.rarity === 5) as it (it.id)}{#if imgSrc(it.icon)}<img src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/if}{/each}
 						<span>{b.name}</span> <Countdown at={b.end} {now} />
 					</span>
 				{/each}
 			</div>
+			{#if data.calendar_fetched_at}<p class="muted">As of {timeAgo(data.calendar_fetched_at, now)}</p>{/if}
 		{/if}
 	</section>
 
@@ -179,6 +180,8 @@
 		{:else}
 			<p>{data.events_left.count} events left · {data.events_left.primogems} primos</p>
 			<ul>{#each data.events_left.next as e (e.id)}<li>{e.name} · <Countdown at={e.end} {now} /></li>{/each}</ul>
+		{/if}
+		{#if data.calendar_fetched_at}<p class="muted">As of {timeAgo(data.calendar_fetched_at, now)}</p>
 		{/if}
 	</section>
 
@@ -196,6 +199,7 @@
 			<p class="muted">Sync to load your profile</p>
 		{:else}
 			<p>AR {data.profile_summary.ar} · Abyss {data.profile_summary.abyss_stars ?? '—'}★ · Theater act {data.profile_summary.theater_act ?? '—'}</p>
+			{#if data.profile_summary.fetched_at}<p class="muted">As of {timeAgo(data.profile_summary.fetched_at, now)}</p>{/if}
 		{/if}
 	</section>
 

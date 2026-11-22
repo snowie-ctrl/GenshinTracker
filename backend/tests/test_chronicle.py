@@ -84,6 +84,7 @@ def test_profile_drops_identity_and_maps_regions():
     assert p.stats.oculi["anemoculi"] == 66 and p.stats.chests["luxurious"] == 200
     assert [(r.name, r.explored, r.reputation) for r in p.regions] == [("Mondstadt", 100.0, 8), ("Enkanomiya", 98.7, None)]
     assert "SECRET-NICK" not in str(to_json(p))
+    assert "os_euro" not in str(to_json(p))
 
 
 def abyss(battles=12, season=101):

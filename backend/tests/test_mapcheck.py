@@ -25,14 +25,13 @@ async def test_check_and_failure():
         if "hoyolab" in str(request.url):
             return httpx.Response(200, headers={"X-Frame-Options": "SAMEORIGIN"})
         return httpx.Response(200)
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        assert await check(http, MAPS["hoyolab"][1]) is False
-        assert await check(http, MAPS["appsample"][1]) is True
+    transport = httpx.MockTransport(handler)
+    assert await check(MAPS["hoyolab"][1], transport=transport) is False
+    assert await check(MAPS["appsample"][1], transport=transport) is True
 
     def boom(request):
         raise httpx.ConnectError("down")
-    async with httpx.AsyncClient(transport=httpx.MockTransport(boom)) as http:
-        assert await check(http, MAPS["appsample"][1]) is None
+    assert await check(MAPS["appsample"][1], transport=httpx.MockTransport(boom)) is None
 
 
 async def test_map_status_offline_and_failure(session_factory):
@@ -41,20 +40,20 @@ async def test_map_status_offline_and_failure(session_factory):
     def handler(request):
         calls.append(str(request.url))
         raise httpx.ConnectError("down")
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        offline = await map_status(session_factory, http, NOW, True, ORIGIN)
-        assert [m["allowed"] for m in offline] == [None, None] and calls == []
-        first = await map_status(session_factory, http, NOW, False, ORIGIN)
-        assert [m["allowed"] for m in first] == [None, None] and len(calls) == 2
-        await map_status(session_factory, http, NOW + timedelta(hours=1), False, ORIGIN)
-        assert len(calls) == 2                       # cached for 24 h, even after a failure
-        await map_status(session_factory, http, NOW + timedelta(hours=25), False, ORIGIN)
-        assert len(calls) == 4
+    http = httpx.MockTransport(handler)
+    offline = await map_status(session_factory, NOW, True, ORIGIN, http)
+    assert [m["allowed"] for m in offline] == [None, None] and calls == []
+    first = await map_status(session_factory, NOW, False, ORIGIN, http)
+    assert [m["allowed"] for m in first] == [None, None] and len(calls) == 2
+    await map_status(session_factory, NOW + timedelta(hours=1), False, ORIGIN, http)
+    assert len(calls) == 2                       # cached for 24 h, even after a failure
+    await map_status(session_factory, NOW + timedelta(hours=25), False, ORIGIN, http)
+    assert len(calls) == 4
 
 
 async def test_cached_value_used_offline(session_factory):
     with session_factory.begin() as s:
         s.add(GameMeta(key="map_embed_hoyolab", value={"allowed": False, "checked_at": "2026-11-21T11:00:00Z"}))
-    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200))) as http:
-        got = {m["key"]: m["allowed"] for m in await map_status(session_factory, http, NOW, True, ORIGIN)}
+    http = httpx.MockTransport(lambda r: httpx.Response(200))
+    got = {m["key"]: m["allowed"] for m in await map_status(session_factory, NOW, True, ORIGIN, http)}
     assert got == {"hoyolab": False, "appsample": None}

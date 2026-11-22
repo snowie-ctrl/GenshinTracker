@@ -57,4 +57,4 @@ def test_challenge_views_current_and_past(session_factory):
     assert [r["season"] for r in v["abyss"]["past"]] == ["100", "99"]
     assert v["theater"]["current"] is None and v["theater"]["past"][0]["season"] == "77"
     assert v["stygian"] == {"current": None, "past": []}
-    assert summary == {"ar": None, "abyss_stars": 36, "theater_act": None}
+    assert summary == {"ar": None, "fetched_at": None, "abyss_stars": 36, "theater_act": None}

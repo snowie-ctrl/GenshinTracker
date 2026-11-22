@@ -42,7 +42,7 @@ export interface CharacterDetail extends Character {
 }
 
 export interface Connection { status: 'connected' | 'expired' | 'missing'; uid: number | null }
-export interface SyncPart { ok: boolean; error?: string; count?: number }
+export interface SyncPart { ok: boolean; error?: string; count?: number; skipped?: string }
 export interface SyncRun {
 	id: number; trigger: string; started_at: string; finished_at: string | null;
 	parts: Record<string, SyncPart>;
@@ -70,7 +70,7 @@ export interface Dashboard {
 	events_left: EventsLeft & { next: EventRow[] };
 	resets: ResetRow[];
 	calendar_fetched_at: string | null;
-	profile_summary: { ar: number | null; abyss_stars: number | null; theater_act: number | null };
+	profile_summary: { ar: number | null; fetched_at: string | null; abyss_stars: number | null; theater_act: number | null };
 }
 export interface StatTile { label: string; value: number }
 export interface RegionView { id: number; name: string; explored: number; reputation: number | null; offerings: { name: string; level: number }[] }

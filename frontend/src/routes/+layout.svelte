@@ -73,7 +73,7 @@
 				{#each Object.entries(last.parts) as [name, part] (name)}
 					<div>
 						<b>{name}</b>:
-						{#if part.ok}ok{#if part.count !== undefined} ({part.count}){/if}{:else}<span class="error"
+						{#if part.ok}ok{#if part.skipped} (skipped: {part.skipped}){/if}{#if part.count !== undefined} ({part.count}){/if}{:else}<span class="error"
 								>{part.error}</span
 							>{/if}
 					</div>

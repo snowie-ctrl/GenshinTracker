@@ -94,7 +94,7 @@
 					<div class="title">{b.name} <span class="muted">· {b.pool}</span></div>
 					<div class="items">
 						{#each b.items as it (it.id)}
-							<img class="r{it.rarity}" class:big={it.rarity === 5} src={imgSrc(it.icon)} alt={it.name} title={it.name} />
+							{#if imgSrc(it.icon)}<img class="r{it.rarity}" class:big={it.rarity === 5} src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/if}
 						{/each}
 					</div>
 					<div>Ends in <Countdown at={b.end} {now} /></div>
@@ -118,7 +118,7 @@
 					<label><input type="checkbox" checked={ev.done} onchange={() => toggle(ev)} aria-label="Done: {ev.name}" /></label>
 					<button type="button" class="name" onclick={() => (open = open === ev.id ? null : ev.id)}>{ev.name}</button>
 					<span class="rewards">
-						{#each ev.rewards as r, i (i)}<img src={imgSrc(r.icon)} alt={r.name} title={rewardTitle(r)} />{/each}
+						{#each ev.rewards as r, i (i)}{#if imgSrc(r.icon)}<img src={imgSrc(r.icon)} alt={r.name} title={rewardTitle(r)} />{/if}{/each}
 						{#if ev.primogems}<strong>{ev.primogems} primos</strong>{/if}
 					</span>
 					<Countdown at={ev.end} {now} />
@@ -151,8 +151,8 @@
 					<tr>
 						<td>{b.name}</td>
 						<td class="muted">{b.start.slice(0, 10)} – {b.end.slice(0, 10)}</td>
-						<td>{#each b.featured_5 as it (it.id)}<img class="r5" src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/each}
-							{#each b.featured_4 as it (it.id)}<img class="r4 small" src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/each}</td>
+						<td>{#each b.featured_5 as it (it.id)}{#if imgSrc(it.icon)}<img class="r5" src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/if}{/each}
+							{#each b.featured_4 as it (it.id)}{#if imgSrc(it.icon)}<img class="r4 small" src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/if}{/each}</td>
 						<td>{#if b.pulls}{b.pulls.pulls} pulls{#if b.pulls.fives.length} · {b.pulls.fives.join(', ')}{/if}{/if}</td>
 					</tr>
 				{:else}

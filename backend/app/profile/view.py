@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ChallengeRun, GameCharacter, HoyolabSnapshot, OwnedCharacter
 from app.events.view import parse_iso
+from app.timeutil import iso
 
 KINDS = ("abyss", "theater", "stygian")
 TILES = (("achievements", "Achievements"), ("characters", "Characters"), ("waypoints", "Waypoints"),
@@ -62,5 +63,6 @@ def profile_summary(session: Session, now: datetime) -> dict:
     views = challenge_views(session, now)
     abyss, theater = views["abyss"]["current"], views["theater"]["current"]
     return {"ar": snap.data["stats"]["ar"] if snap is not None else None,
+            "fetched_at": iso(snap.fetched_at) if snap is not None else None,
             "abyss_stars": abyss["summary"].get("stars") if abyss else None,
             "theater_act": theater["summary"].get("act") if theater else None}

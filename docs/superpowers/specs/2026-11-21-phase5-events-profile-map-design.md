@@ -56,7 +56,7 @@ Banner history uses Phase 3's `game_banner` table and its pull attribution (`wis
 
 ### 2.1 First build step: live check
 
-As in Phase 3 §14, the first step of Milestone 1 runs `python -m app.smoke --calendar --profile --challenges` (live, read-only) against the user's account and writes anonymised findings to `docs/superpowers/notes/` (no UID, nickname, signature, or cookie). It confirms, before the parsers are written:
+As in Phase 3 §14, the first step of Milestone 1 runs `python -m app.smoke --chronicle` (live, read-only) against the user's account and writes anonymised findings to `docs/superpowers/notes/` (no UID, nickname, signature, or cookie). It confirms, before the parsers are written:
 
 1. The calendar's banner, event and challenge field names; where an event's rewards and primogem counts live; whether event ids are stable across calls.
 2. Whether challenge entries give the current Abyss/Theater/Stygian period start and end.
@@ -239,7 +239,7 @@ Each shows "as of <age>"; without data each points to Sync or Settings.
 
 ### Smoke
 
-`python -m app.smoke --calendar --profile --challenges`: live, read-only; prints counts and field summaries without identifiers. Used for §2.1.
+`python -m app.smoke --chronicle`: live, read-only; prints counts and field summaries without identifiers. Used for §2.1.
 
 ---
 

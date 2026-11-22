@@ -44,7 +44,8 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
                 if o is not None and t is not None else None)
         values = [v for v in progress_by_id.values() if v is not None]
         notes = s.get(LiveNotes, 1)
-        ev = events_payload(ctx, s)
+        results = summarize(s, now, offset_hours(reg))
+        ev = events_payload(ctx, s, results)
         data, index = planner_view(s)
         done = set(s.scalars(select(WeeklyBossDone.boss).where(WeeklyBossDone.week_start == week_start(now, reg))))
         return {
@@ -63,7 +64,7 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
             "building_cards": building_cards(data, progress_by_id, index),
             "build_teams": build_team_cards(team_views(s)),
             "gaps": gaps_for(ctx, s),
-            "pity": pity_lines(summarize(s, now, offset_hours(reg))),
+            "pity": pity_lines(results),
             "live_banners": ev["banners"]["current"],
             "events_left": {**ev["events_left"], "next": [e for e in ev["events"] if not e["done"]][:3]},
             "resets": ev["resets"],
