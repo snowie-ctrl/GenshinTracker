@@ -36,3 +36,13 @@ test('map tabs use a roving tabindex and arrow keys', async ({ page }) => {
 	await expect(hoyolab).toBeFocused();
 	await expect(hoyolab).toHaveAttribute('aria-selected', 'true');
 });
+
+test('the embedded map fills most of the window', async ({ page }) => {
+	await page.setViewportSize({ width: 1400, height: 900 });
+	await page.goto('/map');
+	await page.getByTestId('map-tab-appsample').click();
+	const box = await page.getByTestId('map-frame').boundingBox();
+	expect(box).not.toBeNull();
+	expect(box!.height).toBeGreaterThan(900 * 0.8);
+	expect(box!.width).toBeGreaterThan((1400 - 76) * 0.9);
+});
