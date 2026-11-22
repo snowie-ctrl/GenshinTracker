@@ -2,7 +2,7 @@
 	import { weekdayNames } from './materials';
 	import type { Material } from './types';
 
-	let { material }: { material: Material } = $props();
+	let { material, scannedAt = null }: { material: Material; scannedAt?: string | null } = $props();
 </script>
 
 <strong>{material.name}</strong>
@@ -20,6 +20,9 @@
 	</div>
 {/if}
 {#if material.craftable > 0}<div class="muted">Craft {material.craftable} from spare lower tiers</div>{/if}
+{#if material.scan != null && scannedAt}
+	<div class="muted">Scanned: {material.scan} (as of {new Date(scannedAt).toLocaleDateString()})</div>
+{/if}
 
 <style>
 	.needers { margin-top: 6px; }

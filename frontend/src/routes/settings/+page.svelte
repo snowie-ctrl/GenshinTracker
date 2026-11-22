@@ -7,6 +7,8 @@
 	import type { Account, CacheStatus, MapKey, Settings, SyncRun, Targets } from '$lib/types';
 	import { noteTimer } from '$lib/note';
 	import { cacheStatusLabel } from '$lib/wishes';
+	import GoodImportButton from '$lib/GoodImportButton.svelte';
+	import type { GoodStatus } from '$lib/types';
 
 	const FIELDS = [
 		{ key: 'ltuid_v2', required: true },
@@ -38,6 +40,37 @@
 	const gamePathNotes = noteTimer((v) => (gamePathNote = v));
 	const mapNotes = noteTimer((v) => (mapNote = v));
 	onDestroy(() => [intervalNotes, gamePathNotes, mapNotes].forEach((n) => n.cancel()));
+
+	let good = $state<GoodStatus | null>(null);
+	let goodNote = $state<string | null>(null);
+
+	async function loadGood() {
+		try {
+			good = await api.goodStatus();
+		} catch (e) {
+			goodNote = errorMessage(e);
+		}
+	}
+
+	async function setGoodEnabled(on: boolean) {
+		try {
+			settings = await api.saveSettings({ good_import_enabled: on });
+			await loadGood();
+		} catch (e) {
+			goodNote = errorMessage(e);
+		}
+	}
+
+	async function deleteGood() {
+		if (!confirm('Delete the imported GOOD data? This cannot be undone.')) return;
+		try {
+			await api.deleteGood();
+			await loadGood();
+			goodNote = 'Imported data deleted.';
+		} catch (e) {
+			goodNote = errorMessage(e);
+		}
+	}
 
 	async function loadCache() {
 		try {
@@ -79,6 +112,7 @@
 			error = errorMessage(e);
 		}
 		void loadCache();
+		void loadGood();
 	}
 
 	async function submit(uid?: number) {
@@ -223,6 +257,27 @@
 		<TargetsEditor targets={settings.default_targets} levelCaps={settings.level_caps} onchange={saveTargets} />
 	</section>
 
+	<section class="panel" data-testid="good-settings">
+		<h2>Inventory import (GOOD)</h2>
+		<label class="inline">
+			<input type="checkbox" checked={settings.good_import_enabled}
+				onchange={(e) => setGoodEnabled(e.currentTarget.checked)} />
+			Use GOOD inventory import
+		</label>
+		<p class="muted">The import only reads a file. The scanner that creates it is third-party software, which HoYoverse's terms forbid; use at your own risk.</p>
+		{#if good?.imported_at}
+			<p>Last import: {new Date(good.imported_at).toLocaleString()}{good.source ? ` from ${good.source}` : ''}
+				· {good.counts?.materials.matched ?? 0} materials, {good.counts?.weapons.matched ?? 0} weapons,
+				{good.counts?.artifacts.matched ?? 0} artifacts</p>
+			{#if good.unmatched.length}<p class="muted">Not recognised: {good.unmatched.join(', ')}</p>{/if}
+		{:else}
+			<p class="muted">No import yet.</p>
+		{/if}
+		{#if settings.good_import_enabled}<GoodImportButton onimported={loadGood} />{/if}
+		<button type="button" onclick={deleteGood} disabled={!good?.imported_at}>Delete imported data</button>
+		{#if goodNote}<span class="muted">{goodNote}</span>{/if}
+	</section>
+
 	<section class="panel">
 		<h2>Wishes</h2>
 		<label>
@@ -264,6 +319,11 @@
 			{settings.gamedata.banners.fetched_at ? `updated ${timeAgo(settings.gamedata.banners.fetched_at, now)}` : 'never downloaded'}
 		</p>
 		{#if settings.gamedata.banners.last_error}<p class="error">Banners: {settings.gamedata.banners.last_error}</p>{/if}
+		<p>
+			{settings.gamedata.artifact_sets.count} artifact sets ·
+			{settings.gamedata.artifact_sets.fetched_at ? `updated ${timeAgo(settings.gamedata.artifact_sets.fetched_at, now)}` : 'never downloaded'}
+		</p>
+		{#if settings.gamedata.artifact_sets.last_error}<p class="error">Artifact sets: {settings.gamedata.artifact_sets.last_error}</p>{/if}
 		{#if settings.gamedata.banners.unmapped.length}
 			<p class="muted">Banner items not matched to game data: {settings.gamedata.banners.unmapped.join(', ')}</p>
 		{/if}
