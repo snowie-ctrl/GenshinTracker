@@ -12,6 +12,7 @@ DEFAULTS: dict[str, object] = {
     "hoyolab_status": None,  # None | "connected" | "expired"
     "game_install_path": "",   # blank = auto-detect from the game's log file
     "default_map": "hoyolab",  # hoyolab | appsample
+    "good_import_enabled": False,   # opt-in GOOD scanner import (Phase 6)
 }
 
 
