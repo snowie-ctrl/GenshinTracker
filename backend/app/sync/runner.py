@@ -338,7 +338,7 @@ class SyncManager:
             for part in CHRONICLE_PARTS:
                 if expired:
                     break
-                if trigger != "manual":
+                if trigger not in ("manual", "connect"):
                     with self._sf() as s:
                         last = last_part_success(s, part)
                     if last is not None and self._clock() - last < timedelta(minutes=FRESH_MINUTES):

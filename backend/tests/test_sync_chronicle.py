@@ -50,6 +50,18 @@ async def test_throttle_skips_fresh_parts_on_auto_but_not_manual(paths, session_
     assert source.calls.count("calendar") == 3
 
 
+async def test_connect_sync_always_fetches_chronicle_parts(paths, session_factory):
+    seed_game(session_factory)
+    clock = Clock(START)
+    m = manager(paths, session_factory, FakeSource(calendar=CAL), clock=clock)
+    await m.request("manual")
+    await m.wait()
+    clock.advance(minutes=2)
+    await m.request("connect")
+    await m.wait()
+    assert last_run(session_factory).parts["calendar"] == {"ok": True, "count": 1}
+
+
 async def test_failure_keeps_previous_snapshot_and_isolates(paths, session_factory):
     seed_game(session_factory)
     clock = Clock(START)
