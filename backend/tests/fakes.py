@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 
+from app.sync.chronicle import CalendarInfo, ProfileInfo, ProfileStats
 from app.sync.hoyolab import (
     ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, TalentIds,
     WeaponInfo,
@@ -27,7 +28,8 @@ class FakeSource:
     """Stand-in for GenshinPySource. `fail` maps part name -> exception to raise."""
 
     def __init__(self, roster=None, notes=NOTES, fail=None, gate: asyncio.Event | None = None,
-                 gaps: GapResult | None = None, gaps_gate: asyncio.Event | None = None):
+                 gaps: GapResult | None = None, gaps_gate: asyncio.Event | None = None,
+                 calendar=None, profile=None, challenges=None):
         self.roster = roster if roster is not None else [
             make_roster(10000032, name="Bennett"), make_roster(10000089, level=90, name="Furina"),
         ]
@@ -36,6 +38,9 @@ class FakeSource:
         self.gate = gate
         self.gaps = gaps
         self.gaps_gate = gaps_gate
+        self.calendar = calendar
+        self.profile = profile
+        self.challenges = challenges
         self.calls: list = []
 
     async def get_roster(self):
@@ -76,6 +81,25 @@ class FakeSource:
         return GapResult(per_character={c.character_id: [guide] for c in chars},
                          total=[MaterialAmount(104302, "Guide to Freedom", "", 3, 9 * len(chars), 4 * len(chars))],
                          spare=[])
+
+    async def get_calendar(self):
+        self.calls.append("calendar")
+        if "calendar" in self.fail:
+            raise self.fail["calendar"]
+        return self.calendar if self.calendar is not None else CalendarInfo([], [], [])
+
+    async def get_profile(self):
+        self.calls.append("profile")
+        if "profile" in self.fail:
+            raise self.fail["profile"]
+        return self.profile if self.profile is not None else ProfileInfo(
+            ProfileStats(60, 100, 500, 40, {}, {}, 300, 50), [])
+
+    async def get_challenges(self):
+        self.calls.append("challenges")
+        if "challenges" in self.fail:
+            raise self.fail["challenges"]
+        return list(self.challenges or [])
 
 
 class Clock:

@@ -10,6 +10,10 @@ import aiohttp
 import genshin
 
 from app.gamedata.yatta import canonical_id
+from app.sync.chronicle import (
+    CalendarInfo, ChallengeRunInfo, ProfileInfo, to_abyss_run, to_calendar, to_profile, to_stygian_runs,
+    to_theater_runs,
+)
 
 RETRY_DELAYS: tuple[float, ...] = (2.0, 5.0, 10.0)
 DETAIL_BATCH = 20
@@ -143,6 +147,9 @@ class HoyolabSource(Protocol):
     async def get_notes(self) -> NotesInfo: ...
     async def get_talent_ids(self, character_id: int) -> TalentIds: ...
     async def compute_gaps(self, chars: Sequence[GapCharacter]) -> GapResult: ...
+    async def get_calendar(self) -> CalendarInfo: ...
+    async def get_profile(self) -> ProfileInfo: ...
+    async def get_challenges(self) -> list[ChallengeRunInfo]: ...
 
 
 # --- mappers ---------------------------------------------------------------
@@ -304,6 +311,30 @@ class GenshinPySource:
         raw = await call_api(self._client.request_calculator, "batch_compute", data=body,
                              api_version=3, delays=self._delays)
         return to_gap_result(raw, [c.character_id for c in chars])
+
+    async def get_calendar(self) -> CalendarInfo:
+        return to_calendar(await call_api(self._client.get_genshin_event_calendar, self._uid,
+                                          lang="en-us", delays=self._delays))
+
+    async def get_profile(self) -> ProfileInfo:
+        return to_profile(await call_api(self._client.get_partial_genshin_user, self._uid,
+                                         lang="en-us", delays=self._delays))
+
+    async def get_challenges(self) -> list[ChallengeRunInfo]:
+        runs: list[ChallengeRunInfo] = []
+        for previous in (False, True):
+            run = to_abyss_run(await call_api(self._client.get_genshin_spiral_abyss, self._uid,
+                                              previous=previous, delays=self._delays))
+            if run is not None:
+                runs.append(run)
+        runs += to_theater_runs(await call_api(self._client.get_imaginarium_theater, self._uid,
+                                               delays=self._delays))
+        runs += to_stygian_runs(await call_api(self._client.get_stygian_onslaught, self._uid,
+                                               delays=self._delays))
+        seen: dict[tuple[str, str], ChallengeRunInfo] = {}
+        for r in runs:
+            seen[(r.kind, r.season)] = r
+        return list(seen.values())
 
 
 async def fetch_accounts(cookies: dict[str, str]) -> list[Account]:

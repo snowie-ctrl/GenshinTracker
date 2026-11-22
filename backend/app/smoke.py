@@ -2,7 +2,8 @@
 python -m app.smoke          roster/details/notes
 python -m app.smoke --gaps   calculator checks for phase 2 (uses your Build goals from data/tracker.db)
 python -m app.smoke --wishes          read-only wish fetch check (needs Wish History opened in-game)
-python -m app.smoke --paimon FILE     print sheet names/headers/row counts of a paimon.moe export"""
+python -m app.smoke --paimon FILE     print sheet names/headers/row counts of a paimon.moe export
+python -m app.smoke --chronicle   read-only calendar/profile/abyss/theater/stygian check"""
 import asyncio
 import sys
 from collections import Counter
@@ -69,6 +70,24 @@ async def gaps(source: GenshinPySource) -> None:
     engine.dispose()
 
 
+async def chronicle(source: GenshinPySource) -> None:
+    cal = await source.get_calendar()
+    print(f"calendar: {len(cal.banners)} banners, {len(cal.events)} events, challenges "
+          f"{[(c.kind, c.end) for c in cal.challenges]}")
+    for b in cal.banners:
+        print(f"  banner {b.pool} {b.name!r} {b.start}..{b.end} items "
+              f"{[(i.id, i.rarity) for i in b.items]}")
+    for e in cal.events:
+        prim = sum(r.count for r in e.rewards if r.id == 201 or r.name == "Primogem")
+        print(f"  event {e.id} {e.name!r} ends {e.end}, rewards {[(r.id, r.name, r.count) for r in e.rewards]}, "
+              f"primos {prim}")
+    p = await source.get_profile()
+    print(f"profile: AR {p.stats.ar}, days {p.stats.days_active}, achievements {p.stats.achievements}, "
+          f"regions {[(r.name, r.explored, r.reputation, len(r.offerings)) for r in p.regions]}")
+    for r in await source.get_challenges():
+        print(f"challenge {r.kind} season {r.season} {r.start}..{r.end} summary {r.summary} teams {len(r.teams)}")
+
+
 async def wishes() -> None:
     """Read-only: never writes the database, never prints the URL or authkey."""
     paths = default_paths()
@@ -112,7 +131,10 @@ async def main() -> None:
     if not env.get("GENSHIN_UID"):
         sys.exit("Connect from the app's Settings page first (GENSHIN_UID missing in .env).")
     source = GenshinPySource(cookies_from_env(env), int(env["GENSHIN_UID"]), region=env.get("GENSHIN_REGION"))
-    await (gaps(source) if "--gaps" in sys.argv else basic(source))
+    if "--chronicle" in sys.argv:
+        await chronicle(source)
+    else:
+        await (gaps(source) if "--gaps" in sys.argv else basic(source))
 
 
 if __name__ == "__main__":
