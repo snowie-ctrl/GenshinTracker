@@ -13,7 +13,7 @@
 		{ label: 'Characters', href: '/characters' },
 		{ label: 'Teams', href: '/teams' },
 		{ label: 'Inventory', href: '/inventory' },
-		{ label: 'Events', phase: 5 },
+		{ label: 'Events', href: '/events' },
 		{ label: 'Map', phase: 5 },
 		{ label: 'Wishes', href: '/wishes' },
 		{ label: 'Profile', phase: 5 },

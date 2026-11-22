@@ -66,6 +66,10 @@ export interface Dashboard {
 	build_teams: BuildTeamCard[];
 	gaps: GapStatus;
 	pity: PityLine[];
+	live_banners: LiveBanner[];
+	events_left: EventsLeft & { next: EventRow[] };
+	resets: ResetRow[];
+	calendar_fetched_at: string | null;
 }
 export interface Settings {
 	connection: Connection;
@@ -171,3 +175,28 @@ export interface BuildTeamCard {
 	has_shortfall: boolean; all_calculated: boolean; short_count: number;
 }
 export interface TeamRef { id: number; name: string; tags: Tag[] }
+
+export interface BannerItem { id: number; name: string; icon: string; rarity: number; kind: 'character' | 'weapon' }
+export interface BannerPulls { pulls: number; fives: string[]; fours: string[] }
+export interface LiveBanner {
+	id: number; pool: 'character' | 'weapon' | 'chronicled'; name: string; version: string;
+	start: string | null; end: string | null; items: BannerItem[]; pulls: BannerPulls | null;
+}
+export interface Reward { id: number; name: string; icon: string; count: number; rarity: number }
+export interface EventRow {
+	id: number; name: string; description: string; start: string | null; end: string | null;
+	rewards: Reward[]; primogems: number; done: boolean; ending_soon: boolean;
+}
+export interface EventsLeft { count: number; primogems: number }
+export interface ResetRow { key: 'daily' | 'weekly' | 'abyss' | 'theater' | 'stygian'; label: string; at: string }
+export interface EventsResponse {
+	connected: boolean; fetched_at: string | null; error: string | null;
+	banners: { current: LiveBanner[]; upcoming: LiveBanner[] };
+	events: EventRow[]; events_left: EventsLeft; resets: ResetRow[];
+}
+export interface HistoryItem { id: number; name: string; icon: string | null; rarity: number }
+export interface HistoryBanner {
+	key: string; name: string; short_name: string; start: string; end: string;
+	featured_5: HistoryItem[]; featured_4: HistoryItem[]; pulls: BannerPulls | null;
+}
+export interface BannerHistoryPage { total: number; page: number; page_size: number; rows: HistoryBanner[] }

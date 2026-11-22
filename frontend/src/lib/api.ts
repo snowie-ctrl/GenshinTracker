@@ -1,5 +1,5 @@
 import type {
-	CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
+	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
 	ImportStatus, Inventory, Pool, PoolSummary, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
 	TeamBody, TeamResponse, TeamsResponse, WeaponOption, WishSummary
 } from './types';
@@ -74,7 +74,11 @@ export const api = {
 	tags: () => request<TagWithCount[]>('GET', '/tags'),
 	createTag: (name: string, color?: string) => request<Tag>('POST', '/tags', { name, color }),
 	updateTag: (id: number, patch: { name?: string; color?: string }) => request<Tag>('PUT', `/tags/${id}`, patch),
-	deleteTag: (id: number) => request<{ ok: boolean }>('DELETE', `/tags/${id}`)
+	deleteTag: (id: number) => request<{ ok: boolean }>('DELETE', `/tags/${id}`),
+	events: () => request<EventsResponse>('GET', '/events'),
+	setEventDone: (id: number, done: boolean) => request<{ id: number; done: boolean }>('PUT', `/events/${id}/done`, { done }),
+	bannerHistory: (pool: string, q: string, page: number) =>
+		request<BannerHistoryPage>('GET', `/banners/history?pool=${encodeURIComponent(pool)}&q=${encodeURIComponent(q)}&page=${page}`)
 };
 
 export function errorMessage(e: unknown): string {
