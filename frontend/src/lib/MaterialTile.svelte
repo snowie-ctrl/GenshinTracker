@@ -36,7 +36,7 @@
 	.name { color: var(--muted); font-size: 11px; line-height: 1.2; overflow: hidden; display: -webkit-box;
 		-webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
 	.popover { display: none; position: absolute; z-index: 20; top: 70px; left: 50%; transform: translateX(-50%);
-		width: 220px; text-align: left; background: var(--panel-2); border: 1px solid var(--line);
+		width: 220px; text-align: left; background: var(--glass-bg-strong); backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--line);
 		border-radius: 8px; padding: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
 	.tile:hover .popover, .tile:focus-within .popover { display: block; }
 </style>

@@ -75,6 +75,8 @@ button.primary:hover:not(:disabled) { background: var(--gold-strong); }
 	backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
 }
 .panel { padding: 14px; }
+/* backdrop-filter makes every panel a stacking context: lift the hovered one so its popovers clear later panels */
+.panel:hover, .panel:focus-within { position: relative; z-index: 2; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
 	.panel, .glass { background: var(--glass-bg-strong); }
 }
