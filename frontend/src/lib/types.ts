@@ -42,7 +42,7 @@ export interface CharacterDetail extends Character {
 }
 
 export interface Connection { status: 'connected' | 'expired' | 'missing'; uid: number | null }
-export interface SyncPart { ok: boolean; error?: string; count?: number; skipped?: string }
+export interface SyncPart { ok: boolean; error?: string; count?: number; skipped?: 'fresh' | string[] }
 export interface SyncRun {
 	id: number; trigger: string; started_at: string; finished_at: string | null;
 	parts: Record<string, SyncPart>;

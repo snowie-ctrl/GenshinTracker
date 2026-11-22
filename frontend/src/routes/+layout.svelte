@@ -4,11 +4,11 @@
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { sync } from '$lib/sync.svelte';
-	import { failedParts, lastFinished, syncLabel } from '$lib/syncLabel';
+	import { failedParts, lastFinished, skippedNote, syncLabel } from '$lib/syncLabel';
 
 	let { children } = $props();
 
-	const NAV: { label: string; href?: string; phase?: number }[] = [
+	const NAV: { label: string; href: string }[] = [
 		{ label: 'Dashboard', href: '/' },
 		{ label: 'Characters', href: '/characters' },
 		{ label: 'Teams', href: '/teams' },
@@ -44,11 +44,7 @@
 <nav class="topnav">
 	<span class="brand">GenshinTracker</span>
 	{#each NAV as item (item.label)}
-		{#if item.href}
-			<a href={item.href} class:active={isActive(item.href)}>{item.label}</a>
-		{:else}
-			<span class="disabled" title="Coming in phase {item.phase}">{item.label}</span>
-		{/if}
+		<a href={item.href} class:active={isActive(item.href)}>{item.label}</a>
 	{/each}
 	<div class="sync">
 		<button
@@ -73,7 +69,7 @@
 				{#each Object.entries(last.parts) as [name, part] (name)}
 					<div>
 						<b>{name}</b>:
-						{#if part.ok}ok{#if part.skipped} (skipped: {part.skipped}){/if}{#if part.count !== undefined} ({part.count}){/if}{:else}<span class="error"
+						{#if part.ok}ok{#if skippedNote(part)} ({skippedNote(part)}){/if}{#if part.count !== undefined} ({part.count}){/if}{:else}<span class="error"
 								>{part.error}</span
 							>{/if}
 					</div>
@@ -100,7 +96,6 @@
 	.brand { font-weight: 700; margin-right: 8px; }
 	.topnav a { color: var(--text); text-decoration: none; padding-bottom: 2px; }
 	.topnav a.active { border-bottom: 2px solid var(--accent); }
-	.disabled { color: var(--unobtained); cursor: default; }
 	.sync { margin-left: auto; display: flex; gap: 8px; align-items: center; position: relative; }
 	.label { background: none; border: none; color: var(--muted); font-size: 12px; }
 	.label.warn { color: var(--warn); }

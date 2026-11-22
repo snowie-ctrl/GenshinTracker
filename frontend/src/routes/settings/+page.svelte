@@ -4,6 +4,7 @@
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import { timeAgo } from '$lib/time';
 	import type { Account, CacheStatus, MapKey, Settings, SyncRun, Targets } from '$lib/types';
+	import { noteTimer } from '$lib/note';
 	import { cacheStatusLabel } from '$lib/wishes';
 
 	const FIELDS = [
@@ -32,6 +33,9 @@
 	let gamePathNote = $state<string | null>(null);
 	let cache = $state<CacheStatus | null>(null);
 	let mapNote = $state<string | null>(null);
+	const intervalNotes = noteTimer((v) => (savedNote = v));
+	const gamePathNotes = noteTimer((v) => (gamePathNote = v));
+	const mapNotes = noteTimer((v) => (mapNote = v));
 
 	async function loadCache() {
 		try {
@@ -45,10 +49,10 @@
 		try {
 			settings = await api.saveSettings({ game_install_path: gamePath });
 			gamePath = settings.game_install_path;
-			gamePathNote = 'Saved.';
+			gamePathNotes.saved();
 			await loadCache();
 		} catch (e) {
-			gamePathNote = errorMessage(e);
+			gamePathNotes.error(errorMessage(e));
 		}
 	}
 
@@ -102,18 +106,20 @@
 	async function saveInterval() {
 		try {
 			settings = await api.saveSettings({ sync_interval_minutes: interval });
-			savedNote = 'Saved.';
+			intervalNotes.saved();
 		} catch (e) {
-			savedNote = errorMessage(e);
+			intervalNotes.error(errorMessage(e));
 		}
 	}
 
-	async function saveDefaultMap(key: MapKey) {
+	async function saveDefaultMap(select: HTMLSelectElement) {
 		try {
-			settings = await api.saveSettings({ default_map: key });
-			mapNote = 'Saved.';
+			settings = await api.saveSettings({ default_map: select.value as MapKey });
+			mapNotes.saved();
 		} catch (e) {
-			mapNote = errorMessage(e);
+			// the saved value didn't change, so the select would keep showing the rejected choice
+			if (settings) select.value = settings.default_map;
+			mapNotes.error(errorMessage(e));
 		}
 	}
 
@@ -231,7 +237,7 @@
 		<label>
 			Default map
 			<select aria-label="Default map" value={settings.default_map}
-				onchange={(e) => saveDefaultMap(e.currentTarget.value as MapKey)}>
+				onchange={(e) => saveDefaultMap(e.currentTarget)}>
 				<option value="hoyolab">HoYoLAB Interactive Map</option>
 				<option value="appsample">AppSample</option>
 			</select>

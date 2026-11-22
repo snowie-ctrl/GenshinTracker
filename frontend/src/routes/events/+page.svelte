@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
 	import Countdown from '$lib/Countdown.svelte';
-	import { leftTotals, primosLine, sortEvents } from '$lib/events';
+	import { leftTotals, primosLine, setDone } from '$lib/events';
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
 	import { timeAgo } from '$lib/time';
@@ -16,8 +16,8 @@
 	let pool = $state<'character' | 'weapon' | 'chronicled'>('character');
 	let q = $state('');
 	let page = $state(1);
+	let query = $state('');
 	let history = $state<BannerHistoryPage | null>(null);
-	let timer: ReturnType<typeof setTimeout> | undefined;
 	const left = $derived(data ? leftTotals(data.events) : { count: 0, primogems: 0 });
 
 	$effect(() => {
@@ -25,11 +25,20 @@
 		load();
 	});
 
+	// Only typing is debounced: `q` settles into `query` after a pause. Pool chips and paging load at once.
 	$effect(() => {
-		const p = pool, query = q, pg = page;
-		clearTimeout(timer);
-		timer = setTimeout(() => loadHistory(p, query, pg), 250);
+		const typed = q;
+		const timer = setTimeout(() => {
+			if (typed !== query) {
+				query = typed;
+				page = 1;
+			}
+		}, 250);
 		return () => clearTimeout(timer);
+	});
+
+	$effect(() => {
+		loadHistory(pool, query, page);
 	});
 
 	onMount(() => {
@@ -60,12 +69,12 @@
 
 	async function toggle(ev: EventRow) {
 		if (!data) return;
-		const before = data.events;
-		data = { ...data, events: sortEvents(before.map((r) => (r.id === ev.id ? { ...r, done: !r.done } : r))) };
+		data = { ...data, events: setDone(data.events, ev.id, !ev.done) };
 		try {
 			await api.setEventDone(ev.id, !ev.done);
 		} catch (e) {
-			data = { ...data, events: before };
+			// revert only this row: other rows may have been ticked meanwhile
+			if (data) data = { ...data, events: setDone(data.events, ev.id, ev.done) };
 			toast = `Could not save: ${errorMessage(e)}`;
 		}
 	}
@@ -97,7 +106,7 @@
 							{#if imgSrc(it.icon)}<img class="r{it.rarity}" class:big={it.rarity === 5} src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/if}
 						{/each}
 					</div>
-					<div>Ends in <Countdown at={b.end} {now} /></div>
+					<div>Ends in <Countdown at={b.end} {now} warn /></div>
 					{#if b.pulls}<div class="muted">You pulled {b.pulls.pulls} here{#if b.pulls.fives.length} · got {b.pulls.fives.join(', ')}{/if}</div>{/if}
 				</div>
 			{:else}
@@ -121,7 +130,7 @@
 						{#each ev.rewards as r, i (i)}{#if imgSrc(r.icon)}<img src={imgSrc(r.icon)} alt={r.name} title={rewardTitle(r)} />{/if}{/each}
 						{#if ev.primogems}<strong>{ev.primogems} primos</strong>{/if}
 					</span>
-					<Countdown at={ev.end} {now} />
+					<Countdown at={ev.end} {now} warn={!ev.done} />
 					{#if open === ev.id && ev.description}<p class="desc">{ev.description}</p>{/if}
 				</li>
 			{:else}
@@ -142,7 +151,7 @@
 		{#each ['character', 'weapon', 'chronicled'] as p (p)}
 			<button type="button" class="chip" class:on={pool === p} onclick={() => { pool = p as typeof pool; page = 1; }}>{p}</button>
 		{/each}
-		<input placeholder="Search banner or item" bind:value={q} oninput={() => (page = 1)} aria-label="Search banners" />
+		<input placeholder="Search banner or item" bind:value={q} aria-label="Search banners" />
 	</div>
 	{#if history}
 		<table>

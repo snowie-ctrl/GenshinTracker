@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { timeLeft } from './events';
-	let { at, now }: { at: string | null; now: number } = $props();
-	const soon = $derived(!!at && Date.parse(at) - now < 24 * 3600 * 1000);
+	import { countdownWarn, timeLeft } from './events';
+	// warn: set for event and banner end times; resets, done events and past times stay neutral.
+	let { at, now, warn = false }: { at: string | null; now: number; warn?: boolean } = $props();
+	const soon = $derived(countdownWarn(at, now, warn));
 </script>
 
 <span class="cd" class:soon title={at ?? ''}>{timeLeft(at, now)}</span>

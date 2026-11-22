@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
 	import Countdown from '$lib/Countdown.svelte';
+	import { eventsLeft } from '$lib/events';
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
 	import { formatDuration, timeAgo } from '$lib/time';
@@ -125,9 +126,11 @@
 					<span class="avatars">
 						{#each t.members as m (m.id)}
 							{#if m.slug}
-								<a href="/characters/{m.slug}" title={m.name}>{#if imgSrc(m.icon)}<img src={imgSrc(m.icon)} alt={m.name} />{/if}</a>
+								<a href="/characters/{m.slug}" title={m.name}>{#if imgSrc(m.icon)}<img src={imgSrc(m.icon)} alt={m.name} />{:else}<span class="initial" data-testid="member-initial">{m.name.slice(0, 1)}</span>{/if}</a>
 							{:else if imgSrc(m.icon)}
 								<img src={imgSrc(m.icon)} alt={m.name} title={m.name} />
+							{:else}
+								<span class="initial" title={m.name} data-testid="member-initial">{m.name.slice(0, 1)}</span>
 							{/if}
 						{/each}
 					</span>
@@ -163,7 +166,7 @@
 				{#each data.live_banners as b (b.id)}
 					<span class="dash-banner">
 						{#each b.items.filter((i) => i.rarity === 5) as it (it.id)}{#if imgSrc(it.icon)}<img src={imgSrc(it.icon)} alt={it.name} title={it.name} />{/if}{/each}
-						<span>{b.name}</span> <Countdown at={b.end} {now} />
+						<span>{b.name}</span> <Countdown at={b.end} {now} warn />
 					</span>
 				{/each}
 			</div>
@@ -178,8 +181,8 @@
 		{:else if data.events_left.count === 0}
 			<p>All events done ✓</p>
 		{:else}
-			<p>{data.events_left.count} events left · {data.events_left.primogems} primos</p>
-			<ul>{#each data.events_left.next as e (e.id)}<li>{e.name} · <Countdown at={e.end} {now} /></li>{/each}</ul>
+			<p>{eventsLeft(data.events_left.count)} ·{data.events_left.primogems} primos</p>
+			<ul>{#each data.events_left.next as e (e.id)}<li>{e.name} · <Countdown at={e.end} {now} warn={!e.done} /></li>{/each}</ul>
 		{/if}
 		{#if data.calendar_fetched_at}<p class="muted">As of {timeAgo(data.calendar_fetched_at, now)}</p>
 		{/if}
@@ -353,6 +356,8 @@
 	.team-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); }
 	.team-row:last-child { border-bottom: none; }
 	.team-row .avatars img { width: 32px; height: 32px; border-radius: 50%; }
+	.team-row .initial { width: 32px; height: 32px; border-radius: 50%; background: var(--panel-2); display: inline-flex;
+		align-items: center; justify-content: center; font-weight: 600; color: var(--text); }
 	.ok { color: var(--accent); }
 	.dash-banner { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px; }
 	.dash-banner img { width: 36px; height: 36px; border-radius: 50%; }

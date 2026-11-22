@@ -82,6 +82,7 @@
 			{#if view.past.length}
 				<h3>Past runs</h3>
 				<table data-testid="{k.key}-past">
+					<thead><tr><th>Started</th><th>Result</th></tr></thead>
 					<tbody>
 						{#each view.past as r (r.season)}
 							<tr><td>{r.start?.slice(0, 10) ?? r.season}</td><td>{result(k.key, r)}</td></tr>
@@ -102,4 +103,5 @@
 	.initial { width: 36px; height: 36px; border-radius: 50%; background: var(--panel-2); display: inline-flex;
 		align-items: center; justify-content: center; font-weight: 600; }
 	.team { display: flex; gap: 4px; margin: 4px 0; }
+	th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500; padding-right: 14px; }
 </style>

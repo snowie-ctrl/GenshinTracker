@@ -7,7 +7,7 @@ test('ticking an event Done dims it and lowers the Dashboard count', async ({ pa
 	const row = page.getByTestId('event-9002');
 	await row.getByRole('checkbox').check();
 	await expect(row).toHaveClass(/done/);
-	await expect(page.getByTestId('events-left')).toContainText('2 left · 420 primos unclaimed');
+	await expect(page.getByTestId('events-left')).toContainText('2 events left · 420 primos unclaimed');
 	await page.goto('/');
 	await expect(page.getByTestId('dash-events')).toContainText('2 events left · 420 primos');
 	await expect(page.getByTestId('dash-banners')).toContainText('Tide of Furina');

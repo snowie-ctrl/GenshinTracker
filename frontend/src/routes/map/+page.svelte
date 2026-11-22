@@ -27,13 +27,15 @@
 <h1>Map</h1>
 {#if error}<p class="error">{error}</p>{/if}
 {#if data}
-	<div class="tabs" role="tablist">
+	<div class="tabs" role="tablist" aria-label="Maps">
 		{#each data.maps as m (m.key)}
 			<button type="button" role="tab" class="chip" class:on={tab === m.key} aria-selected={tab === m.key}
+				id="map-tab-{m.key}" aria-controls="map-panel"
 				data-testid="map-tab-{m.key}" onclick={() => choose(m.key)}>{m.name}</button>
 		{/each}
 	</div>
 	{#if current}
+		<div role="tabpanel" id="map-panel" aria-labelledby="map-tab-{current.key}">
 		<div class="bar">
 			<span>{current.name}</span>
 			<a href={current.url} target="_blank" rel="noopener noreferrer">Open in new tab</a>
@@ -49,6 +51,7 @@
 					referrerpolicy="no-referrer" allow="fullscreen"></iframe>
 			{/key}
 		{/if}
+		</div>
 	{/if}
 {/if}
 

@@ -5,6 +5,7 @@ test('profile shows stats, current Abyss and past runs', async ({ page }) => {
 	await expect(page.getByText('AR 58')).toBeVisible();
 	await expect(page.getByTestId('abyss-current')).toContainText('36');
 	await expect(page.getByTestId('abyss-past').locator('tbody tr')).toHaveCount(2);
+	await expect(page.getByTestId('abyss-past').getByRole('columnheader')).toHaveText(['Started', 'Result']);
 	await page.goto('/');
 	await expect(page.getByTestId('dash-profile')).toContainText('AR 58');
 });

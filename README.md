@@ -73,7 +73,7 @@ Each team with Build members shows what is still left to farm **to finish just t
 
 ## Events, Profile and Map
 
-**Events** shows the live banners (with your pulls on each), current in-game events with their rewards — tick **Done** to track what's left and how many primogems are still unclaimed — countdowns to the daily, weekly, Abyss, Theater and Stygian resets, and every past banner with your pulls. **Profile** shows your Battle Chronicle: account stats, exploration per region, and Spiral Abyss, Imaginarium Theater and Stygian Onslaught results. Each cycle is kept, so past runs stay listed after HoYoLAB stops showing them. **Map** embeds the HoYoLAB and AppSample maps (choose the default in Settings); if a site refuses embedding, use **Open in new tab**.
+**Events** shows the live banners (with your pulls on each), current in-game events with their rewards — tick **Done** to track what's left and how many primogems are still unclaimed — countdowns to the daily, weekly, Abyss, Theater and Stygian resets, and every past banner with your pulls. **Profile** shows your Battle Chronicle: account stats, exploration per region, and Spiral Abyss, Imaginarium Theater and Stygian Onslaught results. Each cycle is kept, so past runs stay listed after HoYoLAB stops showing them. **Map** embeds the HoYoLAB and AppSample maps (choose the default in Settings; the page then remembers the tab you used last); if a site refuses embedding, use **Open in new tab**.
 
 Calendar, profile and challenge data refresh with the normal sync at most once an hour; **Sync now** always fetches them.
 

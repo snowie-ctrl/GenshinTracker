@@ -1,5 +1,5 @@
 import { timeAgo } from './time';
-import type { SyncRun, SyncStatus } from './types';
+import type { SyncPart, SyncRun, SyncStatus } from './types';
 
 /** Last finished full sync: gaps-only recalculations say nothing about roster/details/notes. */
 export function lastFinished(s: SyncStatus | null): SyncRun | null {
@@ -18,4 +18,11 @@ export function syncLabel(s: SyncStatus | null, now: number): string {
 	const failed = failedParts(last);
 	if (failed.length) return `⚠ ${failed.length} part${failed.length > 1 ? 's' : ''} failed`;
 	return `Synced ${timeAgo(last.finished_at!, now)}`;
+}
+
+/** 'fresh' is the hourly throttle skip; a list names characters the gaps part could not plan. */
+export function skippedNote(part: SyncPart): string {
+	if (part.skipped === 'fresh') return 'skipped: fresh';
+	if (Array.isArray(part.skipped) && part.skipped.length) return `skipped: ${part.skipped.join(', ')}`;
+	return '';
 }
