@@ -79,7 +79,11 @@ export interface TeamChar { id: number; name: string; icon: string | null }
 export interface ChallengeRunView { season: string; start: string | null; end: string | null; summary: Record<string, number | string>; teams: TeamChar[][] }
 export interface ChallengeViews { abyss: { current: ChallengeRunView | null; past: ChallengeRunView[] }; theater: { current: ChallengeRunView | null; past: ChallengeRunView[] }; stygian: { current: ChallengeRunView | null; past: ChallengeRunView[] } }
 export interface ProfileResponse { connected: boolean; fetched_at: string | null; error: string | null; profile: ProfileView | null; challenges: ChallengeViews }
+export type MapKey = 'hoyolab' | 'appsample';
+export interface MapInfo { key: MapKey; name: string; url: string; allowed: boolean | null }
+export interface MapsResponse { maps: MapInfo[]; default_map: MapKey }
 export interface Settings {
+	default_map: MapKey;
 	connection: Connection;
 	sync_interval_minutes: number;
 	default_targets: Targets;

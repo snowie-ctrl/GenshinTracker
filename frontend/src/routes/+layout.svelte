@@ -14,7 +14,7 @@
 		{ label: 'Teams', href: '/teams' },
 		{ label: 'Inventory', href: '/inventory' },
 		{ label: 'Events', href: '/events' },
-		{ label: 'Map', phase: 5 },
+		{ label: 'Map', href: '/map' },
 		{ label: 'Wishes', href: '/wishes' },
 		{ label: 'Profile', href: '/profile' },
 		{ label: 'Settings', href: '/settings' }

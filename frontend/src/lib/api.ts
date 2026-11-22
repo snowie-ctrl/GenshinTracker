@@ -1,6 +1,6 @@
 import type {
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
-	ImportStatus, Inventory, Pool, PoolSummary, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
+	ImportStatus, Inventory, MapKey, MapsResponse, Pool, PoolSummary, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
 	TeamBody, TeamResponse, TeamsResponse, WeaponOption, WishSummary
 } from './types';
 import { historyQuery } from './wishes';
@@ -51,8 +51,9 @@ export const api = {
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
 	profile: () => request<ProfileResponse>('GET', '/profile'),
 	settings: () => request<Settings>('GET', '/settings'),
-	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string }) =>
+	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string; default_map?: MapKey }) =>
 		request<Settings>('PUT', '/settings', body),
+	maps: () => request<MapsResponse>('GET', '/map'),
 	connect: (body: Record<string, string | number>) =>
 		request<ConnectResponse>('POST', '/settings/hoyolab', body),
 	refreshGamedata: () => request<{ refreshed: boolean }>('POST', '/gamedata/refresh'),

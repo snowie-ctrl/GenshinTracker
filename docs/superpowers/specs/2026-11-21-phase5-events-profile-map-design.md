@@ -260,3 +260,14 @@ Each milestone ends with all tests passing and is pushed when done.
 3. The Profile matches the in-game Battle Chronicle, and a past Abyss cycle stays listed after HoYoLAB stops reporting it.
 4. Each map either embeds or shows the fallback card, and Open in new tab always works.
 5. All tests pass; the repository contains no cookie values, UID, nickname, or personal data.
+
+---
+
+## 13. Refinements made during planning (2026-11-21)
+
+1. HoYoLAB's profile has no world level; the header shows AR and days active only.
+2. `challenge_run.season` is HoYoLAB's own period id as a string (Abyss `season`, Theater `schedule.id`, Stygian `season.id`).
+3. A part's last success for the throttle is read from `sync_run` (newest run whose part has `ok` and no `skipped`), the same way for all three parts.
+4. A live banner's "your pulls" uses the Phase 3 `game_banner` window of the same pool that contains the banner's start and shares a featured 5★; no match → no pull count shown.
+5. The calendar's `is_finished` event flag is ignored; Done stays manual.
+6. From the live check: Stygian's reset countdown falls back to the current Stygian run's period end (the calendar lists only Abyss and Theater); reputation is shown only when above 0; regions are ordered by HoYoLAB id; a connect sync always fetches the calendar, profile and challenges.

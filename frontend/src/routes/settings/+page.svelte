@@ -3,7 +3,7 @@
 	import { sync } from '$lib/sync.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import { timeAgo } from '$lib/time';
-	import type { Account, CacheStatus, Settings, SyncRun, Targets } from '$lib/types';
+	import type { Account, CacheStatus, MapKey, Settings, SyncRun, Targets } from '$lib/types';
 	import { cacheStatusLabel } from '$lib/wishes';
 
 	const FIELDS = [
@@ -31,6 +31,7 @@
 	let gamePathLoaded = false;
 	let gamePathNote = $state<string | null>(null);
 	let cache = $state<CacheStatus | null>(null);
+	let mapNote = $state<string | null>(null);
 
 	async function loadCache() {
 		try {
@@ -104,6 +105,15 @@
 			savedNote = 'Saved.';
 		} catch (e) {
 			savedNote = errorMessage(e);
+		}
+	}
+
+	async function saveDefaultMap(key: MapKey) {
+		try {
+			settings = await api.saveSettings({ default_map: key });
+			mapNote = 'Saved.';
+		} catch (e) {
+			mapNote = errorMessage(e);
 		}
 	}
 
@@ -214,6 +224,19 @@
 		<button type="button" onclick={saveGamePath}>Save</button>
 		{#if gamePathNote}<span class="muted">{gamePathNote}</span>{/if}
 		<p class="muted" data-testid="wish-cache">{cache ? cacheStatusLabel(cache, now) : 'Checking the game cache…'}</p>
+	</section>
+
+	<section class="panel">
+		<h2>Map</h2>
+		<label>
+			Default map
+			<select aria-label="Default map" value={settings.default_map}
+				onchange={(e) => saveDefaultMap(e.currentTarget.value as MapKey)}>
+				<option value="hoyolab">HoYoLAB Interactive Map</option>
+				<option value="appsample">AppSample</option>
+			</select>
+		</label>
+		{#if mapNote}<span class="muted">{mapNote}</span>{/if}
 	</section>
 
 	<section class="panel">

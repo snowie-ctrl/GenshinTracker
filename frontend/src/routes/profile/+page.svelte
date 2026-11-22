@@ -43,7 +43,7 @@
 		<section class="panel">
 			<h2>AR {data.profile.ar} <span class="muted">· {data.profile.days_active} days active</span></h2>
 			<div class="tiles">
-				{#each [...data.profile.tiles, ...data.profile.chests, ...data.profile.oculi] as t (t.label)}
+				{#each [...data.profile.tiles, ...data.profile.chests, ...data.profile.oculi] as t, i (i)}
 					<div class="tile"><div class="big">{t.value}</div><div class="muted">{t.label}</div></div>
 				{/each}
 			</div>
@@ -56,7 +56,7 @@
 						<div class="title">{r.name}</div>
 						<div class="big">{r.explored}%</div>
 						{#if r.reputation !== null}<div class="muted">Reputation {r.reputation}</div>{/if}
-						{#each r.offerings as o (o.name)}<div class="muted">{o.name} {o.level}</div>{/each}
+						{#each r.offerings as o, j (j)}<div class="muted">{o.name} {o.level}</div>{/each}
 					</div>
 				{/each}
 			</div>
@@ -73,7 +73,7 @@
 				{#if view.current}
 					<p>{result(k.key, view.current)} · ends in <Countdown at={view.current.end} {now} /></p>
 					{#each view.current.teams as team, i (i)}
-						<div class="team">{#each team as c (c.id)}<img src={imgSrc(c.icon)} alt={c.name} title={c.name} />{/each}</div>
+						<div class="team">{#each team as c (c.id)}{#if imgSrc(c.icon)}<img src={imgSrc(c.icon)} alt={c.name} title={c.name} />{:else}<span class="initial" title={c.name}>{c.name.slice(0, 1)}</span>{/if}{/each}</div>
 					{/each}
 				{:else}
 					<p class="muted">Not attempted this cycle</p>
@@ -99,5 +99,7 @@
 	.tile, .region { background: var(--panel-2); border-radius: 10px; padding: 8px 12px; min-width: 110px; }
 	.big { font-size: 20px; font-weight: 600; }
 	.team img { width: 36px; height: 36px; border-radius: 50%; }
+	.initial { width: 36px; height: 36px; border-radius: 50%; background: var(--panel-2); display: inline-flex;
+		align-items: center; justify-content: center; font-weight: 600; }
 	.team { display: flex; gap: 4px; margin: 4px 0; }
 </style>
