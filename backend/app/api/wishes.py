@@ -158,7 +158,7 @@ def export(ctx: AppContext = Depends(get_ctx)) -> JSONResponse:
     with ctx.session_factory() as s:
         rows = list(s.scalars(select(Wish)))
     data = build_uigf(rows, int(env["GENSHIN_UID"]), offset_hours(env.get("GENSHIN_REGION")), now, APP_VERSION)
-    filename = f"genshintracker-uigf-{now:%Y-%m-%d}.json"
+    filename = f"ad-astra-uigf-{now:%Y-%m-%d}.json"
     return JSONResponse(data, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 

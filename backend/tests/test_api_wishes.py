@@ -84,7 +84,7 @@ def test_upload_paimon_then_export_round_trip(paths):
         assert r.status_code == 200 and r.json()["last"]["added"] == 2
         exp = client.get("/api/wishes/export")
         assert exp.status_code == 200
-        assert 'filename="genshintracker-uigf-' in exp.headers["content-disposition"]
+        assert 'filename="ad-astra-uigf-' in exp.headers["content-disposition"]
         r = client.post("/api/wishes/import/file", files={"file": ("again.json", exp.content)})
         assert r.json()["last"]["ok"] is True and r.json()["last"]["added"] == 0
 

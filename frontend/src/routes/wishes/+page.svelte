@@ -97,7 +97,7 @@
 				throw new Error(detail);
 			}
 			const name = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1]
-				?? 'genshintracker-uigf.json';
+				?? 'ad-astra-uigf.json';
 			const a = document.createElement('a');
 			a.href = URL.createObjectURL(await res.blob());
 			a.download = name;
