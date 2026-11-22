@@ -11,6 +11,7 @@ from app.db.models import CharacterGoal, LiveNotes, OwnedCharacter, WeeklyBossDo
 from app.domain import Current, progress
 from app.planner.characters import building_cards
 from app.planner.today import farm_today, weekly_bosses
+from app.profile.view import profile_summary
 from app.teams.view import build_team_cards
 from app.servertime import offset_hours, server_weekday, week_start
 from app.settings.envfile import connection_status, read_env
@@ -67,4 +68,5 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
             "events_left": {**ev["events_left"], "next": [e for e in ev["events"] if not e["done"]][:3]},
             "resets": ev["resets"],
             "calendar_fetched_at": ev["fetched_at"],
+            "profile_summary": profile_summary(s, now),
         }

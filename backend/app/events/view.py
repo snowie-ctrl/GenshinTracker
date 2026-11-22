@@ -154,7 +154,7 @@ def cleanup_event_done(session: Session, now: datetime) -> int:
     snap = session.get(HoyolabSnapshot, "calendar")
     if snap is None:
         return 0
-    current = {e["id"] for e in snap.data.get("events", [])}
+    current = {e.get("id") for e in snap.data.get("events", [])}
     stale = [r.event_id for r in session.scalars(select(EventDone).where(EventDone.done_at < now - KEEP_DONE))
              if r.event_id not in current]
     if stale:

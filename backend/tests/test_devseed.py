@@ -74,6 +74,15 @@ def test_devseed_teams(tmp_path):
     assert [(t["name"], t["team_count"]) for t in tags] == [("Build", 1), ("abyss", 1)]
 
 
+def test_devseed_profile(tmp_path):
+    seed(tmp_path)
+    with make_client(Paths(tmp_path)) as client:
+        body = client.get("/api/profile").json()
+    assert body["profile"]["ar"] == 58
+    assert len(body["challenges"]["abyss"]["past"]) == 2
+    assert body["challenges"]["abyss"]["current"] is not None
+
+
 def test_devseed_calendar(tmp_path):
     seed(tmp_path)
     with make_client(Paths(tmp_path)) as client:

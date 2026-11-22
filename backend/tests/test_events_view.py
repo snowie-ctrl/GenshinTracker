@@ -126,3 +126,12 @@ def test_cleanup_event_done(session_factory):
         assert cleanup_event_done(s, NOW) == 1
     with session_factory() as s:
         assert {r.event_id for r in s.query(EventDone)} == {1, 3}
+
+
+def test_cleanup_event_done_tolerates_event_without_id(session_factory):
+    with session_factory.begin() as s:
+        s.add(HoyolabSnapshot(part="calendar", data={"banners": [], "challenges": [], "events": [{"name": "No id"}]},
+                              fetched_at=NOW))
+        s.add(EventDone(event_id=2, done_at=NOW - timedelta(days=90)))
+    with session_factory.begin() as s:
+        assert cleanup_event_done(s, NOW) == 1

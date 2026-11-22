@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import (CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
+from app.db.models import (ChallengeRun, CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
@@ -185,6 +185,33 @@ def seed(root: Path) -> None:
                             "end": iso(now + timedelta(days=10))}],
         }
         s.add(HoyolabSnapshot(part="calendar", data=calendar, fetched_at=now))
+        profile = {
+            "stats": {"ar": 58, "days_active": 900, "achievements": 640, "characters": 48,
+                      "chests": {"common": 2100, "exquisite": 1500, "precious": 420, "luxurious": 130,
+                                 "remarkable": 60},
+                      "oculi": {"anemoculi": 66, "geoculi": 131, "electroculi": 181, "dendroculi": 150,
+                                "hydroculi": 120, "pyroculi": 40, "cryoculi": 0, "lunoculi": 0},
+                      "waypoints": 310, "domains": 55},
+            "regions": [
+                {"id": 1, "name": "Mondstadt", "explored": 100.0, "reputation": 8,
+                 "offerings": [{"name": "Frostbearing Tree", "level": 12}]},
+                {"id": 2, "name": "Liyue", "explored": 96.4, "reputation": 7,
+                 "offerings": [{"name": "Sacred Sakura's Favor", "level": 0}]},
+                {"id": 3, "name": "Inazuma", "explored": 88.1, "reputation": 6, "offerings": []},
+            ],
+        }
+        s.add(HoyolabSnapshot(part="profile", data=profile, fetched_at=now))
+        ids = {c[2]: c[0] for c in CHARACTERS}             # slug -> id
+        runs = [
+            ("abyss", "103", now - timedelta(days=10), now + timedelta(days=20), {"stars": 36},
+             [[ids["furina"], ids["bennett"], ids["xingqiu"], ids["kazuha"]]]),
+            ("abyss", "102", now - timedelta(days=40), now - timedelta(days=10), {"stars": 30}, []),
+            ("abyss", "101", now - timedelta(days=70), now - timedelta(days=40), {"stars": 27}, []),
+            ("theater", "77", now - timedelta(days=20), now + timedelta(days=10), {"act": 10, "difficulty": 3}, []),
+        ]
+        for kind, season, r_start, r_end, summary, teams_ in runs:
+            s.add(ChallengeRun(kind=kind, season=season, start=iso(r_start), end=iso(r_end), summary=summary,
+                               teams=teams_, seen_at=now, updated_at=now))
     engine.dispose()
 
 

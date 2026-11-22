@@ -40,7 +40,7 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
     session_factory = make_session_factory(engine)
     with session_factory.begin() as s:
         cleanup_event_done(s, utcnow())
-    http =http_client or httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, follow_redirects=True)
+    http = http_client or httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, follow_redirects=True)
     is_offline = config.offline() if offline is None else offline
 
     async def on_unknown_ids(ids: set[int]) -> None:
