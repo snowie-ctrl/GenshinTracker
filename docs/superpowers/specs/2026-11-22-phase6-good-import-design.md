@@ -1,7 +1,7 @@
 # Phase 6 — GOOD Inventory Import: Design
 
 **Date:** 2026-11-22
-**Status:** Draft for review
+**Status:** Approved 2026-11-22 (amended while planning: §2 ignored keys, §3 module list, §4 `location` column)
 **Parent:** [Overview design](2026-11-19-genshintracker-overview-design.md). Delivers the item the overview promised ("optional GOOD import", "full owned list only when a GOOD import exists", §10 "GOOD files from existing tools are imported") and that [Phase 2](2026-11-19-phase2-planner-design.md) deferred ("exact counts for every tile", "weapon inventory").
 
 ---
@@ -50,14 +50,14 @@ Unknown extra fields are ignored. Missing blocks count as empty, so a materials-
 
 ### Key matching
 
-A GOOD key is the English name in PascalCase with every non-alphanumeric character removed, for example `ShivadaJadeGemstone`, `WolfsGravestone` (from "Wolf's Gravestone") and `GladiatorsFinale`. One function, `good_key(name)`, builds that form: split on non-alphanumerics, capitalise the first letter of each part, and join. It is applied to:
+A GOOD key is the English name in PascalCase with every non-alphanumeric character removed, for example `ShivadaJadeGemstone`, `WolfsGravestone` (from "Wolf's Gravestone") and `GladiatorsFinale`. One function, `good_key(name)`, builds that form: fold accents to ASCII, split on whitespace and hyphens, drop the remaining non-alphanumerics in each word, capitalise each word's first letter, and join. It is applied to:
 
 - `game_material.name` → material ids,
 - `game_weapon.name` → weapon ids,
 - `game_artifact_set.name` → artifact set ids (new table, §4),
 - `game_character.name` → character ids (for `location`). The Traveler keys (`Traveler`, or any key starting with `Traveler`) map to the owned Traveler, if exactly one is found.
 
-If two catalogue names produce the same key, the first id by `sort_order`/id wins, and the collision is logged by key only, without counts. Keys that match nothing are counted and listed in the import summary, then dropped.
+If two catalogue names produce the same key, the first id by `sort_order`/id wins, and the collision is logged by key only, without counts. Material keys that are not in the planner catalogue but are known Yatta items (food, potions, quest items) are counted as **ignored**. Game-data refresh stores the GOOD key of every Yatta material in `game_meta.material_keys_all` for this. Other keys that match nothing are counted as **unmatched** and listed in the import summary as `<block>:<Key>` (`material`, `weapon`, `set`, `character`), then dropped.
 
 ---
 
@@ -70,7 +70,9 @@ If two catalogue names produce the same key, the first id by `sort_order`/id win
 | `parse.py` | Validate and parse the uploaded bytes into dataclasses (`GoodFile`, `GoodWeapon`, `GoodArtifact`). Raises `GoodFormatError` with a user-facing message. |
 | `keys.py` | `good_key(name)` and `KeyIndex.build(session)`, which looks up material, weapon, set and character ids. |
 | `store.py` | `replace_snapshot(session, parsed, index, now)` returns an `ImportSummary`. `delete_snapshot(session)`. `load_snapshot(session)` is read-only and returns what the planner and API need. |
-| `merge.py` | Pure function: `tile_view(live_row, scan_count, has_import)` gives the tile's display fields (§5.1). |
+| `check.py` | `python -m app.good.check --db COPY --refresh FILE` prints only match counts and unmatched keys for a real export (live check). |
+
+The §5.1 tile rules live in the frontend's existing `tileView`; the backend only supplies `scan`.
 
 Setting access goes through the existing `settings/store.py`.
 
@@ -92,8 +94,8 @@ One Alembic migration.
 |---|---|
 | `good_import` | single row (`id = 1`): `imported_at`, `source` (string from the file, truncated to 64 chars, or null), `counts` (JSON: matched/unmatched per block), `unmatched` (JSON list of keys, capped at 200) |
 | `good_material` | `material_id` PK, `count` |
-| `good_weapon` | `id` PK (autoincrement), `weapon_id`, `level`, `ascension`, `refinement`, `character_id` (nullable), `lock` |
-| `good_artifact` | `id` PK (autoincrement), `set_id`, `slot`, `rarity`, `level`, `main_stat`, `substats` (JSON list of `{key, value}`), `character_id` (nullable), `lock` |
+| `good_weapon` | `id` PK (autoincrement), `weapon_id`, `level`, `ascension`, `refinement`, `location` (raw GOOD character key or null), `character_id` (nullable), `lock` |
+| `good_artifact` | `id` PK (autoincrement), `set_id`, `slot`, `rarity`, `level`, `main_stat`, `substats` (JSON list of `{key, value}`), `location`, `character_id` (nullable), `lock` |
 
 ### Setting
 
@@ -119,7 +121,7 @@ One Alembic migration.
 | `met` | "✓ need" | `scan/need ✓` if `scan ≥ need`, else "✓ need" |
 | `unneeded` | dimmed, no number | `scan` shown and **not dimmed** if `scan > 0`; dimmed "0" otherwise |
 
-- Materials in the catalogue's eight categories only. Scanned materials outside those categories, such as food or gadgets, are matched and counted in the summary but not shown.
+- Materials in the catalogue's eight categories only. Scanned materials outside those categories, such as food or gadgets, are counted as ignored and not shown. A holder key we cannot match shows as **Equipped** (never Unequipped).
 - `to_farm`, `craftable`, Farm today, Weekly bosses and Building cards all keep using live calculator data only.
 - The popover adds "Scanned: N (as of <date>)" when `has_import`.
 - The filter chips add **Owned** (`scan > 0`) when `has_import`.
