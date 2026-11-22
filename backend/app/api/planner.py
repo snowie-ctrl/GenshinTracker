@@ -7,13 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.context import AppContext, get_ctx
 from app.db.models import GameWeapon, WeeklyBossDone
+from app.good.store import good_active, owned_weapons, scan_counts
 from app.planner.data import PlannerData, load
 from app.planner.inventory import inventory, material_index
 from app.planner.status import gap_status
 from app.servertime import week_start
 from app.settings.envfile import connection_status, read_env
 from app.settings.store import get_setting
-from app.timeutil import utcnow
+from app.timeutil import iso, utcnow
 
 router = APIRouter()
 KEEP_WEEKS = 8
@@ -46,7 +47,14 @@ def gaps_for(ctx: AppContext, session: Session) -> dict:
 def get_inventory(ctx: AppContext = Depends(get_ctx)) -> dict:
     with ctx.session_factory() as s:
         data, index = planner_view(s)
-        return {"gaps": gaps_for(ctx, s), "categories": inventory(data, index)}
+        categories = inventory(data, index)
+        active = good_active(s)
+        counts = scan_counts(s) if active is not None else None
+        for c in categories:
+            for m in c["materials"]:
+                m["scan"] = counts.get(m["id"], 0) if counts is not None else None
+        good = {"imported_at": iso(active.imported_at), "source": active.source} if active is not None else None
+        return {"gaps": gaps_for(ctx, s), "categories": categories, "good": good}
 
 
 @router.get("/weapons")
@@ -55,8 +63,10 @@ def list_weapons(type: str | None = None, ctx: AppContext = Depends(get_ctx)) ->
         q = select(GameWeapon).order_by(GameWeapon.rarity.desc(), GameWeapon.name)
         if type:
             q = q.where(GameWeapon.weapon_type == type)
-        return [{"id": w.id, "name": w.name, "icon": w.icon, "rarity": w.rarity, "weapon_type": w.weapon_type}
-                for w in s.scalars(q)]
+        owned = owned_weapons(s) if good_active(s) is not None else {}
+        out = [{"id": w.id, "name": w.name, "icon": w.icon, "rarity": w.rarity, "weapon_type": w.weapon_type,
+                "owned": owned.get(w.id)} for w in s.scalars(q)]
+        return sorted(out, key=lambda w: w["owned"] is None)      # stable: owned first, order kept within
 
 
 @router.put("/weekly-bosses/{boss}")

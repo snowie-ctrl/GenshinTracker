@@ -22,6 +22,7 @@ LACK_INCLUDES_CRAFTING = False
 WISH_BACKUPS_KEPT = 10
 APP_VERSION = "0.3.0"
 WISH_UPLOAD_MAX_BYTES = 20 * 1024 * 1024
+GOOD_UPLOAD_MAX_BYTES = 20 * 1024 * 1024
 WISH_PAGE_DELAY = 0.3          # seconds between gacha-log pages (be gentle with the API)
 WISH_HISTORY_PAGE_SIZE = 50
 BANNERS_URL = "https://raw.githubusercontent.com/MadeBaruna/paimon-moe/main/src/data/banners.js"

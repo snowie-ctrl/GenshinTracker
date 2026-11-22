@@ -131,6 +131,7 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
                        json={"targets": {"level": 90, "normal": 9, "skill": 8, "burst": 8,
                                          "weapon_level": 90}}).text,
             client.put("/api/weekly-bosses/Stormterror", json={"done": True}).text,
+            client.put("/api/settings", json={"good_import_enabled": True}).text,
         ]
         bodies += [
             client.post("/api/teams", json={"name": "Leak check", "notes": "", "tag_ids": [1], "new_tags": ["abyss"],
@@ -144,7 +145,8 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
         bodies += [client.get(p).text for p in
                    ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
                     "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett", "/api/teams",
-                    "/api/events", "/api/banners/history?pool=character", "/api/profile", "/api/map")]
+                    "/api/events", "/api/banners/history?pool=character", "/api/profile", "/api/map",
+                    "/api/good/status")]
     assert sum(1 for c in source.calls if isinstance(c, tuple) and c[0] == "gaps") == 2
     for text in [*bodies, caplog.text]:
         assert not any(secret in text for secret in SECRETS)
