@@ -181,7 +181,7 @@
 		{:else if data.events_left.count === 0}
 			<p>All events done ✓</p>
 		{:else}
-			<p>{eventsLeft(data.events_left.count)} ·{data.events_left.primogems} primos</p>
+			<p>{eventsLeft(data.events_left.count)} · {data.events_left.primogems} primos</p>
 			<ul>{#each data.events_left.next as e (e.id)}<li>{e.name} · <Countdown at={e.end} {now} warn={!e.done} /></li>{/each}</ul>
 		{/if}
 		{#if data.calendar_fetched_at}<p class="muted">As of {timeAgo(data.calendar_fetched_at, now)}</p>
