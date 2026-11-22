@@ -26,3 +26,25 @@ export function skippedNote(part: SyncPart): string {
 	if (Array.isArray(part.skipped) && part.skipped.length) return `not planned: ${part.skipped.join(', ')}`;
 	return '';
 }
+
+export type SyncTone = 'ok' | 'warn' | 'none';
+
+function shortAgo(iso: string, now: number): string {
+	const m = Math.floor((now - Date.parse(iso)) / 60_000);
+	if (m < 1) return 'now';
+	if (m < 60) return `${m}m ago`;
+	const h = Math.floor(m / 60);
+	if (h < 24) return `${h}h ago`;
+	return `${Math.floor(h / 24)}d ago`;
+}
+
+/** Sidebar sync item: a status dot tone and a label short enough for 76px. */
+export function syncBadge(s: SyncStatus | null, now: number): { tone: SyncTone; short: string; running: boolean } {
+	if (!s) return { tone: 'none', short: '…', running: false };
+	const last = lastFinished(s);
+	const failed = last ? failedParts(last).length : 0;
+	const tone: SyncTone = !last ? 'none' : failed ? 'warn' : 'ok';
+	if (s.running) return { tone, short: 'Syncing…', running: true };
+	if (!last) return { tone, short: 'Never', running: false };
+	return { tone, short: failed ? `${failed} failed` : shortAgo(last.finished_at!, now), running: false };
+}

@@ -3,104 +3,46 @@
 	import { onMount } from 'svelte';
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { appearance } from '$lib/appearance.svelte';
+	import { isFluid } from '$lib/nav';
+	import Sidebar from '$lib/Sidebar.svelte';
+	import Starfield from '$lib/Starfield.svelte';
 	import { sync } from '$lib/sync.svelte';
-	import { failedParts, lastFinished, skippedNote, syncLabel } from '$lib/syncLabel';
 
 	let { children } = $props();
-
-	const NAV: { label: string; href: string }[] = [
-		{ label: 'Dashboard', href: '/' },
-		{ label: 'Characters', href: '/characters' },
-		{ label: 'Teams', href: '/teams' },
-		{ label: 'Inventory', href: '/inventory' },
-		{ label: 'Events', href: '/events' },
-		{ label: 'Map', href: '/map' },
-		{ label: 'Wishes', href: '/wishes' },
-		{ label: 'Profile', href: '/profile' },
-		{ label: 'Settings', href: '/settings' }
-	];
-
-	let now = $state(Date.now());
-	let showDetails = $state(false);
-	const last = $derived(lastFinished(sync.status));
-	const failed = $derived(last ? failedParts(last) : []);
-
-	function isActive(href: string): boolean {
-		return href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
-	}
+	const fluid = $derived(isFluid(page.url.pathname));
 
 	onMount(() => {
 		sync.loadConnection();
-		const t = setInterval(() => (now = Date.now()), 30_000);
-		return () => clearInterval(t);
+		appearance.load();
 	});
 
-	// "Sync on page load": every navigation asks for an auto sync; the backend decides if it's due.
+	// "Sync on page load": every navigation asks for an auto sync; the backend decides if it is due.
 	afterNavigate(() => {
 		sync.start('auto');
 	});
 </script>
 
-<nav class="topnav">
-	<span class="brand">GenshinTracker</span>
-	{#each NAV as item (item.label)}
-		<a href={item.href} class:active={isActive(item.href)}>{item.label}</a>
-	{/each}
-	<div class="sync">
-		<button
-			type="button"
-			class="label"
-			class:warn={failed.length > 0}
-			data-testid="sync-label"
-			onclick={() => (showDetails = !showDetails)}
-		>
-			{syncLabel(sync.status, now)}
-		</button>
-		<button
-			type="button"
-			onclick={() => sync.start('manual')}
-			disabled={sync.status?.running || sync.connection?.status !== 'connected'}
-		>
-			Sync
-		</button>
-		{#if showDetails && last}
-			<div class="popover panel">
-				<div class="muted">Last sync ({last.trigger})</div>
-				{#each Object.entries(last.parts) as [name, part] (name)}
-					<div>
-						<b>{name}</b>:
-						{#if part.ok}ok{#if skippedNote(part)} ({skippedNote(part)}){/if}{#if part.count !== undefined} ({part.count}){/if}{:else}<span class="error"
-								>{part.error}</span
-							>{/if}
-					</div>
-				{/each}
-			</div>
-		{/if}
-		{#if sync.error}<div class="sync-error error" title={sync.error}>{sync.error}</div>{/if}
-	</div>
-</nav>
+<Starfield animated={appearance.backgroundAnimated} />
+<Sidebar />
 
-{#if sync.connection?.status === 'expired'}
-	<div class="banner warn">Your HoYoLAB login expired. <a href="/settings">Reconnect HoYoLAB</a></div>
-{:else if sync.connection?.status === 'missing'}
-	<div class="banner">Not connected to HoYoLAB yet. <a href="/settings">Connect HoYoLAB</a></div>
-{/if}
-
-<main>{@render children()}</main>
+<div class="content" class:fluid>
+	{#if sync.connection?.status === 'expired'}
+		<div class="banner warn">Your HoYoLAB login expired. <a href="/settings">Reconnect HoYoLAB</a></div>
+	{:else if sync.connection?.status === 'missing'}
+		<div class="banner">Not connected to HoYoLAB yet. <a href="/settings">Connect HoYoLAB</a></div>
+	{/if}
+	<main class:fluid>{@render children()}</main>
+</div>
 
 <style>
-	.topnav {
-		display: flex; align-items: center; gap: 14px; padding: 10px 16px;
-		background: #101016; border-bottom: 1px solid var(--line); flex-wrap: wrap;
+	.content { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+	.content.fluid { height: 100vh; }
+	main { flex: 1; width: 100%; max-width: 1600px; margin: 0 auto; padding: var(--gutter); }
+	main.fluid { max-width: none; min-height: 0; display: flex; flex-direction: column; }
+	.banner {
+		margin: 12px var(--gutter) 0; padding: 8px 14px; border-radius: 10px;
+		background: var(--glass-bg); border: 1px solid var(--glass-border);
 	}
-	.brand { font-weight: 700; margin-right: 8px; }
-	.topnav a { color: var(--text); text-decoration: none; padding-bottom: 2px; }
-	.topnav a.active { border-bottom: 2px solid var(--accent); }
-	.sync { margin-left: auto; display: flex; gap: 8px; align-items: center; position: relative; }
-	.label { background: none; border: none; color: var(--muted); font-size: 12px; }
-	.label.warn { color: var(--warn); }
-	.popover { position: absolute; top: 34px; right: 0; z-index: 10; min-width: 260px; font-size: 12px; }
-	.sync-error { position: absolute; top: 34px; right: 0; font-size: 12px; white-space: nowrap; }
-	.banner { padding: 8px 16px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
-	.banner.warn { background: #3a2a14; }
+	.banner.warn { background: rgba(90, 60, 20, 0.6); border-color: rgba(240, 160, 75, 0.4); }
 </style>
