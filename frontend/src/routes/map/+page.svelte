@@ -37,9 +37,9 @@
 
 <div class="map-page">
 	{#if error}<p class="error">{error}</p>{/if}
-	{#if data}
-		<div class="bar glass">
-			<h1>Map</h1>
+	<div class="bar glass">
+		<h1>Map</h1>
+		{#if data}
 			<div class="tabs" role="tablist" aria-label="Maps">
 				{#each data.maps as m (m.key)}
 					<button type="button" role="tab" class="chip" class:on={tab === m.key} aria-selected={tab === m.key}
@@ -47,12 +47,14 @@
 						data-testid="map-tab-{m.key}" onclick={() => choose(m.key)}>{m.name}</button>
 				{/each}
 			</div>
-			{#if current}
-				<a class="open" href={current.url} target="_blank" rel="noopener noreferrer">
-					Open in new tab <Icon name="external" size={14} />
-				</a>
-			{/if}
-		</div>
+		{/if}
+		{#if current}
+			<a class="open" href={current.url} target="_blank" rel="noopener noreferrer">
+				Open in new tab <Icon name="external" size={14} />
+			</a>
+		{/if}
+	</div>
+	{#if data}
 		{#if current}
 			<div class="panel-area" role="tabpanel" id="map-panel" aria-labelledby="map-tab-{current.key}">
 				{#if current.allowed === false}

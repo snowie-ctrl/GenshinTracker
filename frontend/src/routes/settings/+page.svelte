@@ -384,7 +384,7 @@
 	form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; align-items: end; }
 	label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 	label.inline { flex-direction: row; align-items: center; gap: 8px; display: inline-flex; }
-	label.inline input { width: 80px; }
+	label.inline input[type='number'] { width: 80px; }
 	.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start; }
 	.groups { display: flex; flex-direction: column; gap: 16px; }
 	.group { scroll-margin-top: var(--gutter); margin-bottom: 0; }

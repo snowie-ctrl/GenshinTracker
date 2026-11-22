@@ -90,7 +90,7 @@ export interface Settings {
 	level_caps: number[];
 	game_install_path: string;
 	good_import_enabled: boolean;
-		background_animated: boolean;
+	background_animated: boolean;
 	gamedata: {
 		artifact_sets: { fetched_at: string | null; last_error: string | null; count: number };
 		fetched_at: string | null; last_error: string | null; count: number;
