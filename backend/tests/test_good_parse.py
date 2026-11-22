@@ -70,11 +70,22 @@ def test_whole_file_errors(content, message):
     ({"artifacts": [{"setKey": "A", "slotKey": "flower", "rarity": 5, "level": 0}]}, "artifacts"),
     ({"artifacts": [{"setKey": "A", "slotKey": "flower", "rarity": 5, "level": 0, "mainStatKey": "hp",
                      "substats": "x"}]}, "artifacts"),
+    ({"artifacts": [{"setKey": "A", "slotKey": "flower", "rarity": 5, "level": 0, "mainStatKey": "hp",
+                     "substats": [{"key": "atk", "value": "x"}]}]}, "artifacts"),
 ])
 def test_block_errors_name_the_block(over, block):
     with pytest.raises(GoodFormatError) as e:
         parse_good(raw(**over))
     assert block in str(e.value)
+
+
+@pytest.mark.parametrize("token", [b"NaN", b"Infinity", b"-Infinity"])
+def test_non_finite_substat_value_is_a_format_error(token):
+    body = (b'{"format":"GOOD","version":2,"artifacts":[{"setKey":"A","slotKey":"flower","rarity":5,"level":0,'
+            b'"mainStatKey":"hp","substats":[{"key":"atk","value":' + token + b'}]}]}')
+    with pytest.raises(GoodFormatError) as e:
+        parse_good(body)
+    assert "artifacts" in str(e.value)
 
 
 def test_deeply_nested_json_is_a_format_error():

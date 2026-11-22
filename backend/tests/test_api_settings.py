@@ -6,7 +6,7 @@ from app.settings.envfile import read_env
 from app.sync.hoyolab import Account, HoyolabError
 from fakes import FakeSource
 from app.timeutil import utcnow
-from helpers import make_client, seed_game, wait_for_sync, yatta_transport
+from helpers import FIXTURES, make_client, seed_game, wait_for_sync, yatta_transport
 
 ACCOUNT = Account(uid=800000001, server="os_usa", nickname="TestTraveler", level=60)
 OTHER = Account(uid=800000002, server="os_euro", nickname="Alt", level=20)
@@ -132,6 +132,9 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
                                          "weapon_level": 90}}).text,
             client.put("/api/weekly-bosses/Stormterror", json={"done": True}).text,
             client.put("/api/settings", json={"good_import_enabled": True}).text,
+            client.post("/api/good/import",
+                        files={"file": ("good_sample.json", (FIXTURES / "good_sample.json").read_bytes(),
+                                        "application/json")}).text,
         ]
         bodies += [
             client.post("/api/teams", json={"name": "Leak check", "notes": "", "tag_ids": [1], "new_tags": ["abyss"],
@@ -146,7 +149,7 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
                    ("/api/settings", "/api/sync/status", "/api/characters", "/api/dashboard",
                     "/api/inventory", "/api/weapons?type=Sword", "/api/characters/bennett", "/api/teams",
                     "/api/events", "/api/banners/history?pool=character", "/api/profile", "/api/map",
-                    "/api/good/status")]
+                    "/api/good/status", "/api/good/weapons", "/api/good/artifacts")]
     assert sum(1 for c in source.calls if isinstance(c, tuple) and c[0] == "gaps") == 2
     for text in [*bodies, caplog.text]:
         assert not any(secret in text for secret in SECRETS)

@@ -1,11 +1,9 @@
-import json
-
 from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import CharacterGoal, GameArtifactSet, GameMaterial, GameMeta, GameWeapon
 from app.gamedata.service import META_MAT_KEYS
-from app.sync.persist import save_gaps
-from app.sync.hoyolab import GapResult, MaterialAmount
 from app.planner.requests import snapshot
+from app.sync.hoyolab import GapResult, MaterialAmount
+from app.sync.persist import save_gaps
 from app.timeutil import utcnow
 from helpers import FIXTURES, make_client, seed_game
 

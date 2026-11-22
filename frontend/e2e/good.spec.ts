@@ -6,6 +6,7 @@ const fixture = resolve(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'go
 
 test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', async ({ page }) => {
 	await page.goto('/inventory');
+	await expect(page.getByTestId('gap-status')).toBeVisible();                            // page loaded
 	await expect(page.getByRole('button', { name: 'Import GOOD file' })).toHaveCount(0);   // off by default
 
 	await page.goto('/settings');
@@ -45,9 +46,9 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 	await page.goto('/settings');
 	await page.getByTestId('good-settings').getByRole('checkbox', { name: 'Use GOOD inventory import' }).uncheck();
 	await page.goto('/inventory');
+	await expect(page.getByTestId('tile-100055')).toHaveClass(/dim/);      // data loaded
+	await expect(page.getByTestId('tile-100055')).not.toContainText('37');
 	await expect(page.getByRole('tab', { name: 'Weapons', exact: true })).toHaveCount(0);
 	await expect(page.getByRole('tab', { name: 'Artifacts', exact: true })).toHaveCount(0);
 	await expect(page.getByRole('button', { name: 'Import GOOD file' })).toHaveCount(0);
-	await expect(page.getByTestId('tile-100055')).not.toContainText('37');
-	await expect(page.getByTestId('tile-100055')).toHaveClass(/dim/);
 });

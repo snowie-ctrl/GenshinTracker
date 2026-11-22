@@ -104,22 +104,24 @@
 {#if error}<p class="error">{error}</p>{/if}
 
 {#if data}
-	<div class="bar">
-		{#if data.good}
-			<div role="tablist" class="chips">
-				{#each [['materials', 'Materials'], ['weapons', 'Weapons'], ['artifacts', 'Artifacts']] as [key, label] (key)}
-					<button type="button" role="tab" class="chip" class:on={activeTab === key}
-						aria-selected={activeTab === key} onclick={() => setTab(key as Tab)}>{label}</button>
-				{/each}
-			</div>
-		{/if}
-		{#if goodEnabled}<GoodImportButton onimported={load} />{/if}
-		{#if data.good}
-			<span class="muted" data-testid="scan-status">Scan: {new Date(data.good.imported_at).toLocaleDateString()}
-				({timeAgo(data.good.imported_at, now)}){data.good.source ? ` from ${data.good.source}` : ''}
-				{#if scanAgeNote(data.good.imported_at, now)} · ⚠ {scanAgeNote(data.good.imported_at, now)}{/if}</span>
-		{/if}
-	</div>
+	{#if data.good || goodEnabled}
+		<div class="bar">
+			{#if data.good}
+				<div role="tablist" class="chips">
+					{#each [['materials', 'Materials'], ['weapons', 'Weapons'], ['artifacts', 'Artifacts']] as [key, label] (key)}
+						<button type="button" role="tab" class="chip" class:on={activeTab === key}
+							aria-selected={activeTab === key} onclick={() => setTab(key as Tab)}>{label}</button>
+					{/each}
+				</div>
+			{/if}
+			{#if goodEnabled}<GoodImportButton onimported={load} />{/if}
+			{#if data.good}
+				<span class="muted" data-testid="scan-status">Scan: {new Date(data.good.imported_at).toLocaleDateString()}
+					({timeAgo(data.good.imported_at, now)}){data.good.source ? ` from ${data.good.source}` : ''}
+					{#if scanAgeNote(data.good.imported_at, now)} · ⚠ {scanAgeNote(data.good.imported_at, now)}{/if}</span>
+			{/if}
+		</div>
+	{/if}
 
 	{#if activeTab === 'materials'}
 		<div class="bar">

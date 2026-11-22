@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 
 SUPPORTED_VERSIONS = (1, 2, 3)
@@ -98,7 +99,8 @@ def _artifact(a: dict) -> GoodArtifact:
         key, value = sub.get("key"), sub.get("value")
         if not key:
             continue                      # scanners emit {"key": ""} for unrolled substats
-        if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, (int, float)):
+        if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, (int, float)) \
+                or not math.isfinite(value):
             raise _bad(b)
         subs.append((key, float(value)))
     return GoodArtifact(_str(a.get("setKey"), b), slot, _int(a.get("rarity"), b, 1), _int(a.get("level"), b),

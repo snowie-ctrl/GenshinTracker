@@ -134,7 +134,7 @@ All scanned weapons that matched. Each tile shows the icon on a rarity backgroun
 
 All scanned artifacts that matched. Each card shows the set name and icon, slot, rarity stars, +level, main stat, the substats with values, and the holder's avatar or **Unequipped**. Filters: set, slot, main stat, *Unequipped only*, and minimum rarity (default 4★). Header: "<N> artifacts · <M> unequipped". Sorted by rarity, then set, then slot, then level. The list is paged by 100 on the client.
 
-Stat keys (GOOD's, e.g. `critRate_`, `atk_`, `hp`) map to display names in one frontend table: `critRate_` → "CRIT Rate%", `atk_` → "ATK%", `atk` → "ATK", and so on. Values with `_` show as percentages.
+Stat keys (GOOD's, e.g. `critRate_`, `atk_`, `hp`) map to display names in one frontend table: `critRate_` → "CRIT Rate", `enerRech_` → "Energy Recharge", `atk` → "ATK". The name carries no %; the value does (values for `_` keys show as percentages). The exception is `hp_`/`atk_`/`def_`, which show as "HP%"/"ATK%"/"DEF%" to tell them apart from the flat stats.
 
 ### 5.4 Planned-weapon picker
 

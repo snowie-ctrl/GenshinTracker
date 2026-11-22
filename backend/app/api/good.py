@@ -50,8 +50,6 @@ async def import_good(file: UploadFile, ctx: AppContext = Depends(get_ctx)) -> d
         parsed = parse_good(content)
     except GoodFormatError as e:
         raise HTTPException(400, str(e)) from None
-    finally:
-        del content
     with ctx.session_factory.begin() as s:
         if not s.scalar(select(func.count()).select_from(GameMaterial)):
             raise HTTPException(409, "Refresh game data first")
