@@ -9,7 +9,7 @@ TABLES = {
     "game_character", "game_meta", "owned_character", "owned_artifact",
     "live_notes", "sync_run", "character_goal", "setting",
     "game_material", "game_domain", "game_weapon", "material_gap", "material_total",
-    "gap_run", "weekly_boss_done",
+    "gap_run", "weekly_boss_done", "traveler_element",
 }
 
 

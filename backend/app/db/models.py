@@ -198,6 +198,20 @@ class CharacterGoal(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class TravelerElement(Base):
+    """What HoYoLAB cannot report for Traveler elements other than the current one (sub-project 2)."""
+    __tablename__ = "traveler_element"
+    element_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    seen: Mapped[bool] = mapped_column(Boolean)              # a sync reported it as the current element
+    unlocked: Mapped[bool] = mapped_column(Boolean)          # ticked by the user
+    talent_normal: Mapped[int] = mapped_column(Integer)
+    talent_skill: Mapped[int] = mapped_column(Integer)
+    talent_burst: Mapped[int] = mapped_column(Integer)
+    constellation: Mapped[int] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(String)              # sync | manual
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class WeeklyBossDone(Base):
     __tablename__ = "weekly_boss_done"
     boss: Mapped[str] = mapped_column(String, primary_key=True)
