@@ -6,7 +6,7 @@ from pathlib import Path
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import (CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
-                           Tag, Team, TeamMember, TeamTag)
+                           HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
 from app.sync.persist import save_details, save_gaps, save_notes, save_roster
@@ -162,6 +162,29 @@ def seed(root: Path) -> None:
                 s.add(TeamMember(team_id=tid, slot=slot, character_id=ids[slug], role=role))
             for tag_id in tags:
                 s.add(TeamTag(team_id=tid, tag_id=tag_id))
+    with sf.begin() as s:
+        # same window as the seeded "Tide of Furina" (server-local strings, Asia offset 8) in naive UTC
+        b_start = datetime.strptime(start, "%Y-%m-%d %H:%M:%S") - timedelta(hours=8)
+        b_end = datetime.strptime(end, "%Y-%m-%d %H:%M:%S") - timedelta(hours=8)
+        primo = {"id": 201, "name": "Primogem", "icon": "", "count": 0, "rarity": 5}
+        calendar = {
+            "banners": [{"pool": "character", "name": "Tide of Furina", "start": iso(b_start), "end": iso(b_end),
+                         "items": [{"id": 10000089, "name": "Furina", "icon": "UI_AvatarIcon_Furina", "rarity": 5},
+                                   {"id": 10000032, "name": "Bennett", "icon": "UI_AvatarIcon_Bennett",
+                                    "rarity": 4}]}],
+            "events": [
+                {"id": 9001, "name": "Fishing Festival", "description": "", "start": None,
+                 "end": iso(now + timedelta(days=9)), "rewards": [{**primo, "count": 420}]},
+                {"id": 9002, "name": "Quick Trial", "description": "", "start": None,
+                 "end": iso(now + timedelta(hours=5)), "rewards": [{**primo, "count": 60}]},
+                {"id": 9003, "name": "Photo Event", "description": "", "start": None,
+                 "end": iso(now + timedelta(days=3)), "rewards": []},
+            ],
+            "challenges": [{"kind": "abyss", "name": "Spiral Abyss", "start": None, "end": iso(now + timedelta(days=20))},
+                           {"kind": "theater", "name": "Imaginarium Theater", "start": None,
+                            "end": iso(now + timedelta(days=10))}],
+        }
+        s.add(HoyolabSnapshot(part="calendar", data=calendar, fetched_at=now))
     engine.dispose()
 
 

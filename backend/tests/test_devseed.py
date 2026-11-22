@@ -72,3 +72,12 @@ def test_devseed_teams(tmp_path):
     assert [m["not_building"] for m in abyss["members"]] == [False, False, True]
     assert abyss["shortfall"] and teams[1]["tags"] == []
     assert [(t["name"], t["team_count"]) for t in tags] == [("Build", 1), ("abyss", 1)]
+
+
+def test_devseed_calendar(tmp_path):
+    seed(tmp_path)
+    with make_client(Paths(tmp_path)) as client:
+        body = client.get("/api/events").json()
+    assert [e["id"] for e in body["events"]][:2] and body["events_left"]["primogems"] == 480
+    assert body["banners"]["current"][0]["name"] == "Tide of Furina"
+    assert body["banners"]["current"][0]["pulls"] is not None

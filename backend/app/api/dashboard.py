@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
 from app.api.characters import goal_targets
+from app.api.events import events_payload
 from app.api.planner import gaps_for, planner_view, region
 from app.api.teams import team_views
 from app.api.wishes import pity_lines
@@ -42,6 +43,7 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
                 if o is not None and t is not None else None)
         values = [v for v in progress_by_id.values() if v is not None]
         notes = s.get(LiveNotes, 1)
+        ev = events_payload(ctx, s)
         data, index = planner_view(s)
         done = set(s.scalars(select(WeeklyBossDone.boss).where(WeeklyBossDone.week_start == week_start(now, reg))))
         return {
@@ -61,4 +63,8 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
             "build_teams": build_team_cards(team_views(s)),
             "gaps": gaps_for(ctx, s),
             "pity": pity_lines(summarize(s, now, offset_hours(reg))),
+            "live_banners": ev["banners"]["current"],
+            "events_left": {**ev["events_left"], "next": [e for e in ev["events"] if not e["done"]][:3]},
+            "resets": ev["resets"],
+            "calendar_fetched_at": ev["fetched_at"],
         }

@@ -133,8 +133,9 @@ def banner_history(session: Session, pool: str, q: str, page: int, pulls: dict[s
         ids = [i for i, it in items.items() if text in it["name"].lower()]
         matching = [b.key for b in session.scalars(select(GameBanner).where(GameBanner.pool == pool))
                     if set(b.featured_5 or []) & set(ids) or set(b.featured_4 or []) & set(ids)]
-        query = query.where(or_(func.lower(GameBanner.name).contains(text),
-                                func.lower(GameBanner.short_name).contains(text), GameBanner.key.in_(matching)))
+        query = query.where(or_(func.lower(GameBanner.name).contains(text, autoescape=True),
+                                func.lower(GameBanner.short_name).contains(text, autoescape=True),
+                                GameBanner.key.in_(matching)))
     total = session.scalar(select(func.count()).select_from(query.subquery())) or 0
     page = max(1, page)
     rows = session.scalars(query.order_by(GameBanner.start.desc(), GameBanner.order)
@@ -151,7 +152,9 @@ def banner_history(session: Session, pool: str, q: str, page: int, pulls: dict[s
 
 def cleanup_event_done(session: Session, now: datetime) -> int:
     snap = session.get(HoyolabSnapshot, "calendar")
-    current = {e["id"] for e in (snap.data.get("events", []) if snap is not None else [])}
+    if snap is None:
+        return 0
+    current = {e["id"] for e in snap.data.get("events", [])}
     stale = [r.event_id for r in session.scalars(select(EventDone).where(EventDone.done_at < now - KEEP_DONE))
              if r.event_id not in current]
     if stale:

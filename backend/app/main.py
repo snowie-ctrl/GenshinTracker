@@ -16,6 +16,7 @@ from app.api import ROUTERS
 from app.config import FRONTEND_BUILD, Paths, default_paths
 from app.context import AppContext, make_source_factory
 from app.db.engine import make_engine, make_session_factory, migrate
+from app.events.view import cleanup_event_done
 from app.gamedata.service import META_WISH_UNKNOWN_REFRESH, claim_unknown_ids_refresh, refresh_all
 from app.sync.hoyolab import fetch_accounts
 from app.sync.runner import SyncManager
@@ -37,7 +38,9 @@ def create_app(paths: Paths | None = None, *, source_factory=None, accounts_fetc
     engine = make_engine(paths.db_file)
     migrate(engine)
     session_factory = make_session_factory(engine)
-    http = http_client or httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, follow_redirects=True)
+    with session_factory.begin() as s:
+        cleanup_event_done(s, utcnow())
+    http =http_client or httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, follow_redirects=True)
     is_offline = config.offline() if offline is None else offline
 
     async def on_unknown_ids(ids: set[int]) -> None:
