@@ -54,6 +54,19 @@ next ascension's materials show as still needed until they level up.
 
 Live check of the calculator against your account: `cd backend; ..\.venv\Scripts\python -m app.smoke --gaps`.
 
+## Inventory import (GOOD, optional)
+
+The Inventory page works without this: the HoYoLAB calculator already reports what your Build characters need and how much you're short. If you also want exact counts for every material, a list of all your weapons (including unequipped ones), and your artifacts, you can import a **GOOD** file exported by a scanner tool such as Inventory Kamera or Irminsul.
+
+1. Settings → **Inventory import (GOOD)** → tick **Use GOOD inventory import**.
+2. Inventory → **Import GOOD file** → choose the scanner's `.json` export.
+
+Each import replaces the previous one. Live HoYoLAB data always wins where it is exact, and to-farm numbers never use the scan. Turning the option off hides everything imported (it is kept until you press **Delete imported data**).
+
+**Risk:** this app only reads the file. The scanner that creates it is third-party software, which HoYoverse's terms forbid; use at your own risk.
+
+To see how a real export matches the game data without importing it: `python -m app.good.check --db <copy of the database> --refresh <file>` (from `backend/`; prints only counts and unrecognised keys).
+
 ## Wishes
 
 - **Import from game:** open Wish History in-game once (any banner), then press **Import from game** on the Wishes page. The link the game caches is valid for about a day; if the import says it expired, open Wish History again. If it says the cache is locked, close the game and retry. If the game cache isn't found, set the game install path in Settings.

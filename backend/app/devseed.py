@@ -5,7 +5,7 @@ from pathlib import Path
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import (ChallengeRun, CharacterGoal, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
+from app.db.models import (ChallengeRun, CharacterGoal, GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
@@ -120,6 +120,9 @@ def seed(root: Path) -> None:
                          weekdays=[0, 1, 2, 3, 4, 5, 6], material_ids=[104303, 104302, 104301]))
         for wid, name, icon, rarity, wtype in WEAPONS:
             s.add(GameWeapon(id=wid, name=name, icon=icon, rarity=rarity, weapon_type=wtype))
+        s.add(GameArtifactSet(id=15001, name="Gladiator's Finale", icon="UI_RelicIcon_15001_4", sort_order=1))
+        s.add(GameArtifactSet(id=15007, name="Noblesse Oblige", icon="UI_RelicIcon_15007_4", sort_order=2))
+        s.merge(GameMeta(key="artifact_sets_fetched_at", value=iso(now)))
         s.merge(GameMeta(key="materials_fetched_at", value=iso(now)))
         s.flush()
         result = GapResult(

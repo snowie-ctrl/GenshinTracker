@@ -1,0 +1,16 @@
+{
+  "format": "GOOD", "version": 2, "source": "E2E_Scanner",
+  "materials": {"SmallLampGrass": 37, "HerosWit": 120, "GuideToFreedom": 2, "Fowl": 4},
+  "weapons": [
+    {"key": "FavoniusSword", "level": 90, "ascension": 6, "refinement": 3, "location": "Bennett", "lock": true},
+    {"key": "MistsplitterReforged", "level": 20, "ascension": 1, "refinement": 1, "location": "", "lock": false}
+  ],
+  "artifacts": [
+    {"setKey": "NoblesseOblige", "slotKey": "flower", "rarity": 5, "level": 20, "mainStatKey": "hp",
+     "location": "Furina", "lock": true, "substats": [{"key": "critRate_", "value": 3.9}]},
+    {"setKey": "GladiatorsFinale", "slotKey": "goblet", "rarity": 5, "level": 12, "mainStatKey": "pyro_dmg_",
+     "location": "", "lock": false, "substats": [{"key": "critDMG_", "value": 7.8}]},
+    {"setKey": "NoblesseOblige", "slotKey": "plume", "rarity": 4, "level": 0, "mainStatKey": "atk",
+     "location": "", "lock": false, "substats": []}
+  ]
+}
