@@ -70,7 +70,15 @@ export interface Dashboard {
 	events_left: EventsLeft & { next: EventRow[] };
 	resets: ResetRow[];
 	calendar_fetched_at: string | null;
+	profile_summary: { ar: number | null; abyss_stars: number | null; theater_act: number | null };
 }
+export interface StatTile { label: string; value: number }
+export interface RegionView { id: number; name: string; explored: number; reputation: number | null; offerings: { name: string; level: number }[] }
+export interface ProfileView { ar: number; days_active: number; tiles: StatTile[]; chests: StatTile[]; oculi: StatTile[]; regions: RegionView[] }
+export interface TeamChar { id: number; name: string; icon: string | null }
+export interface ChallengeRunView { season: string; start: string | null; end: string | null; summary: Record<string, number | string>; teams: TeamChar[][] }
+export interface ChallengeViews { abyss: { current: ChallengeRunView | null; past: ChallengeRunView[] }; theater: { current: ChallengeRunView | null; past: ChallengeRunView[] }; stygian: { current: ChallengeRunView | null; past: ChallengeRunView[] } }
+export interface ProfileResponse { connected: boolean; fetched_at: string | null; error: string | null; profile: ProfileView | null; challenges: ChallengeViews }
 export interface Settings {
 	connection: Connection;
 	sync_interval_minutes: number;

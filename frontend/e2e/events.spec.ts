@@ -16,6 +16,17 @@ test('ticking an event Done dims it and lowers the Dashboard count', async ({ pa
 
 test('banner history search narrows the list', async ({ page }) => {
 	await page.goto('/events');
+	const history = page.getByTestId('banner-history');
+	// control: the seeded weapon banner is listed in the weapon pool before searching
+	await history.getByRole('button', { name: 'weapon' }).click();
+	await expect(history.locator('tbody')).toContainText('Epitome Invocation');
+	await history.getByRole('button', { name: 'character' }).click();
 	await page.getByLabel('Search banners').fill('Furina');
-	await expect(page.getByTestId('banner-history').locator('tbody tr').first()).toContainText('Tide of Furina');
+	await expect(history.locator('tbody tr').first()).toContainText('Tide of Furina');
+	await expect(history.locator('tbody tr')).toHaveCount(1);
+	await expect(history.locator('tbody')).not.toContainText('Epitome Invocation');
+	// searching Furina in the weapon pool finds nothing: the weapon banner does not match
+	await history.getByRole('button', { name: 'weapon' }).click();
+	await expect(history.locator('tbody')).toContainText('No banners match.');
+	await expect(history.locator('tbody')).not.toContainText('Epitome Invocation');
 });

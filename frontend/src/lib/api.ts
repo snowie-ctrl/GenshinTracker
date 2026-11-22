@@ -1,6 +1,6 @@
 import type {
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
-	ImportStatus, Inventory, Pool, PoolSummary, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
+	ImportStatus, Inventory, Pool, PoolSummary, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
 	TeamBody, TeamResponse, TeamsResponse, WeaponOption, WishSummary
 } from './types';
 import { historyQuery } from './wishes';
@@ -49,6 +49,7 @@ export const api = {
 	setBossDone: (name: string, done: boolean) =>
 		request<{ name: string; done: boolean }>('PUT', `/weekly-bosses/${encodeURIComponent(name)}`, { done }),
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
+	profile: () => request<ProfileResponse>('GET', '/profile'),
 	settings: () => request<Settings>('GET', '/settings'),
 	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string }) =>
 		request<Settings>('PUT', '/settings', body),

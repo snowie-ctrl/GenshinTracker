@@ -184,7 +184,19 @@
 
 	<section class="panel" data-testid="dash-resets">
 		<h2>Resets</h2>
-		<div class="resets">{#each data.resets as r (r.key)}<span>{r.label}: <Countdown at={r.at} {now} /></span>{/each}</div>
+		<div class="resets">
+			{#each data.resets as r (r.key)}<span>{r.label}: <Countdown at={r.at} {now} /></span>
+			{:else}<span class="muted">No resets to show</span>{/each}
+		</div>
+	</section>
+
+	<section class="panel" data-testid="dash-profile">
+		<h2><a href="/profile">Profile</a></h2>
+		{#if data.profile_summary.ar === null}
+			<p class="muted">Sync to load your profile</p>
+		{:else}
+			<p>AR {data.profile_summary.ar} · Abyss {data.profile_summary.abyss_stars ?? '—'}★ · Theater act {data.profile_summary.theater_act ?? '—'}</p>
+		{/if}
 	</section>
 
 	{#if notes}
