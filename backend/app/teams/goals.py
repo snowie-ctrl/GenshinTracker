@@ -1,14 +1,17 @@
-"""The only place teams change goals. Goals are only ever raised to build, never lowered."""
+"""The only place teams change goals: raise to build, or lower build -> none when no Build team still needs it."""
 from __future__ import annotations
 
 from collections.abc import Iterable
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import CharacterGoal
+from app.db.models import CharacterGoal, TeamMember, TeamTag
 from app.domain import Targets, resolve_targets
 from app.planner.order import apply_goal
 from app.timeutil import utcnow
+
+BUILD_TAG_ID = 1
 
 
 def _stored(row: CharacterGoal) -> Targets | None:
@@ -38,3 +41,31 @@ def raise_to_build(session: Session, character_ids: Iterable[int], defaults: Tar
     if raised:
         session.flush()
     return raised
+
+
+def _in_other_build_team(session: Session, exclude_team_id: int | None) -> set[int]:
+    q = (select(TeamMember.character_id)
+         .join(TeamTag, TeamTag.team_id == TeamMember.team_id)
+         .where(TeamTag.tag_id == BUILD_TAG_ID))
+    if exclude_team_id is not None:
+        q = q.where(TeamMember.team_id != exclude_team_id)
+    return set(session.scalars(q))
+
+
+def lower_from_build(session: Session, character_ids: Iterable[int], exclude_team_id: int | None) -> list[int]:
+    """Build -> none for ids no other Build team still lists. Targets are kept. Returns the ids changed."""
+    ids = list(dict.fromkeys(character_ids))
+    if not ids:
+        return []
+    covered = _in_other_build_team(session, exclude_team_id)
+    lowered: list[int] = []
+    for cid in ids:
+        row = session.get(CharacterGoal, cid)
+        if row is None or row.goal != "build" or cid in covered:
+            continue
+        apply_goal(session, row, "none")
+        row.updated_at = utcnow()
+        lowered.append(cid)
+    if lowered:
+        session.flush()
+    return lowered

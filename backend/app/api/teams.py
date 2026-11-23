@@ -67,16 +67,16 @@ def _one(s: Session, team_id: int) -> dict:
 def _save(ctx: AppContext, team_id: int | None, body: TeamBody) -> dict:
     try:
         with ctx.session_factory.begin() as s:
-            team, raised = store.save_team(s, team_id, body.name, body.notes,
-                                           [MemberIn(m.character_id, m.role) for m in body.members],
-                                           body.tag_ids, body.new_tags)
+            team, raised, lowered = store.save_team(s, team_id, body.name, body.notes,
+                                                    [MemberIn(m.character_id, m.role) for m in body.members],
+                                                    body.tag_ids, body.new_tags)
             tid = team.id
     except TeamError as e:
         raise HTTPException(e.status, e.message) from None
-    if raised:
+    if raised or lowered:
         ctx.sync.schedule_gaps()
     with ctx.session_factory() as s:
-        return {"team": _one(s, tid), "raised": raised}
+        return {"team": _one(s, tid), "raised": raised, "lowered": lowered}
 
 
 def _write(ctx: AppContext, fn) -> object:
@@ -117,7 +117,7 @@ async def update_team(team_id: int, body: TeamBody, ctx: AppContext = Depends(ge
 
 @router.delete("/teams/{team_id}")
 def remove_team(team_id: int, ctx: AppContext = Depends(get_ctx)) -> dict:
-    return _write(ctx, lambda s: store.delete_team(s, team_id))
+    return _write(ctx, lambda s: (store.delete_team(s, team_id), None)[1])
 
 
 @router.get("/tags")

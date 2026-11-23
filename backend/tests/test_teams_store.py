@@ -19,9 +19,10 @@ def sf(session_factory):
 def save(sf, team_id=None, members=(BEN,), tags=(), new_tags=(), name="Team", notes="", roles=None):
     roles = roles or {}
     with sf.begin() as s:
-        team, raised = store.save_team(s, team_id, name, notes,
-                                       [MemberIn(c, roles.get(c, "")) for c in members], list(tags), list(new_tags))
-        return team.id, raised
+        team, raised, lowered = store.save_team(s, team_id, name, notes,
+                                                [MemberIn(c, roles.get(c, "")) for c in members],
+                                                list(tags), list(new_tags))
+        return team.id, raised, lowered
 
 
 def goals(sf, *ids):
@@ -44,7 +45,7 @@ def members_of(sf, team_id):
 
 
 def test_create_without_build_changes_no_goals(sf):
-    tid, raised = save(sf, members=(BEN, FUR), roles={FUR: "driver"})
+    tid, raised, _ = save(sf, members=(BEN, FUR), roles={FUR: "driver"})
     assert raised == []
     assert goals(sf, BEN, FUR) == ["none", "none"]
     assert members_of(sf, tid) == [(0, BEN, ""), (1, FUR, "driver")]
@@ -52,28 +53,73 @@ def test_create_without_build_changes_no_goals(sf):
 
 def test_adding_build_raises_all_members(sf):
     set_goal(sf, FUR, "build")
-    tid, _ = save(sf, members=(BEN, FUR))
-    _, raised = save(sf, tid, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    tid, _, _ = save(sf, members=(BEN, FUR))
+    _, raised, _ = save(sf, tid, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
     assert raised == [BEN]
     assert goals(sf, BEN, FUR) == ["build", "build"]
 
 
 def test_build_team_gaining_member_raises_only_that_member(sf):
-    tid, raised = save(sf, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    tid, raised, _ = save(sf, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
     assert raised == [BEN, FUR]
     set_goal(sf, FUR, "want")                                   # the user lowers Furina elsewhere
-    _, raised = save(sf, tid, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    _, raised, _ = save(sf, tid, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
     assert raised == [] and goals(sf, FUR) == ["want"]          # unchanged re-save keeps the drift
-    _, raised = save(sf, tid, members=(BEN, FUR, XL), tags=(BUILD_TAG_ID,))
+    _, raised, _ = save(sf, tid, members=(BEN, FUR, XL), tags=(BUILD_TAG_ID,))
     assert raised == [XL] and goals(sf, FUR, XL) == ["want", "build"]
 
 
-def test_removals_change_no_goals(sf):
-    tid, _ = save(sf, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
-    save(sf, tid, members=(BEN,), tags=())                      # remove the tag and a member
+def test_build_off_lowers_all_members(sf):
+    tid, _, _ = save(sf, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    _, raised, lowered = save(sf, tid, members=(BEN, FUR), tags=())
+    assert (raised, lowered) == ([], [BEN, FUR])
+    assert goals(sf, BEN, FUR) == ["none", "none"]
+
+
+def test_removing_member_from_build_team_lowers_it(sf):
+    tid, _, _ = save(sf, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    _, _, lowered = save(sf, tid, members=(BEN,), tags=(BUILD_TAG_ID,))
+    assert lowered == [FUR] and goals(sf, BEN, FUR) == ["build", "none"]
+
+
+def test_swap_raises_and_lowers(sf):
+    tid, _, _ = save(sf, members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    _, raised, lowered = save(sf, tid, members=(BEN, XL), tags=(BUILD_TAG_ID,))
+    assert (raised, lowered) == ([XL], [FUR])
+    assert goals(sf, BEN, FUR, XL) == ["build", "none", "build"]
+
+
+def test_team_without_build_never_lowers(sf):
+    set_goal(sf, BEN, "build")
+    tid, _, _ = save(sf, members=(BEN, FUR))
+    _, _, lowered = save(sf, tid, members=(FUR,))
     with sf.begin() as s:
-        store.delete_team(s, tid)
-    assert goals(sf, BEN, FUR) == ["build", "build"]
+        assert store.delete_team(s, tid) == []
+    assert lowered == [] and goals(sf, BEN) == ["build"]
+
+
+def test_delete_build_team_lowers_except_shared(sf):
+    a, _, _ = save(sf, name="A", members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    save(sf, name="B", members=(FUR,), tags=(BUILD_TAG_ID,))
+    with sf.begin() as s:
+        assert store.delete_team(s, a) == [BEN]
+    assert goals(sf, BEN, FUR) == ["none", "build"]
+
+
+def test_set_build(sf):
+    tid, _, _ = save(sf, members=(BEN, FUR))
+    with sf.begin() as s:
+        assert store.set_build(s, tid, True) == ([BEN, FUR], [])
+    with sf.begin() as s:
+        assert store.set_build(s, tid, True) == ([], [])          # already on: no-op
+    with sf.begin() as s:
+        assert store.set_build(s, tid, False) == ([], [BEN, FUR])
+    with sf.begin() as s:
+        assert store.set_build(s, tid, False) == ([], [])
+    with pytest.raises(TeamError) as e:
+        with sf.begin() as s:
+            store.set_build(s, 999, True)
+    assert (e.value.status, e.value.message) == (404, "Team not found")
 
 
 def test_validation(sf):
@@ -94,7 +140,7 @@ def test_validation(sf):
 
 
 def test_traveler_element_ids_saved_and_raw_or_manekin_ids_rejected(sf):
-    tid, _ = save(sf, members=(1000000507,))
+    tid, _, _ = save(sf, members=(1000000507,))
     assert members_of(sf, tid) == [(0, 1000000507, "")]
     for bad in (10000007, 10000005, 10000117):
         with pytest.raises(TeamError) as e:
@@ -105,7 +151,7 @@ def test_traveler_element_ids_saved_and_raw_or_manekin_ids_rejected(sf):
 def test_new_tag_reuses_existing_case_insensitively(sf):
     with sf.begin() as s:
         abyss = store.create_tag(s, "abyss").id
-    tid, _ = save(sf, new_tags=("Abyss", "fun", "FUN"))
+    tid, _, _ = save(sf, new_tags=("Abyss", "fun", "FUN"))
     with sf() as s:
         names = [t.name for t in s.scalars(select(Tag).order_by(Tag.id))]
         tag_ids = [t.id for t in store.team_rows(s)[0][2]]
@@ -114,14 +160,14 @@ def test_new_tag_reuses_existing_case_insensitively(sf):
 
 
 def test_slots_are_contiguous_after_removal(sf):
-    tid, _ = save(sf, members=(BEN, FUR, XL))
+    tid, _, _ = save(sf, members=(BEN, FUR, XL))
     save(sf, tid, members=(BEN, XL))
     assert members_of(sf, tid) == [(0, BEN, ""), (1, XL, "")]
 
 
 def test_new_teams_go_first_and_reorder(sf):
-    a, _ = save(sf, name="A")
-    b, _ = save(sf, name="B")
+    a, _, _ = save(sf, name="A")
+    b, _, _ = save(sf, name="B")
     with sf() as s:
         assert [t.name for t, _m, _t in store.team_rows(s)] == ["B", "A"]
     with sf.begin() as s:
@@ -131,8 +177,8 @@ def test_new_teams_go_first_and_reorder(sf):
 
 
 def test_reorder_requires_every_team_once(sf):
-    a, _ = save(sf, name="A")
-    b, _ = save(sf, name="B")
+    a, _, _ = save(sf, name="A")
+    b, _, _ = save(sf, name="B")
     for ids in ([a], [a, b, 99], [a, a]):
         with pytest.raises(TeamError) as e:
             with sf.begin() as s:
@@ -160,7 +206,7 @@ def test_tags(sf):
     with sf.begin() as s:
         assert store.update_tag(s, BUILD_TAG_ID, None, "blue").color == "blue"
         assert store.update_tag(s, BUILD_TAG_ID, "Build", None).name == "Build"   # same name is not a rename
-    tid, _ = save(sf, tags=(fun.id,))
+    tid, _, _ = save(sf, tags=(fun.id,))
     with sf() as s:
         listed = store.list_tags(s)
     assert [(t["name"], t["team_count"]) for t in listed] == [("Build", 0), ("fun", 1)]
@@ -182,7 +228,7 @@ def test_new_tag_colours_cycle(sf):
 
 
 def test_memberships(sf):
-    tid, _ = save(sf, name="Abyss", members=(BEN, FUR), tags=(BUILD_TAG_ID,))
+    tid, _, _ = save(sf, name="Abyss", members=(BEN, FUR), tags=(BUILD_TAG_ID,))
     with sf() as s:
         m = store.memberships(s)
     assert m[BEN] == [{"id": tid, "name": "Abyss",

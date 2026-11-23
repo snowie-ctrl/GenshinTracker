@@ -8,10 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.db.models import GameCharacter, OwnedCharacter, Tag, Team, TeamMember, TeamTag
 from app.settings.store import default_targets
-from app.teams.goals import raise_to_build
+from app.teams.goals import BUILD_TAG_ID, lower_from_build, raise_to_build
 from app.timeutil import utcnow
 
-BUILD_TAG_ID = 1
 TAG_COLORS = ("orange", "red", "yellow", "green", "teal", "blue", "purple", "pink", "navy", "gold")
 NAME_MAX, NOTES_MAX, ROLE_MAX, TAG_MAX, MEMBERS_MAX = 60, 2000, 40, 30, 4
 
@@ -109,7 +108,7 @@ def list_tags(s: Session) -> list[dict]:
 
 
 def save_team(s: Session, team_id: int | None, name: str, notes: str, members: list[MemberIn],
-              tag_ids: list[int], new_tags: list[str]) -> tuple[Team, list[int]]:
+              tag_ids: list[int], new_tags: list[str]) -> tuple[Team, list[int], list[int]]:
     clean_name = _text(name, NAME_MAX, "Team name")
     clean_notes = _text(notes, NOTES_MAX, "Notes", required=False)
     if not 1 <= len(members) <= MEMBERS_MAX:
@@ -160,17 +159,49 @@ def save_team(s: Session, team_id: int | None, name: str, notes: str, members: l
     team.name, team.notes, team.updated_at = clean_name, clean_notes, utcnow()
     s.flush()
 
+    has_build = BUILD_TAG_ID in final_tags
     to_raise: list[int] = []
-    if BUILD_TAG_ID in final_tags:
+    if has_build:
         to_raise = ids if not had_build else [cid for cid in ids if cid not in old_members]
     raised = raise_to_build(s, to_raise, default_targets(s)) if to_raise else []
-    return team, raised
+    to_lower: list[int] = []
+    if had_build and not has_build:
+        to_lower = list(dict.fromkeys([*ids, *sorted(old_members)]))
+    elif had_build:
+        to_lower = sorted(old_members - set(ids))
+    lowered = lower_from_build(s, to_lower, team.id) if to_lower else []
+    return team, raised, lowered
 
 
-def delete_team(s: Session, team_id: int) -> None:
+def delete_team(s: Session, team_id: int) -> list[int]:
     if s.get(Team, team_id) is None:
         raise TeamError(404, "Team not found")
+    had_build = s.get(TeamTag, (team_id, BUILD_TAG_ID)) is not None
+    members = list(s.scalars(select(TeamMember.character_id).where(TeamMember.team_id == team_id)
+                             .order_by(TeamMember.slot)))
     s.execute(delete(Team).where(Team.id == team_id))
+    s.flush()
+    return lower_from_build(s, members, team_id) if had_build else []
+
+
+def set_build(s: Session, team_id: int, on: bool) -> tuple[list[int], list[int]]:
+    team = s.get(Team, team_id)
+    if team is None:
+        raise TeamError(404, "Team not found")
+    has = s.get(TeamTag, (team_id, BUILD_TAG_ID)) is not None
+    if has == on:
+        return [], []
+    members = list(s.scalars(select(TeamMember.character_id).where(TeamMember.team_id == team_id)
+                             .order_by(TeamMember.slot)))
+    if on:
+        s.add(TeamTag(team_id=team_id, tag_id=BUILD_TAG_ID))
+    else:
+        s.execute(delete(TeamTag).where(TeamTag.team_id == team_id, TeamTag.tag_id == BUILD_TAG_ID))
+    team.updated_at = utcnow()
+    s.flush()
+    if on:
+        return raise_to_build(s, members, default_targets(s)), []
+    return [], lower_from_build(s, members, team_id)
 
 
 def reorder(s: Session, ids: list[int]) -> None:

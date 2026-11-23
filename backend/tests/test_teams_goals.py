@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from app.db.models import CharacterGoal
+from app.db.models import CharacterGoal, Team, TeamMember, TeamTag
 from app.domain import Targets
 from app.teams.artifacts import set_line
-from app.teams.goals import raise_to_build
+from app.teams.goals import lower_from_build, raise_to_build
 
 DEFAULTS = Targets(90, 8, 8, 8, 90)
 NOW = datetime(2026, 11, 21)
@@ -53,3 +53,47 @@ def test_set_line():
     assert set_line(["B", "B", "B", "A", "A"]) == "2pc B + 2pc A"
     assert set_line(["A", "B", "C", "D", "E"]) == ""
     assert set_line([]) == ""
+
+
+def team_with(s, tid, members, build):
+    s.add(Team(id=tid, name=f"T{tid}", notes="", sort_order=tid, created_at=NOW, updated_at=NOW))
+    s.flush()
+    for slot, cid in enumerate(members):
+        s.add(TeamMember(team_id=tid, slot=slot, character_id=cid, role=""))
+    if build:
+        s.add(TeamTag(team_id=tid, tag_id=1))
+
+
+def test_lower_build_to_none_and_clears_priority(session_factory):
+    with session_factory.begin() as s:
+        add_goal(s, 1, "build", (80, 6, 6, 6, 80))
+        s.get(CharacterGoal, 1).priority = 3
+        add_goal(s, 2, "want")
+    with session_factory.begin() as s:
+        assert lower_from_build(s, [1, 2, 3], None) == [1]
+    with session_factory() as s:
+        row = s.get(CharacterGoal, 1)
+        assert (row.goal, row.priority, row.target_level) == ("none", None, 80)   # targets kept
+        assert s.get(CharacterGoal, 2).goal == "want" and s.get(CharacterGoal, 3) is None
+
+
+def test_lower_keeps_member_of_other_build_team(session_factory):
+    with session_factory.begin() as s:
+        for cid in (1, 2):
+            add_goal(s, cid, "build")
+        team_with(s, 10, [1, 2], build=False)     # the team being switched off
+        team_with(s, 11, [1], build=True)         # another Build team still has 1
+        team_with(s, 12, [2], build=False)        # a non-Build team does not protect 2
+    with session_factory.begin() as s:
+        assert lower_from_build(s, [1, 2], exclude_team_id=10) == [2]
+
+
+def test_lower_then_raise_restores_targets(session_factory):
+    with session_factory.begin() as s:
+        add_goal(s, 1, "build", (70, 9, 9, 9, 70))
+    with session_factory.begin() as s:
+        lower_from_build(s, [1], None)
+    with session_factory.begin() as s:
+        assert raise_to_build(s, [1], DEFAULTS) == [1]
+    with session_factory() as s:
+        assert s.get(CharacterGoal, 1).target_level == 70
