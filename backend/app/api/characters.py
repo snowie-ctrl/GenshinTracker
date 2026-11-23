@@ -56,6 +56,7 @@ def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_ro
         "rarity": g.rarity if g is not None else 0,
         "element": (o.element if o is not None and o.element else None) or (g.element if g is not None else None),
         "weapon_type": g.weapon_type if g is not None else None,
+        "release_at": g.release_at.date().isoformat() if g is not None and g.release_at else None,
         "icon": icon,
         "splash": splash_for(icon) if icon else None,
         "owned": o is not None,

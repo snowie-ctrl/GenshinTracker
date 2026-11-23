@@ -136,9 +136,12 @@ def test_no_endpoint_leaks_cookie_values(paths, caplog):
                         files={"file": ("good_sample.json", (FIXTURES / "good_sample.json").read_bytes(),
                                         "application/json")}).text,
         ]
+        team_resp = client.post("/api/teams", json={"name": "Leak check", "notes": "", "tag_ids": [1],
+                                                    "new_tags": ["abyss"],
+                                                    "members": [{"character_id": 10000032, "role": ""}]})
         bodies += [
-            client.post("/api/teams", json={"name": "Leak check", "notes": "", "tag_ids": [1], "new_tags": ["abyss"],
-                                            "members": [{"character_id": 10000032, "role": ""}]}).text,
+            team_resp.text,
+            client.put(f"/api/teams/{team_resp.json()['team']['id']}/build", json={"on": False}).text,
             client.get("/api/tags").text,
         ]
         deadline = time.monotonic() + 5

@@ -130,3 +130,12 @@ def test_img_routes(paths):
     assert named.status_code == 200 and named.headers["cache-control"] == "no-store"
     assert bad.status_code in (400, 404)
     assert remote_bad.status_code == 400
+
+
+def test_characters_have_release_date(paths):
+    setup_data(paths)
+    with make_client(paths) as client:
+        chars = client.get("/api/characters").json()
+    import re
+    assert all(c["release_at"] is None or re.fullmatch(r"\d{4}-\d{2}-\d{2}", c["release_at"]) for c in chars)
+    assert any(c["release_at"] for c in chars)

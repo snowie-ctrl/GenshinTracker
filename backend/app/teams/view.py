@@ -5,30 +5,32 @@ from app.planner.data import PlannerData
 from app.teams.shortfall import team_progress, team_shortfall
 from app.teams.store import BUILD_TAG_ID, tag_dict
 
-MEMBER_KEYS = ("id", "name", "slug", "icon", "element", "rarity", "owned", "goal", "status", "prefarming",
-               "level", "talents", "weapon", "progress")
+MEMBER_KEYS = ("id", "name", "slug", "icon", "splash", "element", "rarity", "owned", "goal", "status",
+               "prefarming", "level", "constellation", "talents", "weapon", "progress")
 TOP_MATERIALS = 5
 
 
 def placeholder(cid: int) -> dict:
-    return {"id": cid, "name": f"Unknown character {cid}", "slug": None, "icon": None, "element": None,
+    return {"id": cid, "name": f"Unknown character {cid}", "slug": None, "icon": None, "splash": None,
+            "constellation": None, "element": None,
             "rarity": 0, "owned": False, "goal": "none", "status": "unobtained", "prefarming": False,
             "level": None, "talents": None, "weapon": None, "progress": None}
 
 
-def member_view(char: dict | None, cid: int, role: str, artifact_line: str, in_build_team: bool,
+def member_view(char: dict | None, cid: int, role: str, arts: tuple[str, list[dict]], in_build_team: bool,
                 calculated: bool) -> dict:
     base = {k: char[k] for k in MEMBER_KEYS} if char is not None else placeholder(cid)
     is_build = base["goal"] == "build"
-    return {**base, "role": role, "artifact_line": artifact_line,
+    line, sets = arts
+    return {**base, "role": role, "artifact_line": line, "artifact_sets": sets,
             "not_building": in_build_team and not is_build,
             "not_calculated": is_build and not calculated}
 
 
-def team_view(team, members, tags, chars: dict[int, dict], arts: dict[int, str], data: PlannerData,
+def team_view(team, members, tags, chars: dict[int, dict], arts: dict[int, tuple[str, list[dict]]], data: PlannerData,
               index: dict[int, dict]) -> dict:
     has_build = any(t.id == BUILD_TAG_ID for t in tags)
-    views = [member_view(chars.get(m.character_id), m.character_id, m.role, arts.get(m.character_id, ""), has_build,
+    views = [member_view(chars.get(m.character_id), m.character_id, m.role, arts.get(m.character_id, ("", [])), has_build,
                          m.character_id in data.calculated)
              for m in members]
     build = [v for v in views if v["goal"] == "build"]

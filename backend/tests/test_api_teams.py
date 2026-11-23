@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import delete
 
-from app.db.models import GapRun, OwnedArtifact
+from app.db.models import GameArtifactSet, GapRun, OwnedArtifact
 from app.planner.requests import snapshot
 from app.api.teams import team_views
 from app.teams.view import build_team_cards
@@ -42,7 +42,7 @@ def test_create_list_get_update_delete(paths):
         r = client.post("/api/teams", json=body(members=(BEN, XL), new_tags=("abyss",), roles={BEN: "battery"}))
         assert r.status_code == 200, r.text
         created = r.json()
-        assert created["raised"] == []
+        assert created["raised"] == [] and created["lowered"] == []
         team = created["team"]
         assert [t["name"] for t in team["tags"]] == ["abyss"] and team["has_build_tag"] is False
         ben = team["members"][0]
@@ -55,7 +55,8 @@ def test_create_list_get_update_delete(paths):
         assert one["team"]["name"] == "Abyss Pyro" and "gaps" in one
         r = client.put(f"/api/teams/{team['id']}", json=body(members=(XL,), name="Renamed"))
         assert r.json()["team"]["name"] == "Renamed" and r.json()["team"]["shortfall"] is None
-        assert client.delete(f"/api/teams/{team['id']}").status_code == 200
+        d = client.delete(f"/api/teams/{team['id']}")
+        assert d.status_code == 200 and d.json() == {"ok": True, "lowered": []}
         assert client.get(f"/api/teams/{team['id']}").status_code == 404
         assert client.put(f"/api/teams/{team['id']}", json=body()).json()["detail"] == "Team not found"
 
@@ -158,3 +159,48 @@ def test_build_team_card_calculation_flags(paths):
         mark_calculated(sf)
         card = team_cards(sf)[0]
     assert card["all_calculated"] is True and card["short_count"] == 2
+
+
+def test_member_payload_has_art_constellation_and_sets(paths):
+    sf = setup(paths)
+    drop_default_tags(sf)
+    with sf.begin() as s:
+        s.execute(delete(OwnedArtifact).where(OwnedArtifact.character_id == BEN))
+        s.merge(GameArtifactSet(id=15007, name="Noblesse Oblige", icon="UI_RelicIcon_15007_4", sort_order=0))
+        for slot in range(1, 5):
+            s.add(OwnedArtifact(character_id=BEN, slot=slot, set_name="Noblesse Oblige", rarity=5, level=20,
+                                main_stat="HP", substats=[], icon=""))
+    with make_client(paths) as client:
+        team = client.post("/api/teams", json=body(members=(BEN, XL))).json()["team"]
+    ben, xl = team["members"]
+    assert ben["artifact_sets"] == [{"name": "Noblesse Oblige", "icon": "UI_RelicIcon_15007_4", "pieces": 4}]
+    assert ben["splash"].startswith("UI_Gacha_AvatarImg_") and isinstance(ben["constellation"], int)
+    assert xl["artifact_sets"] == [] and xl["constellation"] is None
+
+
+def test_build_endpoint_on_off_and_lowered_in_responses(paths):
+    sf = setup(paths)
+    with make_client(paths) as client:
+        sync = client.app.state.ctx.sync
+        tid = client.post("/api/teams", json=body(members=(BEN, NAH))).json()["team"]["id"]
+        on = client.put(f"/api/teams/{tid}/build", json={"on": True}).json()
+        assert on["raised"] == [NAH] and on["lowered"] == [] and on["team"]["has_build_tag"] is True
+        assert sync.gaps_pending
+        off = client.put(f"/api/teams/{tid}/build", json={"on": False}).json()
+        assert off["raised"] == [] and set(off["lowered"]) == {BEN, NAH}
+        chars = {c["id"]: c for c in client.get("/api/characters").json()}
+        assert chars[NAH]["goal"] == "none" and chars[BEN]["goal"] == "none"
+        client.put(f"/api/teams/{tid}/build", json={"on": True})
+        r = client.put(f"/api/teams/{tid}", json=body(members=(BEN,), tags=(1,))).json()
+        assert r["lowered"] == [NAH] and r["raised"] == []
+        d = client.delete(f"/api/teams/{tid}").json()
+        assert d == {"ok": True, "lowered": [BEN]}
+
+
+def test_build_endpoint_noop(paths):
+    setup(paths)
+    with make_client(paths) as client:
+        tid = client.post("/api/teams", json=body(members=(XL,))).json()["team"]["id"]
+        r = client.put(f"/api/teams/{tid}/build", json={"on": False}).json()
+        assert (r["raised"], r["lowered"]) == ([], [])
+        assert client.put("/api/teams/999/build", json={"on": True}).status_code == 404

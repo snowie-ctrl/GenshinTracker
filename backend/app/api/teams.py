@@ -1,4 +1,4 @@
-"""Teams and tags. The only side effect on other data is raising goals to build (app.teams.goals)."""
+"""Teams and tags. Side effects on other data: raising or lowering Build goals (app.teams.goals)."""
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 from app.api.characters import _all, character_payload
 from app.api.planner import gaps_for, is_connected, planner_view
 from app.context import AppContext, get_ctx
-from app.db.models import OwnedArtifact
+from app.db.models import GameArtifactSet, OwnedArtifact
 from app.teams import store
-from app.teams.artifacts import set_line
+from app.teams.artifacts import artifact_sets, set_line
 from app.teams.store import MemberIn, TeamError
 from app.teams.view import team_view
 
@@ -43,17 +43,22 @@ class TagPatch(BaseModel):
     color: str | None = None
 
 
-def artifact_lines(s: Session) -> dict[int, str]:
+class BuildBody(BaseModel):
+    on: bool
+
+
+def artifact_info(s: Session) -> dict[int, tuple[str, list[dict]]]:
+    icons = {a.name: a.icon for a in s.scalars(select(GameArtifactSet))}
     sets: dict[int, list[str]] = {}
     for a in s.scalars(select(OwnedArtifact)):
         sets.setdefault(a.character_id, []).append(a.set_name)
-    return {cid: set_line(names) for cid, names in sets.items()}
+    return {cid: (set_line(names), artifact_sets(names, icons)) for cid, names in sets.items()}
 
 
 def team_views(s: Session) -> list[dict]:
     chars = {p["id"]: p for p in (character_payload(g, o, r) for g, o, r in _all(s))}
     data, index = planner_view(s)
-    arts = artifact_lines(s)
+    arts = artifact_info(s)
     return [team_view(t, members, tags, chars, arts, data, index) for t, members, tags in store.team_rows(s)]
 
 
@@ -62,6 +67,11 @@ def _one(s: Session, team_id: int) -> dict:
         if v["id"] == team_id:
             return v
     raise HTTPException(404, "Team not found")
+
+
+def _changed(ctx: AppContext, raised: list[int], lowered: list[int]) -> None:
+    if raised or lowered:
+        ctx.sync.schedule_gaps()
 
 
 def _save(ctx: AppContext, team_id: int | None, body: TeamBody) -> dict:
@@ -73,8 +83,7 @@ def _save(ctx: AppContext, team_id: int | None, body: TeamBody) -> dict:
             tid = team.id
     except TeamError as e:
         raise HTTPException(e.status, e.message) from None
-    if raised or lowered:
-        ctx.sync.schedule_gaps()
+    _changed(ctx, raised, lowered)
     with ctx.session_factory() as s:
         return {"team": _one(s, tid), "raised": raised, "lowered": lowered}
 
@@ -115,9 +124,27 @@ async def update_team(team_id: int, body: TeamBody, ctx: AppContext = Depends(ge
     return _save(ctx, team_id, body)
 
 
+@router.put("/teams/{team_id}/build")
+async def set_team_build(team_id: int, body: BuildBody, ctx: AppContext = Depends(get_ctx)) -> dict:
+    try:
+        with ctx.session_factory.begin() as s:
+            raised, lowered = store.set_build(s, team_id, body.on)
+    except TeamError as e:
+        raise HTTPException(e.status, e.message) from None
+    _changed(ctx, raised, lowered)
+    with ctx.session_factory() as s:
+        return {"team": _one(s, team_id), "raised": raised, "lowered": lowered}
+
+
 @router.delete("/teams/{team_id}")
-def remove_team(team_id: int, ctx: AppContext = Depends(get_ctx)) -> dict:
-    return _write(ctx, lambda s: (store.delete_team(s, team_id), None)[1])
+async def remove_team(team_id: int, ctx: AppContext = Depends(get_ctx)) -> dict:
+    try:
+        with ctx.session_factory.begin() as s:
+            lowered = store.delete_team(s, team_id)
+    except TeamError as e:
+        raise HTTPException(e.status, e.message) from None
+    _changed(ctx, [], lowered)
+    return {"ok": True, "lowered": lowered}
 
 
 @router.get("/tags")

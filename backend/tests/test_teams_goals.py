@@ -2,7 +2,7 @@ from datetime import datetime
 
 from app.db.models import CharacterGoal, Team, TeamMember, TeamTag
 from app.domain import Targets
-from app.teams.artifacts import set_line
+from app.teams.artifacts import artifact_sets, set_line
 from app.teams.goals import lower_from_build, raise_to_build
 
 DEFAULTS = Targets(90, 8, 8, 8, 90)
@@ -97,3 +97,25 @@ def test_lower_then_raise_restores_targets(session_factory):
         assert raise_to_build(s, [1], DEFAULTS) == [1]
     with session_factory() as s:
         assert s.get(CharacterGoal, 1).target_level == 70
+
+
+ICONS = {"A": "UI_RelicIcon_1_4", "B": "UI_RelicIcon_2_4"}
+
+
+def test_artifact_sets_match_set_line():
+    cases = {
+        ("A", "A", "A", "A", "B"): [("A", 4)],
+        ("A", "A", "B", "B"): [("A", 2), ("B", 2)],
+        ("B", "B", "B", "A", "A"): [("B", 2), ("A", 2)],
+        ("A", "A", "B", "B", "C"): [("A", 2), ("B", 2)],
+        ("A", "B", "C", "D", "E"): [],
+        (): [],
+    }
+    for names, expected in cases.items():
+        got = artifact_sets(list(names), ICONS)
+        assert [(x["name"], x["pieces"]) for x in got] == expected
+        assert " + ".join(f"{x['pieces']}pc {x['name']}" for x in got) == set_line(list(names))
+
+
+def test_artifact_sets_unknown_icon():
+    assert artifact_sets(["Z"] * 4, ICONS) == [{"name": "Z", "icon": None, "pieces": 4}]
