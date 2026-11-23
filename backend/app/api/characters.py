@@ -14,6 +14,7 @@ from app.domain import Current, Targets, derive_status, progress, resolve_target
 from app.gamedata.traveler import is_traveler
 from app.gamedata.yatta import splash_for
 from app.planner.characters import character_shortfall
+from app.planner.order import apply_goal
 from app.schemas import TargetsIn
 from app.settings.store import default_targets
 from app.teams.store import memberships
@@ -165,7 +166,7 @@ async def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(ge
             targets = Targets(**body.targets.model_dump())
         else:
             targets = resolve_targets(new_goal, goal_targets(row), default_targets(s))
-        row.goal = new_goal
+        apply_goal(s, row, new_goal)
         if targets is not None:
             row.target_level, row.target_normal = targets.level, targets.normal
             row.target_skill, row.target_burst = targets.skill, targets.burst

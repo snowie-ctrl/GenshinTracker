@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import CharacterGoal
 from app.domain import Targets, resolve_targets
+from app.planner.order import apply_goal
 from app.timeutil import utcnow
 
 
@@ -28,7 +29,7 @@ def raise_to_build(session: Session, character_ids: Iterable[int], defaults: Tar
         if row.goal == "build":
             continue
         targets = resolve_targets("build", _stored(row), defaults)
-        row.goal = "build"
+        apply_goal(session, row, "build")
         row.target_level, row.target_normal = targets.level, targets.normal
         row.target_skill, row.target_burst = targets.skill, targets.burst
         row.target_weapon_level = targets.weapon_level
