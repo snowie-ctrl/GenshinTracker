@@ -1,11 +1,11 @@
 import type { TileView } from './materials';
-import type { Character, MemberDraft, Team, TeamMaterial, TeamMember } from './types';
+import type { Character, Goal, MemberDraft, Talents, Team, TeamMaterial, TeamMember } from './types';
 
 export const BUILD_TAG_ID = 1;
-export const TAG_COLORS = ['orange', 'red', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink'] as const;
+export const TAG_COLORS = ['orange', 'red', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink', 'navy', 'gold'] as const;
 export const TAG_HEX: Record<string, string> = {
 	orange: '#d9822b', red: '#d64545', yellow: '#c9a227', green: '#3f9c5a',
-	teal: '#2f9c95', blue: '#3d7bd9', purple: '#8a5cd6', pink: '#d65c9c'
+	teal: '#2f9c95', blue: '#3d7bd9', purple: '#8a5cd6', pink: '#d65c9c', navy: '#2a3f8f', gold: '#a9842c'
 };
 export const MAX_MEMBERS = 4;
 
@@ -149,4 +149,54 @@ export function teamTileView(m: TeamMaterial): TileView {
 /** The panel lists only what is still short for the team. */
 export function farmRows(rows: TeamMaterial[]): TeamMaterial[] {
 	return rows.filter((r) => r.short > 0);
+}
+
+export const RIBBON_DEG = 18;
+
+export interface GoalRef { name: string; goal: Goal }
+
+export function memberLookup(teams: Team[]): Map<number, GoalRef> {
+	const out = new Map<number, GoalRef>();
+	for (const t of teams) for (const m of t.members) out.set(m.id, { name: m.name, goal: m.goal });
+	return out;
+}
+
+export function charLookup(chars: Character[]): Map<number, GoalRef> {
+	return new Map(chars.map((c) => [c.id, { name: c.name, goal: c.goal }]));
+}
+
+/** Names of members a change would move off Build (mirrors app.teams.store / goals.lower_from_build).
+ *  draft = null means the team is deleted. */
+export function willLower(
+	teams: Team[], lookup: Map<number, GoalRef>, teamId: number | null,
+	draft: { memberIds: number[]; hasBuild: boolean } | null
+): string[] {
+	const team = teams.find((t) => t.id === teamId);
+	if (!team || !team.has_build_tag) return [];
+	const old = team.members.map((x) => x.id);
+	const candidates = draft === null || !draft.hasBuild
+		? [...new Set([...(draft?.memberIds ?? []), ...old])]
+		: old.filter((id) => !draft.memberIds.includes(id));
+	const covered = new Set(teams.filter((t) => t.id !== teamId && t.has_build_tag).flatMap((t) => t.members.map((x) => x.id)));
+	return candidates
+		.filter((id) => lookup.get(id)?.goal === 'build' && !covered.has(id))
+		.map((id) => lookup.get(id)!.name);
+}
+
+export function loweredMessage(n: number): string {
+	return `Moved ${n} ${n === 1 ? 'character' : 'characters'} off Build`;
+}
+
+export function changeMessage(prefix: string, raised: number[], lowered: number[]): string {
+	return [prefix, raised.length ? raisedMessage(raised.length) : null, lowered.length ? loweredMessage(lowered.length) : null]
+		.filter(Boolean).join(' · ');
+}
+
+export function talentParts(t: Talents | null): { value: number; crowned: boolean }[] {
+	return t ? [t.normal, t.skill, t.burst].map((value) => ({ value, crowned: value >= 10 })) : [];
+}
+
+/** Horizontal offset of a slanted edge over `heightPx` (keeps text clear of the ribbon edge). */
+export function slantInset(heightPx: number, deg: number = RIBBON_DEG): number {
+	return Math.ceil(heightPx * Math.tan((deg * Math.PI) / 180));
 }

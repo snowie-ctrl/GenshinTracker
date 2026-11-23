@@ -61,7 +61,7 @@ function char(id: number, goal: Character['goal'], name = `C${id}`): Character {
 	return {
 		id, slug: `c${id}`, name, rarity: 4, element: 'Pyro', weapon_type: 'Sword', icon: null, splash: null,
 		owned: true, level: 80, constellation: 0, friendship: 10, talents: null, weapon: null, goal,
-		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, team_tags: []
+		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, team_tags: [], release_at: null
 	};
 }
 
@@ -146,5 +146,48 @@ describe('text helpers', () => {
 		expect(teamTileView({ ...row, short: 0, craftable: 0 })).toEqual({ main: '✓ 9', badge: null, hint: 'shared', tone: 'met' });
 		expect(teamTileView({ ...row, to_farm: 2, short: 2, craftable: 0, shared: false }).badge).toBe('−2');
 		expect(farmRows([row, { ...row, id: 2, short: 0 }]).map((r) => r.id)).toEqual([1]);
+	});
+});
+
+import { changeMessage, loweredMessage, memberLookup, slantInset, talentParts, willLower } from './teams';
+
+const lm = (id: number, name: string, goal: 'build' | 'want' | 'none' = 'build') =>
+	({ id, name, goal }) as unknown as TeamMember;
+const lt = (id: number, build: boolean, members: TeamMember[]) =>
+	({ id, has_build_tag: build, members }) as unknown as Team;
+
+describe('willLower', () => {
+	const teams = [lt(1, true, [lm(10, 'Ben'), lm(11, 'Fur'), lm(12, 'Xq', 'want')]), lt(2, true, [lm(11, 'Fur')]), lt(3, false, [lm(10, 'Ben')])];
+	const look = memberLookup(teams);
+	it('switch off: every Build member not in another Build team', () => {
+		expect(willLower(teams, look, 1, { memberIds: [10, 11, 12], hasBuild: false })).toEqual(['Ben']);
+	});
+	it('remove a member from a Build team', () => {
+		expect(willLower(teams, look, 1, { memberIds: [11, 12], hasBuild: true })).toEqual(['Ben']);
+	});
+	it('delete', () => {
+		expect(willLower(teams, look, 1, null)).toEqual(['Ben']);
+	});
+	it('team without Build or new team lowers nothing', () => {
+		expect(willLower(teams, look, 3, null)).toEqual([]);
+		expect(willLower(teams, look, null, { memberIds: [10], hasBuild: false })).toEqual([]);
+	});
+});
+
+describe('messages and geometry', () => {
+	it('builds change messages', () => {
+		expect(loweredMessage(1)).toBe('Moved 1 character off Build');
+		expect(changeMessage('Saved', [1], [2, 3])).toBe('Saved · Raised 1 character to Build · Moved 2 characters off Build');
+		expect(changeMessage('Saved', [], [])).toBe('Saved');
+	});
+	it('marks crowned talents', () => {
+		expect(talentParts({ normal: 10, skill: 9, burst: 10 })).toEqual([
+			{ value: 10, crowned: true }, { value: 9, crowned: false }, { value: 10, crowned: true }]);
+		expect(talentParts(null)).toEqual([]);
+	});
+	it('computes the slant inset', () => {
+		expect(slantInset(100)).toBe(33);
+		expect(slantInset(330)).toBe(108);
+		expect(slantInset(100, 0)).toBe(0);
 	});
 });

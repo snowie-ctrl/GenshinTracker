@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Character } from './types';
-import { deriveStatus, emptyFilters, groupCharacters, progressTooltip, statusLine } from './status';
+import { DEFAULT_SORT, deriveStatus, emptyFilters, groupCharacters, progressTooltip, sortCharacters, statusLine } from './status';
 
 function char(over: Partial<Character>): Character {
 	return {
 		id: 1, slug: 'x', name: 'X', rarity: 4, element: 'Pyro', weapon_type: 'Sword',
 		icon: 'UI_AvatarIcon_X', splash: null, owned: true, level: 80, constellation: 2,
 		friendship: 10, talents: { normal: 6, skill: 8, burst: 8 }, weapon: null, goal: 'none',
-		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, team_tags: [], ...over
+		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, team_tags: [], release_at: null, ...over
 	};
 }
 
@@ -50,12 +50,11 @@ describe('groupCharacters', () => {
 		char({ id: 5, name: 'Kazuha', status: 'wanted', owned: false, rarity: 5, element: 'Anemo' })
 	];
 
-	it('sorts building by progress ascending, others by rarity then element order', () => {
+	it('sorts every section with the same keys (default: rarity then name)', () => {
 		const g = groupCharacters(list, emptyFilters());
-		expect(g.building.map((c) => c.name)).toEqual(['Furina', 'Bennett']);
-		expect(g.obtained.map((c) => c.name)).toEqual(['Nahida', 'Xiangling']);
-		expect(g.wanted.map((c) => c.name)).toEqual(['Kazuha']);
-		expect(g.unobtained).toEqual([]);
+		for (const section of Object.values(g)) {
+			expect(section).toEqual(sortCharacters(section, DEFAULT_SORT));
+		}
 	});
 
 	it('applies filters inside every section', () => {
@@ -73,5 +72,24 @@ describe('groupCharacters', () => {
 		const a = char({ id: 1, slug: 'a', team_tags: [[1, 2]] });
 		const b = char({ id: 2, slug: 'b', team_tags: [[1]] });
 		expect(groupCharacters([a, b], f).obtained.map((c) => c.slug)).toEqual(['a']);
+	});
+});
+
+describe('sortCharacters', () => {
+	const c = (name: string, rarity: number, level: number | null, release_at: string | null, owned = level !== null) =>
+		({ name, rarity, level, release_at, owned }) as unknown as Character;
+	const list = [c('Bennett', 4, 90, '2020-09-28'), c('Albedo', 5, 20, '2020-12-23'), c('Nahida', 5, 90, '2022-11-02'),
+		c('Yelan', 5, null, '2022-05-31'), c('Mystery', 4, null, null)];
+	const names = (k: { az: boolean; rarity: boolean; level: boolean }) => sortCharacters(list, k).map((x) => x.name);
+	it('A-Z only', () => expect(names({ az: true, rarity: false, level: false })).toEqual(['Albedo', 'Bennett', 'Mystery', 'Nahida', 'Yelan']));
+	it('rarity then A-Z', () => expect(names({ az: true, rarity: true, level: false })).toEqual(['Albedo', 'Nahida', 'Yelan', 'Bennett', 'Mystery']));
+	it('rarity, level, A-Z; unowned count as 0', () =>
+		expect(names({ az: true, rarity: true, level: true })).toEqual(['Nahida', 'Albedo', 'Yelan', 'Bennett', 'Mystery']));
+	it('A-Z off: newest first, unknown release last', () =>
+		expect(names({ az: false, rarity: false, level: false })).toEqual(['Nahida', 'Yelan', 'Albedo', 'Bennett', 'Mystery']));
+	it('does not mutate its input', () => {
+		const before = list.map((x) => x.name);
+		sortCharacters(list, { az: true, rarity: true, level: true });
+		expect(list.map((x) => x.name)).toEqual(before);
 	});
 });

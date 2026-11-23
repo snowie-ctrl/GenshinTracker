@@ -1,4 +1,5 @@
 import type {
+	DeleteTeamResponse,
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
 	GoodArtifact, GoodStatus, GoodSummary, GoodWeapon, ImportStatus, Inventory, MapKey, MapsResponse, Pool, PoolSummary, PriorityResult, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
 	Talents, TeamBody, TeamResponse, TeamsResponse, TravelerInfo, WeaponOption, WishSummary
@@ -80,7 +81,8 @@ export const api = {
 	team: (id: number) => request<TeamResponse>('GET', `/teams/${id}`),
 	createTeam: (body: TeamBody) => request<SaveTeamResponse>('POST', '/teams', body),
 	updateTeam: (id: number, body: TeamBody) => request<SaveTeamResponse>('PUT', `/teams/${id}`, body),
-	deleteTeam: (id: number) => request<{ ok: boolean }>('DELETE', `/teams/${id}`),
+	deleteTeam: (id: number) => request<DeleteTeamResponse>('DELETE', `/teams/${id}`),
+	setTeamBuild: (id: number, on: boolean) => request<SaveTeamResponse>('PUT', `/teams/${id}/build`, { on }),
 	reorderTeams: (ids: number[]) => request<{ ok: boolean }>('PUT', '/teams/order', { ids }),
 	tags: () => request<TagWithCount[]>('GET', '/tags'),
 	createTag: (name: string, color?: string) => request<Tag>('POST', '/tags', { name, color }),

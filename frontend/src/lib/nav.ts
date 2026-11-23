@@ -28,3 +28,10 @@ export const FLUID_ROUTES = ['/map'];
 export function isFluid(pathname: string): boolean {
 	return FLUID_ROUTES.some((r) => isActive(r, pathname));
 }
+
+/** Pages that use the full content width (no 1600px cap) but scroll normally. */
+export const WIDE_ROUTES = ['/characters', '/teams'];
+
+export function isWide(pathname: string): boolean {
+	return WIDE_ROUTES.some((r) => pathname === r);
+}

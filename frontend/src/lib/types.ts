@@ -16,6 +16,7 @@ export interface Character {
 	rarity: number;
 	element: string | null;
 	weapon_type: string | null;
+	release_at: string | null;
 	icon: string | null;
 	splash: string | null;
 	owned: boolean;
@@ -186,11 +187,13 @@ export interface PityLine { pool: Pool; pity5: number; hard: number; next_state:
 
 export interface Tag { id: number; name: string; color: string; builtin: boolean }
 export interface TagWithCount extends Tag { team_count: number }
+export interface ArtifactSetRef { name: string; icon: string | null; pieces: number }
 export interface TeamMember {
 	id: number; name: string; slug: string | null; icon: string | null; element: string | null; rarity: number;
 	owned: boolean; goal: Goal; status: Status; prefarming: boolean; level: number | null; talents: Talents | null;
 	weapon: Weapon | null; progress: number | null; role: string; artifact_line: string;
 	not_building: boolean; not_calculated: boolean;
+	splash: string | null; constellation: number | null; artifact_sets: ArtifactSetRef[];
 }
 export interface TeamMaterial {
 	id: number; name: string; icon: string; rarity: number; category: string; category_label: string;
@@ -204,7 +207,8 @@ export interface TeamsResponse { gaps: GapStatus; connected: boolean; teams: Tea
 export interface TeamResponse { gaps: GapStatus; connected: boolean; team: Team }
 export interface MemberDraft { character_id: number; role: string }
 export interface TeamBody { name: string; notes: string; members: MemberDraft[]; tag_ids: number[]; new_tags: string[] }
-export interface SaveTeamResponse { team: Team; raised: number[] }
+export interface SaveTeamResponse { team: Team; raised: number[]; lowered: number[] }
+export interface DeleteTeamResponse { ok: boolean; lowered: number[] }
 export interface BuildTeamCard {
 	id: number; name: string; members: CharRef[]; progress: number | null; top: TeamMaterial[]; more: number;
 	has_shortfall: boolean; all_calculated: boolean; short_count: number;

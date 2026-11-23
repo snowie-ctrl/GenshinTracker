@@ -23,3 +23,13 @@ describe('nav', () => {
 		expect(isFluid('/settings')).toBe(false);
 	});
 });
+
+import { isWide } from './nav';
+describe('isWide', () => {
+	it('covers Characters and Teams but not character detail', () => {
+		expect(isWide('/characters')).toBe(true);
+		expect(isWide('/teams')).toBe(true);
+		expect(isWide('/characters/bennett')).toBe(false);
+		expect(isWide('/inventory')).toBe(false);
+	});
+});
