@@ -105,6 +105,38 @@ test('popup asks before discarding unsaved changes', async ({ page }) => {
 	await expect(page.getByTestId('team-2')).toContainText('Archons only');
 });
 
+test('closing returns focus to the row; a repeated Escape still asks and never strands the popup', async ({ page }) => {
+	await page.goto('/teams');
+	const edit = page.getByRole('button', { name: 'Edit Archons only' });
+	await edit.click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog.getByLabel('Team name')).toHaveValue('Archons only');
+	await dialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(page).toHaveURL(/\/teams$/);
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(edit).toBeFocused();
+
+	await edit.click();
+	await dialog.getByLabel('Team name').fill('Changed');
+	const asked: string[] = [];
+	page.on('dialog', (d) => { asked.push(d.message()); void (asked.length < 3 ? d.dismiss() : d.accept()); });
+	// Only node-side polls between these two presses: locator assertions run page scripts with a user
+	// gesture, which would make the second Escape cancelable again and hide the native-close path.
+	await page.keyboard.press('Escape');                 // cancelable: the cancel handler asks
+	await expect.poll(() => asked.length).toBe(1);
+	await page.keyboard.press('Escape');                 // no user activation since: Chromium closes natively, the close handler asks
+	await expect.poll(() => asked.length).toBe(2);
+	await expect(dialog).toBeVisible();
+	await expect(page).toHaveURL(/\/teams\?edit=2$/);
+	await page.keyboard.press('Escape');                 // accepted this time
+	await expect.poll(() => asked.length).toBe(3);
+	expect(asked.every((m) => m.includes('Discard changes?'))).toBe(true);
+	await expect(page).toHaveURL(/\/teams$/);
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByTestId('team-2')).toContainText('Archons only');
+	await expect(edit).toBeFocused();
+});
+
 test('a rejected tag rename restores the old name; a deleted tag leaves the filter', async ({ page }) => {
 	await page.goto('/teams');
 	await page.getByRole('button', { name: 'Manage tags' }).click();

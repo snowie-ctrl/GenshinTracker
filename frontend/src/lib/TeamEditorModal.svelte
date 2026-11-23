@@ -77,10 +77,43 @@
 		}
 	}
 
+	let approved = false;   // set when our own code closes the dialog, so the close event does not ask again
+
 	onMount(() => {
 		dialog.showModal();
 		load();
+		return () => {
+			if (dialog.open) {
+				approved = true;
+				dialog.close();
+			}
+		};
 	});
+
+	/** The one way out: close the dialog (the browser puts focus back on the button that opened it), then act. */
+	function finish(action: () => void) {
+		snapshot = formState();                          // so the navigation guard does not ask again
+		approved = true;
+		if (dialog.open) dialog.close();
+		action();
+	}
+
+	function onCancel(e: Event) {
+		// Chromium makes a repeated Escape (no user activation since the last one) non-cancelable;
+		// then the dialog closes natively and onNativeClose asks instead, so this must not ask too.
+		if (!e.cancelable) return;
+		e.preventDefault();
+		requestClose();
+	}
+
+	function onNativeClose() {
+		if (approved) return;
+		if (dirty && !saving && !confirm('Discard changes?')) {
+			dialog.showModal();
+			return;
+		}
+		finish(onClose);
+	}
 
 	beforeNavigate(({ cancel }) => {
 		if (dirty && !saving && !confirm('Discard changes?')) cancel();
@@ -117,8 +150,7 @@
 
 	function requestClose() {
 		if (dirty && !saving && !confirm('Discard changes?')) return;
-		snapshot = formState();                          // so the navigation guard does not ask again
-		onClose();
+		finish(onClose);
 	}
 
 	async function save() {
@@ -128,10 +160,13 @@
 		const body = { name, notes, members, tag_ids: tagIds, new_tags: newTags };
 		try {
 			const res = teamId === null ? await api.createTeam(body) : await api.updateTeam(teamId, body);
-			snapshot = formState();
-			onDone(changeMessage('Saved', res.raised, res.lowered));
+			const message = changeMessage('Saved', res.raised, res.lowered);
+			finish(() => onDone(message));
 		} catch (e) {
-			if (e instanceof ApiError && e.status === 404) missing = true;
+			if (e instanceof ApiError && e.status === 404) {
+				missing = true;
+				snapshot = formState();
+			}
 			else if (e instanceof ApiError && e.status === 422) fieldError = { field: teamErrorField(e.message), message: e.message };
 			else error = errorMessage(e);
 		} finally {
@@ -147,10 +182,13 @@
 		try {
 			saving = true;
 			const res = await api.deleteTeam(teamId);
-			snapshot = formState();
-			onDone(changeMessage('Deleted', [], res.lowered));
+			const message = changeMessage('Deleted', [], res.lowered);
+			finish(() => onDone(message));
 		} catch (e) {
-			if (e instanceof ApiError && e.status === 404) missing = true;
+			if (e instanceof ApiError && e.status === 404) {
+				missing = true;
+				snapshot = formState();
+			}
 			else error = errorMessage(e);
 		} finally {
 			saving = false;
@@ -160,16 +198,16 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <dialog bind:this={dialog} class="modal" aria-label={teamId === null ? 'New team' : 'Edit team'}
-	oncancel={(e) => { e.preventDefault(); requestClose(); }}
+	oncancel={onCancel} onclose={onNativeClose}
 	onclick={(e) => { if (e.target === dialog) requestClose(); }}>
 	{#if loading}
 		<p class="muted">Loading…</p>
 	{:else if missing}
 		<p>This team no longer exists.</p>
-		<button type="button" onclick={onClose}>Close</button>
+		<button type="button" onclick={() => finish(onClose)}>Close</button>
 	{:else if loadFailed}
 		<div class="toast error">Could not load the team editor: {error} <button type="button" onclick={load}>Retry</button></div>
-		<button type="button" onclick={onClose}>Close</button>
+		<button type="button" onclick={() => finish(onClose)}>Close</button>
 	{:else}
 		<div class="head">
 			<input class="name" bind:value={name} maxlength="60" aria-label="Team name"

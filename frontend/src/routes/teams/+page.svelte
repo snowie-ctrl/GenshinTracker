@@ -88,7 +88,7 @@
 
 	async function editorDone(message: string) {
 		notice = message;
-		await goto('/teams', { noScroll: true });
+		await goto('/teams', { noScroll: true, keepFocus: true });   // keep the focus the closed dialog gave back
 		await load();
 	}
 
