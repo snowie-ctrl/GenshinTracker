@@ -63,11 +63,11 @@ class FakeSource:
             raise self.fail["notes"]
         return self.notes
 
-    async def get_talent_ids(self, character_id):
-        self.calls.append(("talents", character_id))
+    async def get_talent_ids(self, avatar_id, element_attr_id=None):
+        self.calls.append(("talents", avatar_id, element_attr_id) if element_attr_id else ("talents", avatar_id))
         if "talents" in self.fail:
             raise self.fail["talents"]
-        return TalentIds(character_id * 10 + 1, character_id * 10 + 2, character_id * 10 + 9)
+        return TalentIds(avatar_id * 10 + 1, avatar_id * 10 + 2, avatar_id * 10 + 9)
 
     async def compute_gaps(self, chars):
         self.calls.append(("gaps", tuple(c.character_id for c in chars)))

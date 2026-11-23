@@ -174,8 +174,6 @@ def test_building_cards_only_short_and_fully_built():
     cards = {c["character"]["id"]: c for c in building_cards(d, {10: 0.5, 20: 0.8, 30: 1.0}, material_index(d))}
     assert [m["id"] for m in cards[20]["materials"]] == [2, 51]     # 3 is met, so not listed
     assert cards[30]["materials"] == [] and cards[30]["skipped"] is False
-    d.characters[10000005] = CharRef(10000005, "Traveler", "traveler", None)
-    assert any(c["skipped"] for c in building_cards(d, {}, material_index(d)))
 
 
 def test_calculated_only_for_characters_unchanged_since_last_success(session_factory):

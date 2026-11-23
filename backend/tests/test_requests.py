@@ -18,20 +18,20 @@ def setup(session_factory, goals):
     seed_game(session_factory)
     with session_factory.begin() as s:
         save_roster(s, [make_roster(10000032, level=80, name="Bennett"),
-                        make_roster(10000005, raw_id=10000007, name="Traveler")], utcnow())
+                        make_roster(1000000507, raw_id=10000007, name="Traveler", element="Cryo")], utcnow())
         save_details(s, [make_detail(10000032, talents=(6, 8, 8))])
         for g in goals:
             s.add(g)
 
 
-@pytest.mark.xfail(reason="rewritten in Task 4/5", strict=False)
-def test_owned_prefarm_and_unsupported(session_factory):
-    setup(session_factory, [goal(10000032), goal(10000073), goal(10000005)])
+def test_owned_prefarm_and_traveler(session_factory):
+    setup(session_factory, [goal(10000032), goal(10000073), goal(1000000507)])
     with session_factory() as s:
         inputs, skipped = build_inputs(s)
     by_id = {i.character_id: i for i in inputs}
-    assert skipped == ["Traveler"]
-    assert set(by_id) == {10000032, 10000073}
+    assert skipped == []
+    assert set(by_id) == {10000032, 10000073, 1000000507}
+    assert by_id[1000000507].element_attr_id == 7 and by_id[1000000507].avatar_id == 10000007
     bennett, nahida = by_id[10000032], by_id[10000073]
     assert (bennett.level, bennett.talents) == (80, (6, 8, 8))
     assert bennett.weapon == (1, 90)             # equipped weapon id from the fake roster (WEAPON.id == 1)

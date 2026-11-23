@@ -122,6 +122,8 @@ class GapCharacter:
     level_target: int
     talents: tuple[tuple[int, int, int], ...]
     weapon: tuple[int, int, int] | None
+    avatar_id: int | None = None          # HoYoLAB id when it differs from ours (Traveler body id)
+    element_attr_id: int | None = None    # Traveler only: calculator element number
 
 
 @dataclass(frozen=True)
@@ -145,7 +147,7 @@ class HoyolabSource(Protocol):
     async def get_roster(self) -> list[RosterEntry]: ...
     async def get_details(self, raw_ids: Sequence[int]) -> list[DetailEntry]: ...
     async def get_notes(self) -> NotesInfo: ...
-    async def get_talent_ids(self, character_id: int) -> TalentIds: ...
+    async def get_talent_ids(self, avatar_id: int, element_attr_id: int | None = None) -> TalentIds: ...
     async def compute_gaps(self, chars: Sequence[GapCharacter]) -> GapResult: ...
     async def get_calendar(self) -> CalendarInfo: ...
     async def get_profile(self) -> ProfileInfo: ...
@@ -225,7 +227,7 @@ def build_batch_body(chars: Sequence[GapCharacter], uid: int, region: str) -> di
     items = []
     for c in chars:
         item: dict[str, Any] = {
-            "avatar_id": c.character_id,
+            "avatar_id": c.avatar_id or c.character_id,
             "avatar_level_current": c.level_current,
             "avatar_level_target": c.level_target,
             "skill_list": [{"id": g, "level_current": cur, "level_target": tgt} for g, cur, tgt in c.talents],
@@ -233,6 +235,8 @@ def build_batch_body(chars: Sequence[GapCharacter], uid: int, region: str) -> di
         if c.weapon is not None:
             wid, cur, tgt = c.weapon
             item["weapon"] = {"id": wid, "level_current": cur, "level_target": tgt}
+        if c.element_attr_id is not None:
+            item["element_attr_id"] = c.element_attr_id
         items.append(item)
     return {"items": items, "uid": uid, "region": region}
 
@@ -302,9 +306,12 @@ class GenshinPySource:
     async def get_notes(self) -> NotesInfo:
         return to_notes(await call_api(self._client.get_genshin_notes, self._uid, delays=self._delays))
 
-    async def get_talent_ids(self, character_id: int) -> TalentIds:
+    async def get_talent_ids(self, avatar_id: int, element_attr_id: int | None = None) -> TalentIds:
+        params: dict[str, int] = {"avatar_id": avatar_id}
+        if element_attr_id is not None:
+            params["element_attr_id"] = element_attr_id
         data = await call_api(self._client.request_calculator, "avatarSkill/list", method="GET",
-                              params={"avatar_id": character_id}, delays=self._delays)
+                              params=params, delays=self._delays)
         return to_talent_ids(data.get("list") or [])
 
     async def compute_gaps(self, chars: Sequence[GapCharacter]) -> GapResult:

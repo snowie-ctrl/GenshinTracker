@@ -213,18 +213,18 @@ async def test_gaps_failure_is_isolated_and_recorded(paths, session_factory):
         assert s.get(GapRun, 1).ok is False
 
 
-@pytest.mark.xfail(reason="rewritten in Task 4/5", strict=False)
-async def test_traveler_is_skipped_but_others_calculated(paths, session_factory):
+async def test_traveler_is_calculated_with_element(paths, session_factory):
     seed_game(session_factory)
     build_goal(session_factory, 10000032)
-    build_goal(session_factory, 10000005)
+    build_goal(session_factory, 1000000507)
     source = FakeSource(roster=[make_roster(10000032, name="Bennett"),
-                                make_roster(10000005, raw_id=10000007, name="Traveler")])
+                                make_roster(1000000507, raw_id=10000007, name="Traveler", element="Cryo")])
     m = manager(paths, session_factory, source)
     await m.request("manual")
     await m.wait()
-    assert last_run(session_factory).parts["gaps"] == {"ok": True, "count": 1, "skipped": ["Traveler"]}
-    assert ("gaps", (10000032,)) in source.calls
+    assert last_run(session_factory).parts["gaps"] == {"ok": True, "count": 2}
+    assert ("talents", 10000007, 7) in source.calls
+    assert ("gaps", (10000032, 1000000507)) in source.calls
 
 
 async def test_no_work_skips_calculator_call(paths, session_factory):

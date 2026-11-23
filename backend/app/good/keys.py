@@ -60,7 +60,8 @@ class KeyIndex:
         )
 
     def character(self, key: str) -> int | None:
-        from app.gamedata.yatta import MANEKIN_ID, TRAVELER_ID
+        from app.gamedata.yatta import MANEKIN_ID
+        TRAVELER_ID = 10000005  # Task 5
         if not key:
             return None
         if key.startswith("Traveler"):

@@ -163,9 +163,9 @@ class SyncManager:
                 snap = snapshot(s)
                 cache = load_talent_ids(s)
             work = [i for i in inputs if has_work(i)]
-            missing = [i.character_id for i in work if i.character_id not in cache]
-            for cid in missing:
-                cache[cid] = await source.get_talent_ids(cid)
+            missing = [i for i in work if i.character_id not in cache]
+            for i in missing:
+                cache[i.character_id] = await source.get_talent_ids(i.avatar_id, i.element_attr_id)
             if missing:
                 with self._sf.begin() as s:
                     save_talent_ids(s, cache)

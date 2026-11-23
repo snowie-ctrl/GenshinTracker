@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from app.planner.data import PlannerData
-from app.planner.requests import UNSUPPORTED
 from app.teams.shortfall import team_progress, team_shortfall
 from app.teams.store import BUILD_TAG_ID, tag_dict
 
@@ -30,7 +29,7 @@ def team_view(team, members, tags, chars: dict[int, dict], arts: dict[int, str],
               index: dict[int, dict]) -> dict:
     has_build = any(t.id == BUILD_TAG_ID for t in tags)
     views = [member_view(chars.get(m.character_id), m.character_id, m.role, arts.get(m.character_id, ""), has_build,
-                         m.character_id in data.calculated and m.character_id not in UNSUPPORTED)
+                         m.character_id in data.calculated)
              for m in members]
     build = [v for v in views if v["goal"] == "build"]
     counted = [v["id"] for v in build if not v["not_calculated"]]
