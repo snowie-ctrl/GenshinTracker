@@ -18,7 +18,7 @@ test('a failed Default map save snaps the select back to the saved value', async
 test('settings are grouped with an index that jumps to each section', async ({ page }) => {
 	await page.goto('/settings');
 	const index = page.getByRole('navigation', { name: 'Settings sections' });
-	for (const label of ['Account', 'Sync & data', 'Appearance', 'Planner', 'Wishes', 'Map']) {
+	for (const label of ['Account', 'Sync & data', 'Appearance', 'Wishes', 'Map']) {
 		await expect(index.getByRole('link', { name: label })).toBeVisible();
 		await expect(page.getByRole('heading', { level: 2, name: label })).toBeVisible();
 	}

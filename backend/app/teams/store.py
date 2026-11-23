@@ -7,7 +7,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import GameCharacter, OwnedCharacter, Tag, Team, TeamMember, TeamTag
-from app.settings.store import default_targets
 from app.teams.goals import BUILD_TAG_ID, lower_from_build, raise_to_build
 from app.timeutil import utcnow
 
@@ -163,7 +162,7 @@ def save_team(s: Session, team_id: int | None, name: str, notes: str, members: l
     to_raise: list[int] = []
     if has_build:
         to_raise = ids if not had_build else [cid for cid in ids if cid not in old_members]
-    raised = raise_to_build(s, to_raise, default_targets(s)) if to_raise else []
+    raised = raise_to_build(s, to_raise) if to_raise else []
     to_lower: list[int] = []
     if had_build and not has_build:
         to_lower = list(dict.fromkeys([*ids, *sorted(old_members)]))
@@ -200,7 +199,7 @@ def set_build(s: Session, team_id: int, on: bool) -> tuple[list[int], list[int]]
     team.updated_at = utcnow()
     s.flush()
     if on:
-        return raise_to_build(s, members, default_targets(s)), []
+        return raise_to_build(s, members), []
     return [], lower_from_build(s, members, team_id)
 
 

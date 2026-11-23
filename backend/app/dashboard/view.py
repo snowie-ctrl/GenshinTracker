@@ -38,11 +38,11 @@ def banners_with_pity(banners: list[dict], lines: list[dict]) -> list[dict]:
 
 
 def build_progress(s: Session) -> dict[int, float | None]:
-    from app.api.characters import goal_targets
+    from app.targets import stored_targets
     owned = {o.character_id: o for o in s.scalars(select(OwnedCharacter))}
     out: dict[int, float | None] = {}
     for row in s.scalars(select(CharacterGoal).where(CharacterGoal.goal == "build")):
-        o, t = owned.get(row.character_id), goal_targets(row)
+        o, t = owned.get(row.character_id), stored_targets(row)
         out[row.character_id] = (progress(Current(o.level, o.talent_normal, o.talent_skill, o.talent_burst), t)
                                  if o is not None and t is not None else None)
     return out

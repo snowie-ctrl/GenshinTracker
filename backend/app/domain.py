@@ -13,6 +13,8 @@ class Targets:
     skill: int
     burst: int
     weapon_level: int
+    constellation: int | None = None   # wish goal; the material planner ignores it (sub-project 5)
+    refinement: int | None = None      # wish goal; the material planner ignores it (sub-project 5)
 
     @classmethod
     def from_dict(cls, d: dict) -> Targets:
@@ -22,6 +24,8 @@ class Targets:
             skill=int(d["skill"]),
             burst=int(d["burst"]),
             weapon_level=int(d["weapon_level"]),
+            constellation=None if d.get("constellation") is None else int(d["constellation"]),
+            refinement=None if d.get("refinement") is None else int(d["refinement"]),
         )
 
     def to_dict(self) -> dict:
@@ -34,6 +38,26 @@ class Current:
     normal: int | None
     skill: int | None
     burst: int | None
+    constellation: int = 0
+    weapon_level: int | None = None
+    refinement: int | None = None
+
+
+BASELINE = Targets(level=90, normal=6, skill=9, burst=9, weapon_level=90)
+
+
+def build_defaults(current: Current | None) -> Targets:
+    """Starting targets when a character first goes to Build. Sub-project 9 replaces the body, not the callers."""
+    c = current or Current(level=1, normal=1, skill=1, burst=1)
+    return Targets(
+        level=max(BASELINE.level, c.level),
+        normal=max(BASELINE.normal, c.normal or 1),
+        skill=max(BASELINE.skill, c.skill or 1),
+        burst=max(BASELINE.burst, c.burst or 1),
+        weapon_level=max(BASELINE.weapon_level, c.weapon_level or 1),
+        constellation=c.constellation,
+        refinement=c.refinement or 1,
+    )
 
 
 def derive_status(owned: bool, goal: str) -> tuple[str, bool]:

@@ -7,21 +7,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import CharacterGoal, TeamMember, TeamTag
-from app.domain import Targets, resolve_targets
+from app.domain import resolve_targets
 from app.planner.order import apply_goal
+from app.targets import defaults_for, stored_targets, write_targets
 from app.timeutil import utcnow
 
 BUILD_TAG_ID = 1
 
 
-def _stored(row: CharacterGoal) -> Targets | None:
-    if row.target_level is None:
-        return None
-    return Targets(row.target_level, row.target_normal, row.target_skill, row.target_burst,
-                   row.target_weapon_level)
-
-
-def raise_to_build(session: Session, character_ids: Iterable[int], defaults: Targets) -> list[int]:
+def raise_to_build(session: Session, character_ids: Iterable[int]) -> list[int]:
     """Set goal build for every id whose goal is none/want (no row = none). Returns the ids changed."""
     raised: list[int] = []
     for cid in dict.fromkeys(character_ids):
@@ -31,11 +25,9 @@ def raise_to_build(session: Session, character_ids: Iterable[int], defaults: Tar
             session.add(row)
         if row.goal == "build":
             continue
-        targets = resolve_targets("build", _stored(row), defaults)
+        targets = resolve_targets("build", stored_targets(row), defaults_for(session, cid))
         apply_goal(session, row, "build")
-        row.target_level, row.target_normal = targets.level, targets.normal
-        row.target_skill, row.target_burst = targets.skill, targets.burst
-        row.target_weapon_level = targets.weapon_level
+        write_targets(row, targets)
         row.updated_at = utcnow()
         raised.append(cid)
     if raised:

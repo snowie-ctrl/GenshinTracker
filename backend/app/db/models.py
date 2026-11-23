@@ -30,6 +30,14 @@ class GameMeta(Base):
     value: Mapped[object | None] = mapped_column(JSON, nullable=True)
 
 
+class GameCharacterKit(Base):
+    """Parsed Yatta talents, passives and constellations per character (sub-project 5)."""
+    __tablename__ = "game_character_kit"
+    character_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    data: Mapped[object] = mapped_column(JSON)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class GameMaterial(Base):
     __tablename__ = "game_material"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -198,6 +206,8 @@ class CharacterGoal(Base):
     target_skill: Mapped[int | None] = mapped_column(Integer, nullable=True)
     target_burst: Mapped[int | None] = mapped_column(Integer, nullable=True)
     target_weapon_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    target_constellation: Mapped[int | None] = mapped_column(Integer, nullable=True)   # sub-project 5
+    target_refinement: Mapped[int | None] = mapped_column(Integer, nullable=True)      # sub-project 5
     planned_weapon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     priority: Mapped[int | None] = mapped_column(Integer, nullable=True)   # Build order, 1 = first (sub-project 3)
     updated_at: Mapped[datetime] = mapped_column(DateTime)

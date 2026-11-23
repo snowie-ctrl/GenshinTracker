@@ -5,6 +5,8 @@ type Saver = (on: boolean) => Promise<unknown>;
 
 export class AppearanceStore {
 	backgroundAnimated = $state(true);
+	/** Element colour set by the character page; null elsewhere. */
+	tint = $state<string | null>(null);
 	#load: Loader;
 	#save: Saver;
 

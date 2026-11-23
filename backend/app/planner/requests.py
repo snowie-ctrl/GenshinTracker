@@ -37,7 +37,7 @@ def _build_rows(session: Session) -> list[CharacterGoal]:
     return [r for r in rows if r.target_level is not None]
 
 
-def _shared_traveler_row(session: Session) -> OwnedCharacter | None:
+def shared_traveler_row(session: Session) -> OwnedCharacter | None:
     """Level and weapon are shared: an element without its own owned row borrows them from one that has."""
     cur = current_element_id(session)
     for cid in ([cur] if cur else []) + sorted(TRAVELER_IDS):
@@ -57,7 +57,7 @@ def build_inputs(session: Session) -> tuple[list[PlanInput], list[str]]:
         if g is None and o is None:
             continue
         traveler = is_traveler(cid)
-        shared = (o or _shared_traveler_row(session)) if traveler else o
+        shared = (o or shared_traveler_row(session)) if traveler else o
         targets = Targets(row.target_level, row.target_normal, row.target_skill, row.target_burst,
                           row.target_weapon_level)
         level = shared.level if shared is not None else 1

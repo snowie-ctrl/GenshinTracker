@@ -33,5 +33,5 @@ export function isFluid(pathname: string): boolean {
 export const WIDE_ROUTES = ['/characters', '/teams'];
 
 export function isWide(pathname: string): boolean {
-	return WIDE_ROUTES.some((r) => pathname === r);
+	return WIDE_ROUTES.some((r) => pathname === r) || pathname.startsWith('/characters/');
 }

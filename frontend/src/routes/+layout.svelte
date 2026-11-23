@@ -24,7 +24,7 @@
 	});
 </script>
 
-<Starfield animated={appearance.backgroundAnimated} />
+<Starfield animated={appearance.backgroundAnimated} tint={appearance.tint} />
 <Sidebar />
 
 <div class="content" class:fluid>

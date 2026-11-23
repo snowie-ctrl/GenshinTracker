@@ -3,7 +3,6 @@ import pytest
 from app.db.models import CharacterGoal
 from app.planner.order import apply_goal, build_order, set_order
 from app.teams.goals import raise_to_build
-from app.domain import Targets
 from app.timeutil import utcnow
 from helpers import make_client, seed_game
 
@@ -59,7 +58,7 @@ def test_teams_raise_appends_priority(session_factory):
     with session_factory.begin() as s:
         add(s, 1, "build", 1)
         s.flush()
-        raise_to_build(s, [7, 1], Targets(90, 8, 8, 8, 90))
+        raise_to_build(s, [7, 1])
         assert build_order(s) == [1, 7]
 
 

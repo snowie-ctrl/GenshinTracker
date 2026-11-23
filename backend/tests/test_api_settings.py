@@ -19,7 +19,7 @@ def test_settings_defaults(paths):
         body = client.get("/api/settings").json()
     assert body["connection"] == {"status": "missing", "uid": None}
     assert body["sync_interval_minutes"] == 10
-    assert body["default_targets"] == {"level": 90, "normal": 8, "skill": 8, "burst": 8, "weapon_level": 90}
+    assert "default_targets" not in body
     assert body["level_caps"] == [20, 40, 50, 60, 70, 80, 90]
     assert body["gamedata"] == {"fetched_at": None, "last_error": None, "count": 0,
                                "materials": {"fetched_at": None, "last_error": None, "count": 0},
@@ -31,11 +31,9 @@ def test_settings_defaults(paths):
 def test_put_settings_validates_and_saves(paths):
     with make_client(paths) as client:
         assert client.put("/api/settings", json={"sync_interval_minutes": 0}).status_code == 422
-        bad_targets = {"level": 90, "normal": 11, "skill": 8, "burst": 8, "weapon_level": 90}
-        assert client.put("/api/settings", json={"default_targets": bad_targets}).status_code == 422
-        good = {"level": 80, "normal": 6, "skill": 6, "burst": 6, "weapon_level": 80}
-        body = client.put("/api/settings", json={"sync_interval_minutes": 30, "default_targets": good}).json()
-    assert body["sync_interval_minutes"] == 30 and body["default_targets"] == good
+        body = client.put("/api/settings", json={"sync_interval_minutes": 30,
+                                                 "default_targets": {"level": 1}}).json()   # ignored field
+    assert body["sync_interval_minutes"] == 30 and "default_targets" not in body
 
 
 def test_connect_single_account_writes_env_and_syncs(paths):

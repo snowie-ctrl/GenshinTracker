@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.config import LEVEL_CAPS
 from app.context import AppContext, get_ctx
 from app.gamedata.service import gamedata_status, refresh_all
-from app.schemas import TargetsIn
 from app.settings.connect import ConnectError, connect
 from app.settings.envfile import COOKIE_KEYS, connection_status, read_env
 from app.settings.store import get_setting, set_setting
@@ -21,7 +20,6 @@ DISPLAY_NAME_MAX = 40
 
 class SettingsIn(BaseModel):
     sync_interval_minutes: int | None = Field(default=None, ge=1, le=1440)
-    default_targets: TargetsIn | None = None
     game_install_path: str | None = Field(default=None, max_length=500)
     default_map: Literal["hoyolab", "appsample"] | None = None
     good_import_enabled: bool | None = None
@@ -59,7 +57,6 @@ def settings_payload(ctx: AppContext, s: Session) -> dict:
     return {
         "connection": connection_status(env, get_setting(s, "hoyolab_status")),
         "sync_interval_minutes": get_setting(s, "sync_interval_minutes"),
-        "default_targets": get_setting(s, "default_targets"),
         "game_install_path": get_setting(s, "game_install_path"),
         "default_map": get_setting(s, "default_map"),
         "good_import_enabled": bool(get_setting(s, "good_import_enabled")),
@@ -81,8 +78,6 @@ def put_settings(body: SettingsIn, ctx: AppContext = Depends(get_ctx)) -> dict:
     with ctx.session_factory.begin() as s:
         if body.sync_interval_minutes is not None:
             set_setting(s, "sync_interval_minutes", body.sync_interval_minutes)
-        if body.default_targets is not None:
-            set_setting(s, "default_targets", body.default_targets.model_dump())
         if body.game_install_path is not None:
             set_setting(s, "game_install_path", body.game_install_path.strip())
         if body.default_map is not None:

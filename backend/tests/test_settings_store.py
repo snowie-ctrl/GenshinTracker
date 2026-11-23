@@ -1,17 +1,15 @@
 import pytest
 
-from app.domain import Targets
 from app.settings.envfile import (
     connection_status, cookies_from_env, read_env, update_env,
 )
-from app.settings.store import default_targets, get_setting, set_setting
+from app.settings.store import get_setting, set_setting
 
 
 def test_defaults_when_unset(session_factory):
     with session_factory() as s:
         assert get_setting(s, "sync_interval_minutes") == 10
         assert get_setting(s, "hoyolab_status") is None
-        assert default_targets(s) == Targets(90, 8, 8, 8, 90)
 
 
 def test_set_and_get(session_factory):
@@ -27,10 +25,9 @@ def test_unknown_key_rejected(session_factory):
         set_setting(s, "nope", 1)
 
 
-def test_default_value_is_a_copy(session_factory):
-    with session_factory() as s:
-        get_setting(s, "default_targets")["level"] = 1
-        assert get_setting(s, "default_targets")["level"] == 90
+def test_default_targets_setting_is_gone(session_factory):
+    with session_factory() as s, pytest.raises(KeyError):
+        set_setting(s, "default_targets", {})
 
 
 def test_update_env_preserves_other_lines(tmp_path):

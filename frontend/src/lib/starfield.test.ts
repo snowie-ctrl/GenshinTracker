@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LAYERS, TILE, backgroundAnimated, makeStars, starTile } from './starfield';
+import { LAYERS, TILE, backgroundAnimated, layerColors, makeStars, nebula, starTile } from './starfield';
 
 describe('makeStars', () => {
 	it('is deterministic for a seed and differs between seeds', () => {
@@ -46,5 +46,16 @@ describe('backgroundAnimated', () => {
 describe('LAYERS', () => {
 	it('has three layers, nearer ones faster', () => {
 		expect(LAYERS.map((l) => l.seconds)).toEqual([90, 55, 35]);
+	});
+});
+
+describe('tint', () => {
+	it('keeps the fine layer white and tints the two nearer layers', () => {
+		expect(layerColors(null)).toEqual(LAYERS.map((l) => l.color));
+		expect(layerColors('#4cc2f1')).toEqual(['#ffffff', '#4cc2f1', '#4cc2f1']);
+	});
+	it('tints the nebula', () => {
+		expect(nebula(null)).toContain('rgba(59, 47, 107');
+		expect(nebula('#ef7a4a')).toContain('#ef7a4a');
 	});
 });

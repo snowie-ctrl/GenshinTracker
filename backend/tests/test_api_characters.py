@@ -85,18 +85,41 @@ def test_detail_includes_artifacts_and_stats(paths):
     assert missing.status_code == 404
 
 
-def test_set_goal_build_fills_defaults_and_leaving_keeps_targets(paths):
+def test_set_goal_build_fills_baseline_and_leaving_keeps_targets(paths):
     setup_data(paths)
     with make_client(paths) as client:
         c = client.put("/api/characters/10000089/goal", json={"goal": "build"}).json()
         assert c["status"] == "building"
-        assert c["targets"] == {"level": 90, "normal": 8, "skill": 8, "burst": 8, "weapon_level": 90}
-        custom = {"level": 80, "normal": 6, "skill": 9, "burst": 9, "weapon_level": 80}
+        # Furina: Lv 90, talents 6/8/8, C2, The Flute Lv 90 R5 (fakes.make_detail / WEAPON)
+        assert c["targets"] == {"level": 90, "normal": 6, "skill": 9, "burst": 9, "weapon_level": 90,
+                                "constellation": 2, "refinement": 5}
+        custom = {"level": 80, "normal": 6, "skill": 9, "burst": 9, "weapon_level": 80,
+                  "constellation": 6, "refinement": 5}
         client.put("/api/characters/10000089/goal", json={"targets": custom})
         c = client.put("/api/characters/10000089/goal", json={"goal": "none"}).json()
         assert c["status"] == "obtained" and c["targets"] == custom
         c = client.put("/api/characters/10000089/goal", json={"goal": "build"}).json()
         assert c["targets"] == custom
+
+
+def test_targets_omitting_new_fields_keeps_stored(paths):
+    setup_data(paths)
+    with make_client(paths) as client:
+        client.put("/api/characters/10000089/goal", json={"goal": "build", "targets": {
+            "level": 90, "normal": 6, "skill": 9, "burst": 9, "weapon_level": 90, "constellation": 4, "refinement": 3}})
+        c = client.put("/api/characters/10000089/goal", json={"targets": {
+            "level": 80, "normal": 6, "skill": 9, "burst": 9, "weapon_level": 90}}).json()
+        assert (c["targets"]["level"], c["targets"]["constellation"], c["targets"]["refinement"]) == (80, 4, 3)
+        assert client.put("/api/characters/10000089/goal", json={"targets": {
+            "level": 80, "normal": 6, "skill": 9, "burst": 9, "weapon_level": 90, "constellation": 7}}).status_code == 422
+
+
+def test_detail_has_priority(paths):
+    setup_data(paths)
+    with make_client(paths) as client:
+        client.put("/api/characters/10000089/goal", json={"goal": "build"})
+        assert client.get("/api/characters/furina").json()["priority"] is not None
+        assert client.get("/api/characters/xiangling").json()["priority"] is None
 
 
 def test_set_goal_validation_and_404(paths):

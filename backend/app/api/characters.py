@@ -1,3 +1,4 @@
+import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,12 +12,14 @@ from app.api.traveler import traveler_payload
 from app.db.models import (CharacterGoal, GameCharacter, GameWeapon, OwnedArtifact, OwnedCharacter,
                            TravelerElement)
 from app.domain import Current, Targets, derive_status, progress, resolve_targets
+from app.gamedata.kit import load_kit, yatta_key
 from app.gamedata.traveler import is_traveler
 from app.gamedata.yatta import splash_for
 from app.planner.characters import character_shortfall
 from app.planner.order import apply_goal
 from app.schemas import TargetsIn
-from app.settings.store import default_targets
+from app.settings.store import get_setting
+from app.targets import defaults_for, stored_targets, write_targets
 from app.teams.store import memberships
 from app.timeutil import utcnow
 from app.traveler.store import current_element_id
@@ -30,17 +33,10 @@ class GoalIn(BaseModel):
     planned_weapon_id: int | None = None
 
 
-def goal_targets(row: CharacterGoal | None) -> Targets | None:
-    if row is None or row.target_level is None:
-        return None
-    return Targets(row.target_level, row.target_normal, row.target_skill, row.target_burst,
-                   row.target_weapon_level)
-
-
 def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_row: CharacterGoal | None) -> dict:
     goal = goal_row.goal if goal_row else "none"
     status, prefarming = derive_status(o is not None, goal)
-    targets = goal_targets(goal_row)
+    targets = stored_targets(goal_row)
     cid = g.id if g is not None else o.character_id
     icon = (o.icon if o is not None and o.icon else None) or (g.icon if g is not None else None)
     talents = None
@@ -69,6 +65,7 @@ def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_ro
             "level": o.weapon_level, "refinement": o.weapon_refinement,
         },
         "goal": goal,
+        "priority": goal_row.priority if goal_row else None,
         "targets": targets.to_dict() if targets else None,
         "status": status,
         "prefarming": prefarming,
@@ -159,19 +156,18 @@ async def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(ge
 
         def state() -> tuple:
             return (row.goal, row.target_level, row.target_normal, row.target_skill, row.target_burst,
-                    row.target_weapon_level, row.planned_weapon_id)
+                    row.target_weapon_level, row.target_constellation, row.target_refinement,
+                    row.planned_weapon_id)
 
         before = state()
         new_goal = body.goal or row.goal
         if body.targets is not None:
             targets = Targets(**body.targets.model_dump())
         else:
-            targets = resolve_targets(new_goal, goal_targets(row), default_targets(s))
+            targets = resolve_targets(new_goal, stored_targets(row), defaults_for(s, character_id))
         apply_goal(s, row, new_goal)
         if targets is not None:
-            row.target_level, row.target_normal = targets.level, targets.normal
-            row.target_skill, row.target_burst = targets.skill, targets.burst
-            row.target_weapon_level = targets.weapon_level
+            write_targets(row, targets)
         if "planned_weapon_id" in body.model_fields_set:
             wid = body.planned_weapon_id
             if wid is not None:
@@ -186,3 +182,14 @@ async def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(ge
     if changed:
         ctx.sync.schedule_gaps()
     return payload
+
+
+@router.get("/characters/{slug}/kit")
+async def get_kit(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
+    with ctx.session_factory() as s:
+        g = s.scalar(select(GameCharacter).where(GameCharacter.slug == slug))
+        if g is None:
+            raise HTTPException(404, "Unknown character")
+        cid, body = g.id, str(get_setting(s, "traveler_body"))
+    lock = ctx.kit_locks.setdefault(cid, asyncio.Lock())
+    return await load_kit(ctx.session_factory, ctx.http, cid, yatta_key(cid, body), ctx.offline, lock, utcnow())

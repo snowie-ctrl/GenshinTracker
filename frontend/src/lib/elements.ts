@@ -17,3 +17,13 @@ export const RARITY_STYLE: Record<number, { color: string; ink: string }> = {
 	5: { color: 'var(--rarity-5)', ink: '#17130b' },
 	4: { color: 'var(--rarity-4)', ink: '#ffffff' }
 };
+
+/** Hex copies of the --pyro … --geo tokens, for places CSS variables cannot reach (SVG data URIs). */
+export const ELEMENT_HEX: Record<string, string> = {
+	Pyro: '#ef7a4a', Hydro: '#4cc2f1', Anemo: '#5fd3b8', Electro: '#b38cf0',
+	Dendro: '#9bd25a', Cryo: '#9fe0ef', Geo: '#f0c45a'
+};
+
+export function elementHex(name: string | null | undefined): string | null {
+	return (name && ELEMENT_HEX[name]) || null;
+}

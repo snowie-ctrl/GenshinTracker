@@ -2,13 +2,11 @@ import copy
 
 from sqlalchemy.orm import Session
 
-from app.config import DEFAULT_SYNC_INTERVAL_MINUTES, DEFAULT_TARGETS
+from app.config import DEFAULT_SYNC_INTERVAL_MINUTES
 from app.db.models import Setting
-from app.domain import Targets
 
 DEFAULTS: dict[str, object] = {
     "sync_interval_minutes": DEFAULT_SYNC_INTERVAL_MINUTES,
-    "default_targets": DEFAULT_TARGETS,
     "hoyolab_status": None,  # None | "connected" | "expired"
     "game_install_path": "",   # blank = auto-detect from the game's log file
     "display_name": "",   # Dashboard greeting (sub-project 3); local only
@@ -34,7 +32,3 @@ def set_setting(session: Session, key: str, value: object) -> None:
     else:
         row.value = value
     session.flush()
-
-
-def default_targets(session: Session) -> Targets:
-    return Targets.from_dict(get_setting(session, "default_targets"))

@@ -7,7 +7,7 @@ function char(over: Partial<Character>): Character {
 		id: 1, slug: 'x', name: 'X', rarity: 4, element: 'Pyro', weapon_type: 'Sword',
 		icon: 'UI_AvatarIcon_X', splash: null, owned: true, level: 80, constellation: 2,
 		friendship: 10, talents: { normal: 6, skill: 8, burst: 8 }, weapon: null, goal: 'none',
-		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, team_tags: [], release_at: null, ...over
+		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, priority: null, team_tags: [], release_at: null, ...over
 	};
 }
 

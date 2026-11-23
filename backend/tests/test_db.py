@@ -49,9 +49,9 @@ def test_models_match_migrations(paths):
 
 def test_json_round_trip(session_factory):
     with session_factory.begin() as s:
-        s.add(Setting(key="default_targets", value={"level": 90}))
+        s.add(Setting(key="display_name", value={"x": 1}))
     with session_factory() as s:
-        assert s.get(Setting, "default_targets").value == {"level": 90}
+        assert s.get(Setting, "display_name").value == {"x": 1}
 
 
 def test_phase3_tables_exist(paths):

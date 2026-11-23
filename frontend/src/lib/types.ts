@@ -1,7 +1,23 @@
 export type Goal = 'none' | 'want' | 'build';
 export type Status = 'building' | 'obtained' | 'wanted' | 'unobtained';
 
-export interface Targets { level: number; normal: number; skill: number; burst: number; weapon_level: number }
+export interface Targets {
+	level: number; normal: number; skill: number; burst: number; weapon_level: number;
+	constellation?: number | null; refinement?: number | null;
+}
+export type TalentRole = 'normal' | 'skill' | 'burst';
+export interface Segment { text: string; color: string | null; italic: boolean }
+export interface ScaleRow { label: string; values: string[] }
+export interface KitTalent {
+	name: string; icon: string | null; role: TalentRole | 'other'; cooldown: number | null; cost: number | null;
+	description: Segment[][]; scaling: ScaleRow[];
+}
+export interface KitPassive { name: string; icon: string | null; description: Segment[][] }
+export interface KitConstellation {
+	index: number; name: string; icon: string | null; description: Segment[][]; raises: TalentRole | null;
+}
+export interface Kit { talents: KitTalent[]; passives: KitPassive[]; constellations: KitConstellation[] }
+export interface KitResponse { state: 'fresh' | 'stale' | 'unavailable'; kit: Kit | null }
 export interface TravelerInfo {
 	element_id: number; current: boolean; seen: boolean; unlocked: boolean;
 	talents: Talents; constellation: number; source: 'sync' | 'manual';
@@ -31,6 +47,7 @@ export interface Character {
 	prefarming: boolean;
 	progress: number | null;
 	planned_weapon_id: number | null;
+	priority: number | null;
 	team_tags: number[][];
 }
 
@@ -106,7 +123,6 @@ export interface Settings {
 	default_map: MapKey;
 	connection: Connection;
 	sync_interval_minutes: number;
-	default_targets: Targets;
 	level_caps: number[];
 	game_install_path: string;
 	good_import_enabled: boolean;

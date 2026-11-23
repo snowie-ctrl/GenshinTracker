@@ -10,7 +10,6 @@ FRONTEND_BUILD = REPO_ROOT / "frontend" / "build"
 
 DEFAULT_PORT = 8765
 LEVEL_CAPS = [20, 40, 50, 60, 70, 80, 90]
-DEFAULT_TARGETS = {"level": 90, "normal": 8, "skill": 8, "burst": 8, "weapon_level": 90}
 DEFAULT_SYNC_INTERVAL_MINUTES = 10
 MANUAL_SYNC_MIN_SECONDS = 60
 GAMEDATA_MAX_AGE_DAYS = 7

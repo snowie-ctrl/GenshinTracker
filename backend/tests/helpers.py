@@ -60,6 +60,23 @@ def yatta_transport(status: int = 200, fail_details: frozenset[int] = frozenset(
     return httpx.MockTransport(handler)
 
 
+def kit_transport(fail: bool = False, calls: list | None = None) -> httpx.MockTransport:
+    furina = load_fixture("yatta_kit_furina.json")
+    traveler = load_fixture("yatta_kit_traveler_anemo.json")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if "/avatar/" not in path:
+            return httpx.Response(404)
+        if calls is not None:
+            calls.append(path.rsplit("/", 1)[1])
+        if fail:
+            return httpx.Response(500)
+        return httpx.Response(200, json=traveler if "-" in path.rsplit("/", 1)[1] else furina)
+
+    return httpx.MockTransport(handler)
+
+
 def seed_game(session_factory, rows=GAME_ROWS, release: datetime = datetime(2020, 9, 28)) -> None:
     with session_factory.begin() as s:
         for cid, name, slug, rarity, element, weapon, icon in rows:
@@ -78,7 +95,7 @@ from app.main import create_app  # noqa: E402
 
 
 def make_client(paths, source=None, accounts=None, transport=None,
-                wish_link_reader=None, wish_page_factory=None) -> TestClient:
+                wish_link_reader=None, wish_page_factory=None, offline: bool = True) -> TestClient:
     """`accounts`: list[Account] to return, or an Exception to raise, from the account lookup."""
     http = httpx.AsyncClient(transport=transport or httpx.MockTransport(lambda r: httpx.Response(404)))
 
@@ -88,7 +105,7 @@ def make_client(paths, source=None, accounts=None, transport=None,
         return list(accounts or [])
 
     app = create_app(paths, source_factory=lambda: source, accounts_fetcher=fetch_accounts,
-                     http_client=http, offline=True,
+                     http_client=http, offline=offline,
                      wish_link_reader=wish_link_reader, wish_page_factory=wish_page_factory)
     return TestClient(app)
 

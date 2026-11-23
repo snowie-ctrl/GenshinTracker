@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import (ChallengeRun, CharacterGoal, GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
+from app.db.models import (ChallengeRun, CharacterGoal, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
@@ -82,6 +82,32 @@ def demo_wishes(start_local: str) -> list[IncomingWish]:
     return out
 
 
+def _seg(text: str) -> list[list[dict]]:
+    return [[{"text": text, "color": None, "italic": False}]]
+
+
+def demo_kit(name: str) -> dict:
+    """Made-up kit so the offline e2e server never calls Yatta (sub-project 5)."""
+    def scale(label: str) -> dict:
+        return {"label": label, "values": [f"{10 + n}.0%" for n in range(15)]}
+    talents = [
+        {"name": f"{name} Strike", "icon": "Skill_A_01", "role": "normal", "cooldown": None, "cost": None,
+         "description": _seg("Demo normal attack text."), "scaling": [scale("1-Hit DMG")]},
+        {"name": f"{name} Skill", "icon": "Skill_S_Furina_01", "role": "skill", "cooldown": 10.0, "cost": None,
+         "description": [[{"text": "Deals ", "color": None, "italic": False},
+                          {"text": "demo DMG", "color": "#80C0FF", "italic": False}]],
+         "scaling": [scale("Skill DMG")]},
+        {"name": f"{name} Burst", "icon": "Skill_E_Furina_01", "role": "burst", "cooldown": 15.0, "cost": 60,
+         "description": _seg("Demo burst text."), "scaling": [scale("Burst DMG")]},
+    ]
+    passives = [{"name": f"{name} Passive {n}", "icon": "UI_Talent_S_Furina_05", "description": _seg("Demo passive.")}
+                for n in (1, 2, 3)]
+    raises = {3: "skill", 5: "burst"}
+    constellations = [{"index": n, "name": f"{name} C{n}", "icon": "UI_Talent_S_Furina_01",
+                       "description": _seg(f"Demo constellation {n}."), "raises": raises.get(n)} for n in range(1, 7)]
+    return {"v": 1, "talents": talents, "passives": passives, "constellations": constellations}
+
+
 def seed(root: Path) -> None:
     paths = Paths(root)
     paths.ensure()
@@ -97,6 +123,8 @@ def seed(root: Path) -> None:
                                 weapon_type=weapon, region=None, icon=icon,
                                 splash=icon.replace("UI_AvatarIcon_", "UI_Gacha_AvatarImg_"),
                                 release_at=datetime(2020, 9, 28)))
+        for cid, name, *_rest in CHARACTERS:
+            s.add(GameCharacterKit(character_id=cid, data=demo_kit(name), fetched_at=now))
         s.merge(GameMeta(key="characters_fetched_at", value=iso(now)))
         s.merge(GameMeta(key="map_embed_hoyolab", value={"allowed": False, "checked_at": iso(now)}))
         s.merge(GameMeta(key="map_embed_appsample", value={"allowed": True, "checked_at": iso(now)}))

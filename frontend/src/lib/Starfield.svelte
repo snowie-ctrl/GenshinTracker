@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { LAYERS, TILE, backgroundAnimated, makeStars, starTile } from './starfield';
+	import { LAYERS, TILE, backgroundAnimated, layerColors, makeStars, nebula, starTile } from './starfield';
 
-	let { animated }: { animated: boolean } = $props();
+	let { animated, tint = null }: { animated: boolean; tint?: string | null } = $props();
 
 	let reducedMotion = $state(false);
 	const moving = $derived(backgroundAnimated(animated, reducedMotion));
-	const tiles = LAYERS.map((l) => ({ ...l, image: starTile(makeStars(l.seed, l.count, l.r[0], l.r[1]), l.color) }));
+	const stars = LAYERS.map((l) => makeStars(l.seed, l.count, l.r[0], l.r[1]));
+	const tiles = $derived(
+		layerColors(tint).map((color, i) => ({ ...LAYERS[i], image: starTile(stars[i], color) }))
+	);
 
 	onMount(() => {
 		const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -17,9 +20,9 @@
 	});
 </script>
 
-<div class="starfield" class:paused={!moving} data-testid="starfield" data-animated={String(moving)} aria-hidden="true"
-	style="--tile-w: {TILE.w}px; --tile-h: {TILE.h}px">
-	<div class="nebula"></div>
+<div class="starfield" class:paused={!moving} data-testid="starfield" data-animated={String(moving)}
+	data-tint={tint ?? ''} aria-hidden="true" style="--tile-w: {TILE.w}px; --tile-h: {TILE.h}px">
+	<div class="nebula" style="background: {nebula(tint)}"></div>
 	{#each tiles as t (t.seed)}
 		<div class="dust" style="background-image: {t.image}; animation-duration: {t.seconds}s"></div>
 	{/each}
@@ -29,9 +32,6 @@
 	.starfield { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--bg); }
 	.nebula {
 		position: absolute; inset: -20%;
-		background:
-			radial-gradient(ellipse 50% 35% at 70% 30%, rgba(59, 47, 107, 0.25), transparent 70%),
-			radial-gradient(ellipse 45% 45% at 20% 75%, rgba(29, 74, 107, 0.25), transparent 70%);
 	}
 	.dust {
 		position: absolute; top: 0; left: 0;

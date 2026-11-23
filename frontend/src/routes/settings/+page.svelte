@@ -2,9 +2,8 @@
 	import { onDestroy } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
 	import { sync } from '$lib/sync.svelte';
-	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import { timeAgo } from '$lib/time';
-	import type { Account, CacheStatus, MapKey, Settings, SyncRun, Targets } from '$lib/types';
+	import type { Account, CacheStatus, MapKey, Settings, SyncRun } from '$lib/types';
 	import { noteTimer } from '$lib/note';
 	import { cacheStatusLabel } from '$lib/wishes';
 	import GoodImportButton from '$lib/GoodImportButton.svelte';
@@ -16,7 +15,6 @@
 		{ id: 'account', label: 'Account' },
 		{ id: 'sync-data', label: 'Sync & data' },
 		{ id: 'appearance', label: 'Appearance' },
-		{ id: 'planner', label: 'Planner' },
 		{ id: 'wishes', label: 'Wishes' },
 		{ id: 'map', label: 'Map' }
 	];
@@ -193,14 +191,6 @@
 		}
 	}
 
-	async function saveTargets(t: Targets) {
-		try {
-			settings = await api.saveSettings({ default_targets: t });
-		} catch (e) {
-			error = errorMessage(e);
-		}
-	}
-
 	async function refreshGamedata() {
 		refreshing = true;
 		try {
@@ -358,14 +348,6 @@
 					<p class="muted">Shown in the Dashboard greeting. Leave blank for “Traveler”. Kept on this computer only.</p>
 					{#if displayNameNote}<span class="muted" data-testid="display-name-note">{displayNameNote}</span>{/if}
 					{#if appearanceNote}<span class="error" data-testid="appearance-note">{appearanceNote}</span>{/if}
-				</div>
-			</section>
-			<section class="panel group" id="planner" aria-labelledby="h-planner">
-				<h2 id="h-planner">Planner</h2>
-				<div class="sub">
-					<h3>Default build targets</h3>
-						<p class="muted">Used when you set a character to Build for the first time.</p>
-						<TargetsEditor targets={settings.default_targets} levelCaps={settings.level_caps} onchange={saveTargets} />
 				</div>
 			</section>
 			<section class="panel group" id="wishes" aria-labelledby="h-wishes">

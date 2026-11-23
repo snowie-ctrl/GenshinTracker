@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ELEMENTS } from './status';
-import { ELEMENT_STYLE, RARITY_STYLE, elementStyle } from './elements';
+import { ELEMENT_HEX, ELEMENT_STYLE, RARITY_STYLE, elementHex, elementStyle } from './elements';
 
 describe('elements', () => {
 	it('styles every element with a colour token and its icon', () => {
@@ -18,5 +18,14 @@ describe('elements', () => {
 	it('gives 5★ gold with dark text and 4★ purple with white text', () => {
 		expect(RARITY_STYLE[5]).toEqual({ color: 'var(--rarity-5)', ink: '#17130b' });
 		expect(RARITY_STYLE[4]).toEqual({ color: 'var(--rarity-4)', ink: '#ffffff' });
+	});
+});
+
+describe('elementHex', () => {
+	it('maps every element to a hex colour and unknowns to null', () => {
+		expect(Object.keys(ELEMENT_HEX).sort()).toEqual(['Anemo', 'Cryo', 'Dendro', 'Electro', 'Geo', 'Hydro', 'Pyro']);
+		expect(elementHex('Hydro')).toBe('#4cc2f1');
+		expect(elementHex(null)).toBeNull();
+		expect(elementHex('Light')).toBeNull();
 	});
 });

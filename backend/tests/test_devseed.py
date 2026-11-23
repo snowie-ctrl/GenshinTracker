@@ -98,3 +98,20 @@ def test_devseed_calendar(tmp_path):
     assert [e["id"] for e in body["events"]][:2] and body["events_left"]["primogems"] == 480
     assert body["banners"]["current"][0]["name"] == "Tide of Furina"
     assert body["banners"]["current"][0]["pulls"] is not None
+
+
+def test_devseed_stores_a_kit_per_character(tmp_path):
+    from app.config import Paths
+    from app.db.engine import make_engine, make_session_factory
+    from app.db.models import GameCharacter, GameCharacterKit
+    from app.devseed import seed
+    seed(tmp_path)
+    engine = make_engine(Paths(tmp_path).db_file)
+    with make_session_factory(engine)() as s:
+        chars = s.query(GameCharacter).count()
+        kits = s.query(GameCharacterKit).all()
+        assert len(kits) == chars
+        k = kits[0].data
+        assert [t["role"] for t in k["talents"]] == ["normal", "skill", "burst"]
+        assert len(k["constellations"]) == 6 and k["constellations"][2]["raises"] == "skill"
+    engine.dispose()

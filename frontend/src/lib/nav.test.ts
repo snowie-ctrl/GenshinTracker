@@ -29,7 +29,9 @@ describe('isWide', () => {
 	it('covers Characters and Teams but not character detail', () => {
 		expect(isWide('/characters')).toBe(true);
 		expect(isWide('/teams')).toBe(true);
-		expect(isWide('/characters/bennett')).toBe(false);
+		expect(isWide('/characters/bennett')).toBe(true);
+		expect(isWide('/characters/bennett/guide')).toBe(true);
+		expect(isWide('/charactersx')).toBe(false);
 		expect(isWide('/inventory')).toBe(false);
 	});
 });

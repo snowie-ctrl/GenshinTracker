@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
 import httpx
@@ -24,6 +25,7 @@ class AppContext:
     sync: SyncManager
     wishes: WishImporter
     accounts_fetcher: Callable[[dict[str, str]], Awaitable[list[Account]]]
+    kit_locks: dict[int, asyncio.Lock] = field(default_factory=dict)
 
 
 def get_ctx(request: Request) -> AppContext:

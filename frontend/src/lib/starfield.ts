@@ -43,3 +43,17 @@ export const LAYERS: { seed: number; count: number; r: [number, number]; color: 
 	{ seed: 23, count: 110, r: [0.7, 1.1], color: '#dbe7ff', seconds: 55 },
 	{ seed: 37, count: 40, r: [1.1, 1.6], color: '#ffeccc', seconds: 35 }
 ];
+
+/** Layer colours: the fine far layer stays white; the two nearer layers take the tint (sub-project 5). */
+export function layerColors(tint: string | null): string[] {
+	return LAYERS.map((l, i) => (tint && i > 0 ? tint : l.color));
+}
+
+export function nebula(tint: string | null): string {
+	if (!tint) {
+		return 'radial-gradient(ellipse 50% 35% at 70% 30%, rgba(59, 47, 107, 0.25), transparent 70%), ' +
+			'radial-gradient(ellipse 45% 45% at 20% 75%, rgba(29, 74, 107, 0.25), transparent 70%)';
+	}
+	return `radial-gradient(ellipse 50% 35% at 70% 30%, ${tint}33, transparent 70%), ` +
+		`radial-gradient(ellipse 45% 45% at 20% 75%, ${tint}26, transparent 70%)`;
+}
