@@ -5,8 +5,8 @@
 	import { MAX_MEMBERS, slantInset } from './teams';
 	import type { GapStatus, Team, TeamMember } from './types';
 
-	let { team, gaps, connected, now, reorderable, first, last, onMove, onOpen, onBuild, onBuildAgain }: {
-		team: Team; gaps: GapStatus; connected: boolean; now: number; reorderable: boolean; first: boolean; last: boolean;
+	let { team, gaps, connected, now, reorderable, first, last, buildBusy = false, onMove, onOpen, onBuild, onBuildAgain }: {
+		team: Team; gaps: GapStatus; connected: boolean; now: number; reorderable: boolean; first: boolean; last: boolean; buildBusy?: boolean;
 		onMove: (delta: -1 | 1) => void; onOpen: () => void; onBuild: (on: boolean) => void; onBuildAgain: (m: TeamMember) => void;
 	} = $props();
 
@@ -27,7 +27,7 @@
 			<TeamRibbon member={m} {onBuildAgain} />
 		{/each}
 		<div class="side">
-			<TeamInfo {team} {gaps} {connected} {drawerOpen} {onBuild} onToggleDrawer={() => (drawerOpen = !drawerOpen)} />
+			<TeamInfo {team} {gaps} {connected} {drawerOpen} {buildBusy} {onBuild} onToggleDrawer={() => (drawerOpen = !drawerOpen)} />
 			<button type="button" class="edit" onclick={onOpen} aria-label="Edit {team.name}">Edit</button>
 		</div>
 		<div class="arrows">
@@ -49,7 +49,9 @@
 		opacity: 0; transition: opacity 0.12s; }
 	.team:hover .arrows, .team:focus-within .arrows { opacity: 1; }
 	.arrows button { width: 26px; height: 26px; border-radius: 50%; padding: 0; }
-	@media (max-width: 1100px) {
+	/* Below this width five columns leave each ribbon too narrow for its info lines (about 165px at 1101px),
+	   so the team info moves under the ribbons and the four ribbons share the full row. */
+	@media (max-width: 1400px) {
 		.row { grid-template-columns: repeat(4, 1fr); height: auto; padding: 0 60px; }
 		.row > :global(.rib) { height: var(--row-h); }
 		.side { grid-column: 1 / -1; padding: 12px 0; }

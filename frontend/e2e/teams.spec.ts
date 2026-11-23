@@ -1,46 +1,97 @@
 import { expect, test } from '@playwright/test';
 
 test('create a Build team in the popup, then switch Build off from the row', async ({ page }) => {
+	try {
+		await page.goto('/teams');
+		await page.getByTestId('new-team').click();
+		await expect(page).toHaveURL(/\/teams\?edit=new$/);
+		const dialog = page.getByRole('dialog');
+		await dialog.getByLabel('Team name').fill('Dendro test');
+		await dialog.getByTestId('pick-nahida').click();
+		await expect(dialog.getByTestId('slot-0')).toContainText('Nahida');
+		await dialog.getByRole('switch', { name: 'Build' }).click();
+		await expect(dialog.getByText('Saving raises Nahida to Build')).toBeVisible();
+		await dialog.getByLabel('Add tag').fill('dendro');
+		await dialog.getByLabel('Add tag').press('Enter');
+		await dialog.getByRole('button', { name: 'Save' }).click();
+
+		await expect(page).toHaveURL(/\/teams$/);
+		await expect(page.getByText('Raised 1 character to Build')).toBeVisible();
+		const row = page.locator('article', { hasText: 'Dendro test' });
+		await expect(row).toBeVisible();
+		await page.getByTestId('tag-filter').getByRole('button', { name: 'dendro' }).click();
+		await expect(page.locator('article')).toHaveCount(1);
+		await page.getByTestId('tag-filter').getByRole('button', { name: 'All' }).click();
+
+		await page.goto('/characters');
+		await expect(page.getByTestId('section-building').getByTestId('card-nahida')).toBeVisible();
+
+		await page.goto('/teams');
+		page.once('dialog', (d) => d.accept());               // "Turn off Build? This moves Nahida off Build."
+		await row.getByRole('switch', { name: 'Build' }).click();
+		await expect(page.getByText('Moved 1 character off Build')).toBeVisible();
+		await page.goto('/characters');
+		await expect(page.getByTestId('section-obtained').getByTestId('card-nahida')).toBeVisible();
+
+		// Deleting from the popup: the row is gone, so focus lands on New team.
+		await page.goto('/teams');
+		await row.getByRole('button', { name: 'Edit Dendro test' }).click();
+		page.once('dialog', (d) => d.accept());
+		await page.getByRole('dialog').getByRole('button', { name: 'Delete team' }).click();
+		await expect(page.locator('article', { hasText: 'Dendro test' })).toHaveCount(0);
+		await expect(page.getByTestId('new-team')).toBeFocused();
+	} finally {
+		// Restore through the API whatever the test got to: the team, its tag, and Nahida's goal.
+		// (The seed has no goal row for Nahida; the API cannot remove one, so she goes back to goal "none".)
+		const { teams } = await (await page.request.get('/api/teams')).json();
+		for (const t of teams.filter((x: { name: string }) => x.name === 'Dendro test')) await page.request.delete(`/api/teams/${t.id}`);
+		const tags = await (await page.request.get('/api/tags')).json();
+		const dendro = tags.find((t: { name: string }) => t.name === 'dendro');
+		if (dendro) await page.request.delete(`/api/tags/${dendro.id}`);
+		const chars = await (await page.request.get('/api/characters')).json();
+		const nahida = chars.find((c: { slug: string | null }) => c.slug === 'nahida');
+		if (nahida && nahida.goal !== 'none') await page.request.put(`/api/characters/${nahida.id}/goal`, { data: { goal: 'none' } });
+	}
+});
+
+test('focus goes to the row when the popup was opened from a ribbon or a link', async ({ page }) => {
 	await page.goto('/teams');
-	await page.getByTestId('new-team').click();
-	await expect(page).toHaveURL(/\/teams\?edit=new$/);
-	const dialog = page.getByRole('dialog');
-	await dialog.getByLabel('Team name').fill('Dendro test');
-	await dialog.getByTestId('pick-nahida').click();
-	await expect(dialog.getByTestId('slot-0')).toContainText('Nahida');
-	await dialog.getByRole('switch', { name: 'Build' }).click();
-	await expect(dialog.getByText('Saving raises Nahida to Build')).toBeVisible();
-	await dialog.getByLabel('Add tag').fill('dendro');
-	await dialog.getByLabel('Add tag').press('Enter');
-	await dialog.getByRole('button', { name: 'Save' }).click();
+	await page.getByTestId('team-2').locator('.rib').first().click();
+	await expect(page).toHaveURL(/\/teams\?edit=2$/);
+	await expect(page.getByRole('dialog').getByLabel('Team name')).toHaveValue('Archons only');
+	await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Edit Archons only' })).toBeFocused();
 
-	await expect(page).toHaveURL(/\/teams$/);
-	await expect(page.getByText('Raised 1 character to Build')).toBeVisible();
-	const row = page.locator('article', { hasText: 'Dendro test' });
-	await expect(row).toBeVisible();
-	await page.getByTestId('tag-filter').getByRole('button', { name: 'dendro' }).click();
-	await expect(page.locator('article')).toHaveCount(1);
-	await page.getByTestId('tag-filter').getByRole('button', { name: 'All' }).click();
+	await page.goto('/teams?edit=new');
+	await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByTestId('new-team')).toBeFocused();
+});
 
-	await page.goto('/characters');
-	await expect(page.getByTestId('section-building').getByTestId('card-nahida')).toBeVisible();
-
+test('the Build switch ignores clicks while its request is in flight', async ({ page }) => {
+	let calls = 0;
+	let release: () => void = () => {};
+	const held = new Promise<void>((r) => (release = r));
+	// The request fails on purpose, so nothing on the server changes and the switch goes back.
+	await page.route('**/api/teams/2/build', async (route) => {
+		calls++;
+		await held;
+		await route.fulfill({ status: 500, json: { detail: 'held for test' } });
+	});
 	await page.goto('/teams');
-	page.once('dialog', (d) => d.accept());               // "Turn off Build? This moves Nahida off Build."
-	await row.getByRole('switch', { name: 'Build' }).click();
-	await expect(page.getByText('Moved 1 character off Build')).toBeVisible();
-	await page.goto('/characters');
-	await expect(page.getByTestId('section-obtained').getByTestId('card-nahida')).toBeVisible();
-
-	// restore: delete the team and its tag
-	await page.goto('/teams');
-	await row.getByRole('button', { name: 'Edit Dendro test' }).click();
-	page.once('dialog', (d) => d.accept());
-	await page.getByRole('dialog').getByRole('button', { name: 'Delete team' }).click();
-	await expect(page.locator('article', { hasText: 'Dendro test' })).toHaveCount(0);
-	const tags = await (await page.request.get('/api/tags')).json();
-	const dendro = tags.find((t: { name: string }) => t.name === 'dendro');
-	if (dendro) await page.request.delete(`/api/tags/${dendro.id}`);
+	const sw = page.getByTestId('build-switch-2');
+	await expect(sw).toHaveAttribute('aria-checked', 'false');
+	await sw.click();
+	await expect(sw).toHaveAttribute('aria-checked', 'true');
+	await expect(sw).toHaveAttribute('aria-disabled', 'true');
+	await sw.click({ force: true });                        // ignored: the first request is still in flight
+	await expect(sw).toHaveAttribute('aria-checked', 'true');
+	release();
+	await expect(page.getByText('Could not change Build for Archons only')).toBeVisible();
+	await expect(sw).toHaveAttribute('aria-checked', 'false');
+	await expect(sw).toHaveAttribute('aria-disabled', 'false');
+	expect(calls).toBe(1);
 });
 
 test('ribbons grey out unowned members; the shortfall drawer opens', async ({ page }) => {

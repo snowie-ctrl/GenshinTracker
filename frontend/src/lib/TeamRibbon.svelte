@@ -64,10 +64,13 @@
 	.shade { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--info-h) + 30px);
 		background: linear-gradient(180deg, transparent, rgba(6, 8, 16, 0.92) 30%); }
 	.dim { color: var(--muted); }
-	.nm { font-weight: 700; font-size: 14px; display: flex; gap: 5px; align-items: center; white-space: nowrap; }
-	.nm span:first-of-type { overflow: hidden; text-overflow: ellipsis; }
+	.nm { font-weight: 700; font-size: 14px; display: flex; gap: 5px; align-items: center; }
+	/* A long name takes a second line before it gives way to an ellipsis. */
+	.nm span:first-of-type { min-width: 0; overflow: hidden; overflow-wrap: anywhere;
+		display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+	.nm span:not(:first-of-type) { white-space: nowrap; }
 	.nm img { width: 16px; height: 16px; }
-	.line { display: flex; gap: 6px; align-items: center; margin-top: 3px; white-space: nowrap; }
+	.line { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: center; margin-top: 3px; white-space: nowrap; }
 	.crown { color: var(--gold); font-weight: 700; }
 	.wp { width: 24px; height: 24px; }
 	.set { position: relative; width: 24px; height: 24px; }

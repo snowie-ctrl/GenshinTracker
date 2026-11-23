@@ -3,8 +3,8 @@
 	import { farmRows } from './teams';
 	import type { GapStatus, Team } from './types';
 
-	let { team, gaps, connected, drawerOpen, onBuild, onToggleDrawer }: {
-		team: Team; gaps: GapStatus; connected: boolean; drawerOpen: boolean;
+	let { team, gaps, connected, drawerOpen, buildBusy = false, onBuild, onToggleDrawer }: {
+		team: Team; gaps: GapStatus; connected: boolean; drawerOpen: boolean; buildBusy?: boolean;
 		onBuild: (on: boolean) => void; onToggleDrawer: () => void;
 	} = $props();
 
@@ -24,7 +24,7 @@
 	<h2>{team.name}</h2>
 	<label class="sw-row">
 		<button type="button" role="switch" aria-checked={team.has_build_tag} aria-label="Build" class="sw" class:on={team.has_build_tag}
-			data-testid="build-switch-{team.id}" onclick={(e) => { e.stopPropagation(); onBuild(!team.has_build_tag); }}></button>
+			aria-disabled={buildBusy} aria-busy={buildBusy} data-testid="build-switch-{team.id}" onclick={(e) => { e.stopPropagation(); if (!buildBusy) onBuild(!team.has_build_tag); }}></button>
 		Build
 	</label>
 	<div class="tags">{#each team.tags.filter((t) => !t.builtin) as t (t.id)}<TagChip tag={t} />{/each}</div>
@@ -44,6 +44,7 @@
 	.sw { width: 32px; height: 18px; border-radius: 9px; padding: 0; border: 1px solid var(--glass-border); background: #3a3f50; position: relative; cursor: pointer; }
 	.sw::after { content: ''; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--cream); transition: left 0.12s; }
 	.sw.on { background: var(--gold); }
+	.sw[aria-disabled='true'] { cursor: progress; opacity: 0.7; }
 	.sw.on::after { left: 16px; background: #17130b; }
 	.tags { display: flex; flex-wrap: wrap; gap: 4px; }
 	.notes { margin: 0; font-size: 12px; color: var(--cream-dim, #b9ad95); white-space: pre-wrap; overflow: hidden;

@@ -204,3 +204,25 @@ def test_build_endpoint_noop(paths):
         r = client.put(f"/api/teams/{tid}/build", json={"on": False}).json()
         assert (r["raised"], r["lowered"]) == ([], [])
         assert client.put("/api/teams/999/build", json={"on": True}).status_code == 404
+
+
+def test_noop_build_switch_and_noop_save_schedule_no_gaps(paths):
+    """Spec §11: gaps are scheduled only when a goal changed."""
+    setup(paths)                                               # Bennett is already Build
+    with make_client(paths) as client:
+        sync = client.app.state.ctx.sync
+        built = client.post("/api/teams", json=body(members=(BEN,), tags=(1,))).json()
+        assert (built["raised"], built["lowered"]) == ([], []) and not sync.gaps_pending
+        tid = built["team"]["id"]
+        on = client.put(f"/api/teams/{tid}/build", json={"on": True}).json()        # already on
+        assert (on["raised"], on["lowered"]) == ([], []) and not sync.gaps_pending
+        plain = client.post("/api/teams", json=body(members=(XL,), name="Plain")).json()["team"]["id"]
+        off = client.put(f"/api/teams/{plain}/build", json={"on": False}).json()     # already off
+        assert (off["raised"], off["lowered"]) == ([], []) and not sync.gaps_pending
+        # Saves that raise and lower nothing: rename + role on the Build team, add a member to a team without Build.
+        r = client.put(f"/api/teams/{tid}", json=body(members=(BEN,), tags=(1,), name="Renamed", roles={BEN: "battery"})).json()
+        assert (r["raised"], r["lowered"]) == ([], []) and not sync.gaps_pending
+        r = client.put(f"/api/teams/{plain}", json=body(members=(XL, NAH), name="Plain")).json()
+        assert (r["raised"], r["lowered"]) == ([], []) and not sync.gaps_pending
+        # Control: a real change does schedule.
+        assert client.put(f"/api/teams/{plain}/build", json={"on": True}).json()["raised"] and sync.gaps_pending

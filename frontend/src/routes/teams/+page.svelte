@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { api, errorMessage } from '$lib/api';
@@ -24,6 +24,9 @@
 	let filter = $state<TeamFilter>(loadTeamFilter());
 	let showTags = $state(false);
 	let now = $state(Date.now());
+	// Build switches with a request in flight, and the value each was switched to.
+	let buildPending = $state<Record<number, boolean>>({});
+	let loadSeq = 0;
 	const shown = $derived(data ? filterTeams(data.teams, filter) : []);
 	// Moving a team among a filtered subset would shuffle hidden teams in surprising ways.
 	const canReorder = $derived(!filterActive(filter));
@@ -42,13 +45,18 @@
 	});
 
 	async function load() {
+		const seq = ++loadSeq;
 		try {
-			[data, tags] = await Promise.all([api.teams(), api.tags()]);
+			const [d, t] = await Promise.all([api.teams(), api.tags()]);
+			if (seq !== loadSeq) return;   // a newer load started meanwhile (e.g. after a Build change); this one is stale
+			// A poll that lands while a Build request is in flight keeps the switched value until the request ends.
+			data = { ...d, teams: d.teams.map((x) => (x.id in buildPending ? { ...x, has_build_tag: buildPending[x.id] } : x)) };
+			tags = t;
 			const pruned = pruneTeamFilter(filter, tags.map((t) => t.id));
 			if (pruned !== filter) setFilter(pruned);
 			error = null;
 		} catch (e) {
-			error = errorMessage(e);
+			if (seq === loadSeq) error = errorMessage(e);
 		}
 	}
 
@@ -82,31 +90,51 @@
 		void goto(`/teams?edit=${id}`, { noScroll: true, keepFocus: true });
 	}
 
-	function closeEditor() {
-		void goto('/teams', { noScroll: true, keepFocus: true });
+	/** The closed dialog gives focus back to whatever opened it. When that was nothing focusable (a click on a
+	 *  ribbon, a direct ?edit= link) or it is gone (a deleted team's row), focus the row's Edit button,
+	 *  else the New team button. */
+	async function settleFocus(id: number | null) {
+		await tick();
+		const a = document.activeElement;
+		if (a && a !== document.body && a.isConnected) return;
+		const row = id === null ? null : document.querySelector<HTMLElement>(`#team-${id} button.edit`);
+		(row ?? document.querySelector<HTMLElement>('[data-testid="new-team"]'))?.focus();
+	}
+
+	async function closeEditor() {
+		const id = editId ?? null;
+		await goto('/teams', { noScroll: true, keepFocus: true });
+		await settleFocus(id);
 	}
 
 	async function editorDone(message: string) {
+		const id = editId ?? null;
 		notice = message;
 		await goto('/teams', { noScroll: true, keepFocus: true });   // keep the focus the closed dialog gave back
 		await load();
+		await settleFocus(id);
 	}
 
 	async function setBuild(team: Team, on: boolean) {
-		if (!data) return;
+		if (!data || team.id in buildPending) return;   // one request per switch at a time
 		if (!on) {
 			const names = willLower(data.teams, memberLookup(data.teams), team.id, { memberIds: team.members.map((m) => m.id), hasBuild: false });
 			if (names.length && !confirm(`Turn off Build? This moves ${names.join(', ')} off Build.`)) return;
 		}
-		const before = data.teams;
-		data = { ...data, teams: data.teams.map((t) => (t.id === team.id ? { ...t, has_build_tag: on } : t)) };
+		const flip = (value: boolean) => {
+			if (data) data = { ...data, teams: data.teams.map((t) => (t.id === team.id ? { ...t, has_build_tag: value } : t)) };
+		};
+		buildPending[team.id] = on;
+		flip(on);
 		try {
 			const r = await api.setTeamBuild(team.id, on);
 			const msg = changeMessage('', r.raised, r.lowered);
 			if (msg) notice = msg;
+			delete buildPending[team.id];
 			await load();
 		} catch (e) {
-			if (data) data = { ...data, teams: before };
+			delete buildPending[team.id];
+			flip(!on);
 			toast = `Could not change Build for ${team.name}: ${errorMessage(e)}`;
 		}
 	}
@@ -157,7 +185,7 @@
 		<TeamRow {team} gaps={data.gaps} connected={data.connected} {now} reorderable={canReorder}
 			first={indexOf(team.id) === 0} last={indexOf(team.id) === data.teams.length - 1}
 			onMove={(d) => reorderTo(indexOf(team.id), indexOf(team.id) + d)} onOpen={() => openEditor(team.id)}
-			onBuild={(on) => setBuild(team, on)} onBuildAgain={buildAgain} />
+			buildBusy={team.id in buildPending} onBuild={(on) => setBuild(team, on)} onBuildAgain={buildAgain} />
 	{/each}
 {:else if !error}
 	<p class="muted">Loading…</p>
