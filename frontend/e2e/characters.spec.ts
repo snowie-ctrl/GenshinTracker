@@ -66,3 +66,13 @@ test('Traveler element card: unlock another element', async ({ page }) => {
 	await expect(page.getByRole('heading', { name: 'Current' })).toBeVisible();
 	await expect(page.getByText('Lv 90 · C0')).toBeVisible();
 });
+
+test('Traveler element card: out-of-range talent snaps back to the saved value', async ({ page }) => {
+	await page.goto('/characters/anemo-traveler');
+	await page.getByRole('checkbox', { name: 'Unlocked' }).check();
+	await expect(page.getByRole('heading', { name: 'Current' })).toBeVisible();
+	const normal = page.getByRole('spinbutton', { name: 'Normal attack' });
+	await normal.fill('15');
+	await normal.blur();
+	await expect(normal).toHaveValue('10');
+});
