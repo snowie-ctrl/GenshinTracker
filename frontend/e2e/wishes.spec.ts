@@ -22,7 +22,7 @@ test('history rarity filter shows only 5★ rows', async ({ page }) => {
 	for (const row of await page.getByTestId('history-row').all()) await expect(row).toContainText('5★');
 });
 
-test('dashboard shows the pity card', async ({ page }) => {
+test('dashboard shows pity on the live character banner', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByTestId('pity-card')).toContainText('Character 2/90 · 50/50');
+	await expect(page.getByTestId('dash-banners')).toContainText('Pity 2/90 · 50/50');
 });

@@ -73,3 +73,18 @@ test('display name saves and trims', async ({ page }) => {
 	await input.blur();
 	await expect(input).toHaveValue('');
 });
+
+test('display name shows in the greeting', async ({ page }) => {
+	await page.goto('/settings');
+	const input = page.getByTestId('display-name');
+	await input.fill('Paimon');
+	await input.blur();
+	await expect(page.getByTestId('display-name-note')).toHaveText('Saved');
+	await page.goto('/');
+	await expect(page.getByTestId('greeting')).toContainText(', Paimon');
+	await page.goto('/settings');
+	await page.getByTestId('display-name').fill('');
+	await page.getByTestId('display-name').blur();
+	await expect(page.getByTestId('display-name-note')).toHaveText('Saved');
+	await expect(page.getByTestId('display-name')).toHaveValue('');
+});

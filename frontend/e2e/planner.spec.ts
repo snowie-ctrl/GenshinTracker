@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('dashboard shows active domains and a weekly boss that can be ticked', async ({ page }) => {
 	await page.goto('/');
-	const today = page.getByTestId('farm-today');
+	const today = page.getByTestId('domains');
 	await expect(today.getByText('Domain of Mastery: Forsaken Rift', { exact: true })).toBeVisible();
 	const boss = page.getByTestId('boss-Stormterror');
 	await expect(boss).toBeVisible();
