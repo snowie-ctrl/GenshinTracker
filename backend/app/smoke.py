@@ -46,7 +46,7 @@ async def gaps(source: GenshinPySource) -> None:
     print(f"build characters: {len(inputs)} ({len(work)} with work), skipped: {skipped}")
     if not work:
         sys.exit("Set at least one owned character to Build with targets above current, then rerun.")
-    talent_ids = {i.character_id: await source.get_talent_ids(i.character_id) for i in work}
+    talent_ids = {i.character_id: await source.get_talent_ids(i.avatar_id, i.element_attr_id) for i in work}
     print("check 0 (talent ids):", {k: (v.normal, v.skill, v.burst) for k, v in talent_ids.items()})
     requests = gap_requests(work, talent_ids)
     print(f"check 2 (character limit): sending {len(requests)} characters in one request")
