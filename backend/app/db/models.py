@@ -1,7 +1,7 @@
 """SQLite tables. Three categories: game data, account data (overwritten by sync), user data."""
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -332,6 +332,21 @@ class EventDone(Base):
     __tablename__ = "event_done"
     event_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     done_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class EventLog(Base):
+    """Every event and event wish the announcement feed (or calendar) has shown; pruned 90 days after its end."""
+    __tablename__ = "event_log"
+    key: Mapped[str] = mapped_column(String, primary_key=True)          # ann:<ann_id> | cal:<calendar id>
+    kind: Mapped[str] = mapped_column(String)                           # event | wish:<pool>
+    name: Mapped[str] = mapped_column(String)
+    start: Mapped[str | None] = mapped_column(String, nullable=True)    # UTC ISO
+    end: Mapped[str | None] = mapped_column(String, nullable=True)
+    image: Mapped[str | None] = mapped_column(String, nullable=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    calendar_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    first_seen: Mapped[datetime] = mapped_column(DateTime)
+    last_seen: Mapped[datetime] = mapped_column(DateTime)
 
 
 # --- GOOD import (user data; sync never writes these) -----------------------
