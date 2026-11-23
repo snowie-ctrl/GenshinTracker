@@ -19,6 +19,14 @@ def sf_for(paths):
     return make_session_factory(engine)
 
 
+def mark_calculated(sf):
+    """A successful gap run whose snapshot matches the current goals: Build characters count as calculated."""
+    from app.planner.requests import snapshot
+    with sf.begin() as s:
+        s.merge(GapRun(id=1, ok=True, error=None, skipped=[], computed_at=datetime(2026, 11, 21),
+                       snapshot=snapshot(s)))
+
+
 def setup(paths, catalogue=True):
     sf = sf_for(paths)
     seed_game(sf)
@@ -73,13 +81,14 @@ def test_inventory_without_catalogue_shows_other(paths):
 
 
 def test_dashboard_planner_sections(paths):
-    setup(paths)
+    sf = setup(paths)
+    mark_calculated(sf)
     with make_client(paths) as client:
         body = client.get("/api/dashboard").json()
-    assert body["farm_today"]["domains"][0]["name"] == "Domain of Mastery: Forsaken Rift"
+    assert body["domains_by_day"]["0"]["domains"][0]["name"] == "Domain of Mastery: Forsaken Rift"
     boss = body["weekly_bosses"]["bosses"][0]
     assert boss["name"] == "Stormterror" and boss["done"] is False
-    card = body["building_cards"][0]
+    card = body["builds"][0]
     assert card["character"]["name"] == "Bennett" and {m["id"] for m in card["materials"]} == {104302, 113003}
     assert "gaps" in body
 
@@ -146,7 +155,7 @@ def test_goal_change_schedules_gaps_run(paths):
 def test_calculated_flag_on_cards_and_detail(paths):
     sf = setup(paths)
     with make_client(paths) as client:
-        assert client.get("/api/dashboard").json()["building_cards"][0]["calculated"] is False   # no gap run yet
+        assert client.get("/api/dashboard").json()["builds"][0]["calculated"] is False   # no gap run yet
         shortfall = client.get("/api/characters/bennett").json()["shortfall"]
         assert shortfall["calculated"] is False
         assert {m["category_label"] for m in shortfall["materials"]} == {"Talent books", "Weekly boss drops"}
@@ -154,7 +163,7 @@ def test_calculated_flag_on_cards_and_detail(paths):
         s.add(GapRun(id=1, computed_at=datetime(2026, 11, 19, 12), ok=True, error=None, skipped=[],
                      snapshot=[[10000032, 90, 8, 8, 8, 90, None]]))
     with make_client(paths) as client:
-        assert client.get("/api/dashboard").json()["building_cards"][0]["calculated"] is True
+        assert client.get("/api/dashboard").json()["builds"][0]["calculated"] is True
         assert client.get("/api/characters/bennett").json()["shortfall"]["calculated"] is True
 
 

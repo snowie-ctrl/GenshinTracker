@@ -31,7 +31,7 @@ def test_events_endpoint_and_done(paths):
         body = client.get("/api/events").json()
         assert [e["id"] for e in body["events"]] == [9001, 9002] and body["events_left"]["primogems"] == 420
         dash = client.get("/api/dashboard").json()
-        assert dash["events_left"]["count"] == 1 and [e["id"] for e in dash["events_left"]["next"]] == [9001]
+        assert next(e for e in dash["events"] if e.get("id") == 9002)["done"] is True
         client.put("/api/events/9002/done", json={"done": False})
         assert client.get("/api/events").json()["events_left"]["count"] == 2
 

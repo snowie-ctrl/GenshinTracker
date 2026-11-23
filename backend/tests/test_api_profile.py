@@ -14,6 +14,4 @@ def test_profile_endpoint(paths):
         s.add(HoyolabSnapshot(part="profile", data=DATA, fetched_at=utcnow()))
     with make_client(paths) as client:
         body = client.get("/api/profile").json()
-        dash = client.get("/api/dashboard").json()
     assert body["profile"]["ar"] == 60 and set(body["challenges"]) == {"abyss", "theater", "stygian"}
-    assert dash["profile_summary"]["ar"] == 60 and dash["profile_summary"]["fetched_at"].endswith("Z")

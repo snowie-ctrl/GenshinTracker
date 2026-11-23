@@ -72,8 +72,6 @@ def test_game_import_summary_history_and_dashboard(paths):
         five = client.get("/api/wishes?rarity=5").json()
         assert five["total"] == 1 and five["rows"][0]["pity"] == 1
         assert client.get("/api/wishes?q=furi").json()["total"] == 1
-        dash = client.get("/api/dashboard").json()["pity"]
-        assert {"pool": "standard", "pity5": 60, "hard": 90, "next_state": None, "fate_points": None} in dash
 
 
 def test_upload_paimon_then_export_round_trip(paths):

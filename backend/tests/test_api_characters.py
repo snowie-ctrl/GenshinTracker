@@ -109,12 +109,12 @@ def test_set_goal_validation_and_404(paths):
 def test_dashboard(paths):
     with make_client(paths) as client:
         empty = client.get("/api/dashboard").json()
-    assert empty["notes"] is None and empty["building"] == {"count": 0, "average_progress": None}
+    assert empty["notes"] is None and empty["builds"] == []
     setup_data(paths)
     with make_client(paths) as client:
         d = client.get("/api/dashboard").json()
     assert d["notes"]["resin"] == 153 and d["notes"]["resin_full_at"].endswith("Z")
-    assert d["building"]["count"] == 1
+    assert len([b for b in d["builds"] if b["progress"] is not None]) == 1   # Nahida is Build but not owned
     assert d["connection"]["status"] == "missing"
 
 

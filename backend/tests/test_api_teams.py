@@ -4,6 +4,8 @@ from sqlalchemy import delete
 
 from app.db.models import GapRun, OwnedArtifact
 from app.planner.requests import snapshot
+from app.api.teams import team_views
+from app.teams.view import build_team_cards
 from test_api_planner import setup                  # Bennett owned + Build, catalogue, totals, gaps
 from helpers import make_client
 
@@ -14,6 +16,11 @@ def mark_calculated(sf):
     """Record a successful gap run whose snapshot matches the current goals, so Build members count as calculated."""
     with sf.begin() as s:
         s.merge(GapRun(id=1, ok=True, error=None, skipped=[], computed_at=datetime(2026, 11, 21), snapshot=snapshot(s)))
+
+
+def team_cards(sf):
+    with sf() as s:
+        return build_team_cards(team_views(s))
 
 
 def body(members=(BEN,), tags=(), new_tags=(), name="Abyss Pyro", notes="", roles=None):
@@ -122,7 +129,7 @@ def test_tag_endpoints(paths):
         assert client.delete(f"/api/tags/{fun['id']}").status_code == 404
 
 
-def test_character_detail_and_dashboard(paths):
+def test_character_detail_and_build_team_cards(paths):
     sf = setup(paths)
     mark_calculated(sf)
     with make_client(paths) as client:
@@ -132,7 +139,7 @@ def test_character_detail_and_dashboard(paths):
         assert [t["name"] for t in detail["teams"]] == ["Pyro"]
         assert client.get("/api/characters/xiangling").json()["teams"] == [
             {"id": tid + 1, "name": "Fun", "tags": []}]
-        cards = client.get("/api/dashboard").json()["build_teams"]
+        cards = team_cards(sf)
     assert [c["name"] for c in cards] == ["Pyro"]
     card = cards[0]
     assert [m["id"] for m in card["members"]] == [BEN]
@@ -140,12 +147,12 @@ def test_character_detail_and_dashboard(paths):
     assert card["has_shortfall"] is True and card["more"] == 0
 
 
-def test_dashboard_card_calculation_flags(paths):
+def test_build_team_card_calculation_flags(paths):
     sf = setup(paths)
     with make_client(paths) as client:
         client.post("/api/teams", json=body(members=(BEN,), tags=(1,), name="Pyro"))
-        card = client.get("/api/dashboard").json()["build_teams"][0]
+        card = team_cards(sf)[0]
         assert card["all_calculated"] is False and card["short_count"] == 0 and card["top"] == []
         mark_calculated(sf)
-        card = client.get("/api/dashboard").json()["build_teams"][0]
+        card = team_cards(sf)[0]
     assert card["all_calculated"] is True and card["short_count"] == 2

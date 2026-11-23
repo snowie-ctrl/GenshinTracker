@@ -32,12 +32,17 @@ def test_devseed_contains_planner_data(tmp_path):
     with TestClient(create_app(Paths(tmp_path), offline=True)) as client:
         dash = client.get("/api/dashboard").json()
         inv = client.get("/api/inventory").json()
-    assert dash["farm_today"]["domains"][0]["name"] == "Domain of Mastery: Forsaken Rift"
+    assert dash["domains_by_day"][str(dash["server_weekday"])]["domains"][0]["name"] == "Domain of Mastery: Forsaken Rift"
     assert dash["weekly_bosses"]["bosses"][0]["name"] == "Stormterror"
     assert dash["gaps"]["stale"] is False
-    cards = {c["character"]["slug"]: c for c in dash["building_cards"]}
-    assert all(c["calculated"] for c in cards.values())
-    assert cards["neuvillette"]["materials"] == []          # Build, no rows, in snapshot -> fully built
+    builds = {b["character"]["slug"]: b for b in dash["builds"]}
+    assert [b["character"]["slug"] for b in dash["builds"]] == ["bennett", "furina"]
+    assert all(b["calculated"] for b in builds.values())
+    guide = next(m for m in builds["bennett"]["materials"] if m["id"] == 104302)
+    assert (guide["have"], guide["craft"]) == (8, 1)
+    assert [c["slug"] for c in dash["completed"]] == ["neuvillette"]      # Build, no rows, in snapshot
+    assert {t["kind"] for t in dash["timers"]} == {"resin", "realm", "transformer", "expedition"}
+    assert [e["id"] for e in dash["ending_soon"]] == [9002, 9003]
     states = {m["id"]: m["state"] for c in inv["categories"] for m in c["materials"]}
     assert states[104302] == "short" and states[104003] == "met" and states[100055] == "unneeded"
 

@@ -8,7 +8,7 @@ from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import (ChallengeRun, CharacterGoal, GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
-from app.sync.hoyolab import ArtifactInfo, DetailEntry, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
+from app.sync.hoyolab import ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
 from app.sync.persist import save_details, save_gaps, save_notes, save_roster
 from app.timeutil import iso, utcnow
 from app.wishes.merge import merge
@@ -107,13 +107,18 @@ def seed(root: Path) -> None:
                            "https://enka.network/ui/UI_RelicIcon_15007_4.png")
         save_details(s, [DetailEntry(cid, *t, WEAPON, [art], [{"name": "Max HP", "value": "20000"}])
                          for cid, (_l, t) in OWNED.items()])
-        save_notes(s, NotesInfo(120, 200, 80 * 8 * 60, 3, 4, 900, 2400, []), now)
+        save_notes(s, NotesInfo(120, 200, 80 * 8 * 60, 3, 4, 900, 2400,
+                                [ExpeditionInfo("https://act-webstatic.hoyoverse.com/demo-exp.png", False, 2 * 3600),
+                                 ExpeditionInfo("https://act-webstatic.hoyoverse.com/demo-exp.png", True, 0)],
+                                2, 3, False, 9 * 3600, 0, 5), now)
+        build_rank = {cid: n for n, cid in enumerate((c for c, g in GOALS.items() if g == "build"), start=1)}
         for cid, goal in GOALS.items():
             build = goal == "build"
             s.add(CharacterGoal(character_id=cid, goal=goal, target_level=90 if build else None,
                                 target_normal=8 if build else None, target_skill=8 if build else None,
                                 target_burst=8 if build else None,
-                                target_weapon_level=90 if build else None, updated_at=now))
+                                target_weapon_level=90 if build else None, priority=build_rank.get(cid),
+                                updated_at=now))
         for order, (mid, name, cat, rarity, craft, ytype, sources) in enumerate(MATERIALS):
             src = [FREEDOM_SOURCE] if cat == "talent" else sources
             s.add(GameMaterial(id=mid, name=name, icon=f"UI_ItemIcon_{mid}", rarity=rarity, yatta_type=ytype,
@@ -187,11 +192,15 @@ def seed(root: Path) -> None:
                 {"id": 9002, "name": "Quick Trial", "description": "", "start": None,
                  "end": iso(now + timedelta(hours=5)), "rewards": [{**primo, "count": 60}]},
                 {"id": 9003, "name": "Photo Event", "description": "", "start": None,
-                 "end": iso(now + timedelta(days=3)), "rewards": []},
+                 "end": iso(now + timedelta(days=2)), "rewards": []},
+                {"id": 9004, "name": "Daily Check-in Event", "description": "", "start": None,
+                 "end": iso(now + timedelta(days=5)), "rewards": [], "finished": True},
             ],
             "challenges": [{"kind": "abyss", "name": "Spiral Abyss", "start": None, "end": iso(now + timedelta(days=20))},
                            {"kind": "theater", "name": "Imaginarium Theater", "start": None,
-                            "end": iso(now + timedelta(days=10))}],
+                            "end": iso(now + timedelta(days=10))},
+                           {"kind": "stygian", "name": "Stygian Onslaught", "start": None,
+                            "end": iso(now + timedelta(days=12))}],
         }
         s.add(HoyolabSnapshot(part="calendar", data=calendar, fetched_at=now))
         profile = {

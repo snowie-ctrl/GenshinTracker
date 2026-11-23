@@ -1,18 +1,17 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 
-from app.api.characters import goal_targets
 from app.api.events import events_payload
 from app.api.planner import gaps_for, planner_view, region
-from app.api.teams import team_views
 from app.api.wishes import pity_lines
 from app.context import AppContext, get_ctx
-from app.db.models import CharacterGoal, LiveNotes, OwnedCharacter, WeeklyBossDone
-from app.domain import Current, progress
-from app.planner.characters import building_cards
+from app.dashboard.view import banners_with_pity, build_progress, event_list, timers
+from app.db.models import LiveNotes, WeeklyBossDone
+from app.events.view import ending_within
+from app.planner.order import build_order, set_order
+from app.planner.priority import build_sections
 from app.planner.today import farm_today, weekly_bosses
-from app.profile.view import profile_summary
-from app.teams.view import build_team_cards
 from app.servertime import offset_hours, server_weekday, week_start
 from app.settings.envfile import connection_status, read_env
 from app.settings.store import get_setting
@@ -22,52 +21,68 @@ from app.wishes.pity import summarize
 router = APIRouter()
 
 
+def _opt_iso(value):
+    return iso(value) if value is not None else None
+
+
 def notes_payload(n: LiveNotes) -> dict:
     return {
         "resin": n.resin, "resin_max": n.resin_max, "resin_full_at": iso(n.resin_full_at),
         "commissions_done": n.commissions_done, "commissions_max": n.commissions_max,
+        "commission_bonus_claimed": n.commission_bonus_claimed,
         "realm_currency": n.realm_currency, "realm_currency_max": n.realm_currency_max,
-        "expeditions": n.expeditions, "fetched_at": iso(n.fetched_at),
+        "realm_currency_full_at": _opt_iso(n.realm_currency_full_at),
+        "expeditions": n.expeditions, "expeditions_max": n.expeditions_max, "fetched_at": iso(n.fetched_at),
     }
+
+
+def _builds(s) -> tuple[dict, dict[int, int], object, dict]:
+    data, index = planner_view(s)
+    order = [cid for cid in build_order(s) if cid in data.characters]
+    rank = {cid: i for i, cid in enumerate(order)}
+    return build_sections(data, order, index, build_progress(s)), rank, data, index
 
 
 @router.get("/dashboard")
 def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
     now, reg = utcnow(), region(ctx)
     with ctx.session_factory() as s:
-        owned = {o.character_id: o for o in s.scalars(select(OwnedCharacter))}
-        progress_by_id: dict[int, float | None] = {}
-        for row in s.scalars(select(CharacterGoal).where(CharacterGoal.goal == "build")):
-            o, t = owned.get(row.character_id), goal_targets(row)
-            progress_by_id[row.character_id] = (
-                progress(Current(o.level, o.talent_normal, o.talent_skill, o.talent_burst), t)
-                if o is not None and t is not None else None)
-        values = [v for v in progress_by_id.values() if v is not None]
         notes = s.get(LiveNotes, 1)
         results = summarize(s, now, offset_hours(reg))
         ev = events_payload(ctx, s, results)
-        data, index = planner_view(s)
+        sections, rank, data, index = _builds(s)
         done = set(s.scalars(select(WeeklyBossDone.boss).where(WeeklyBossDone.week_start == week_start(now, reg))))
         return {
             "connection": connection_status(read_env(ctx.paths.env_file), get_setting(s, "hoyolab_status")),
+            "display_name": str(get_setting(s, "display_name") or ""),
             "notes": notes_payload(notes) if notes is not None else None,
-            "building": {
-                "count": len(values),
-                "average_progress": round(sum(values) / len(values), 4) if values else None,
-            },
-            "farm_today": farm_today(data, server_weekday(now, reg), index),
+            "timers": timers(notes) if notes is not None else [],
+            "ending_soon": ending_within(ev["events"], now),
+            "server_weekday": server_weekday(now, reg),
+            "domains_by_day": {str(d): farm_today(data, d, index, rank) for d in range(7)},
             "weekly_bosses": {
                 "discounts_left": notes.weekly_discounts_left if notes is not None else None,
                 "discounts_max": notes.weekly_discounts_max if notes is not None else None,
-                "bosses": weekly_bosses(data, done, index),
+                "bosses": weekly_bosses(data, done, index, rank),
             },
-            "building_cards": building_cards(data, progress_by_id, index),
-            "build_teams": build_team_cards(team_views(s)),
-            "gaps": gaps_for(ctx, s),
-            "pity": pity_lines(results),
-            "live_banners": ev["banners"]["current"],
-            "events_left": {**ev["events_left"], "next": [e for e in ev["events"] if not e["done"]][:3]},
-            "resets": ev["resets"],
+            **sections,
+            "live_banners": banners_with_pity(ev["banners"]["current"], pity_lines(results)),
+            "events": event_list(ev["events"], ev["resets"]),
             "calendar_fetched_at": ev["fetched_at"],
-            "profile_summary": profile_summary(s, now),
+            "gaps": gaps_for(ctx, s),
         }
+
+
+class PriorityIn(BaseModel):
+    order: list[int]
+
+
+@router.put("/priority")
+def put_priority(body: PriorityIn, ctx: AppContext = Depends(get_ctx)) -> dict:
+    with ctx.session_factory.begin() as s:
+        try:
+            set_order(s, body.order)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        sections, _rank, _data, _index = _builds(s)
+        return sections
