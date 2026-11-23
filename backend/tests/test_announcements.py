@@ -57,6 +57,10 @@ def test_malformed_items_are_skipped_not_fatal():
     event_group["list"].append({"ann_id": 299, "title": "Bad start", "subtitle": "Bad start", "banner": "",
                                 "start_time": "not a date", "end_time": "2026-11-30 03:59:59", "type": 1})
     assert sorted(a.ann_id for a in parse(feed, CONTENT, -5)) == [201, 202, 204, 205, 206]
+    content = copy.deepcopy(CONTENT)
+    content["data"]["list"].append({"banner": "", "content": "<p>orphan, no ann_id</p>"})
+    content["data"]["list"].append({"ann_id": "abc", "banner": "", "content": "<p>orphan, bad ann_id</p>"})
+    assert sorted(a.ann_id for a in parse(LIST, content, -5)) == [201, 202, 204, 205, 206]
 
 
 async def test_fetch_sends_only_fixed_params_and_region():

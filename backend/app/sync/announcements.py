@@ -74,7 +74,12 @@ def _name(item: dict) -> str:
 
 
 def parse(ann_list: dict, ann_content: dict, offset_hours: int) -> list[Announcement]:
-    content = {int(c["ann_id"]): c for c in (ann_content.get("data") or {}).get("list", [])}
+    content: dict[int, dict] = {}
+    for c in (ann_content.get("data") or {}).get("list", []):
+        try:
+            content[int(c["ann_id"])] = c
+        except (KeyError, TypeError, ValueError):
+            continue  # a malformed content entry is ignored, like a malformed item
     out: list[Announcement] = []
     for group in (ann_list.get("data") or {}).get("list", []):
         if int(group.get("type_id", 0)) != EVENT_TYPE_ID:
