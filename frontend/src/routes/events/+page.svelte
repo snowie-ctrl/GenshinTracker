@@ -124,7 +124,7 @@
 		<ul class="events">
 			{#each data.events as ev (ev.id)}
 				<li class:done={ev.done} data-testid="event-{ev.id}">
-					<label><input type="checkbox" checked={ev.done} onchange={() => toggle(ev)} aria-label="Done: {ev.name}" /></label>
+					<label title={ev.finished ? 'Completed in game' : undefined}><input type="checkbox" checked={ev.done} disabled={ev.finished} onchange={() => toggle(ev)} aria-label="Done: {ev.name}" /></label>
 					<button type="button" class="name" onclick={() => (open = open === ev.id ? null : ev.id)}>{ev.name}</button>
 					<span class="rewards">
 						{#each ev.rewards as r, i (i)}{#if imgSrc(r.icon)}<img src={imgSrc(r.icon)} alt={r.name} title={rewardTitle(r)} />{/if}{/each}

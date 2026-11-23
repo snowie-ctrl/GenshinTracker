@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from app.db.models import EventDone, GameBanner, HoyolabSnapshot
 from app.events.view import (
-    banner_history, cleanup_event_done, event_rows, events_left, live_banners, primogems, resets,
+    banner_history, cleanup_event_done, ending_within, event_rows, events_left, live_banners, primogems, resets,
 )
 from app.wishes.pity import BannerWindow
 from helpers import seed_game
@@ -135,3 +135,22 @@ def test_cleanup_event_done_tolerates_event_without_id(session_factory):
         s.add(EventDone(event_id=2, done_at=NOW - timedelta(days=90)))
     with session_factory.begin() as s:
         assert cleanup_event_done(s, NOW) == 1
+
+
+def test_event_rows_finished_counts_as_done():
+    cal = {"banners": [], "challenges": [], "events": [
+        {**ev(1, "2026-11-30T04:00:00Z"), "finished": True},
+        ev(2, "2026-11-30T04:00:00Z"),                         # old snapshot: no "finished" key
+        {**ev(3, "2026-11-30T04:00:00Z"), "finished": True},
+    ]}
+    rows = {r["id"]: r for r in event_rows(cal, {3}, NOW)}
+    assert (rows[1]["done"], rows[1]["finished"]) == (True, True)
+    assert (rows[2]["done"], rows[2]["finished"]) == (False, False)
+    assert (rows[3]["done"], rows[3]["finished"]) == (True, True)       # ticked and finished: done once
+
+
+def test_ending_within_three_days_skips_done_and_far():
+    rows = event_rows(CAL, {2}, NOW)          # 2 ends in 16h but is done; 1 ends in 8d16h; 3 in 13d
+    assert ending_within(rows, NOW) == []
+    rows = event_rows(CAL, set(), NOW)
+    assert [r["id"] for r in ending_within(rows, NOW)] == [2]

@@ -102,6 +102,10 @@ class NotesInfo:
     expeditions: list[ExpeditionInfo]
     weekly_discounts_left: int | None = None
     weekly_discounts_max: int | None = None
+    commission_bonus_claimed: bool | None = None
+    realm_recovery_seconds: int | None = None
+    transformer_recovery_seconds: int | None = None   # None = no Parametric Transformer on the account
+    expeditions_max: int | None = None
 
 
 class NoInventoryData(HoyolabError):
@@ -164,6 +168,14 @@ def _opt_int(v: Any) -> int | None:
     return None if v is None else int(v)
 
 
+def _opt_bool(v: Any) -> bool | None:
+    return None if v is None else bool(v)
+
+
+def _opt_seconds(v: Any) -> int | None:
+    return None if v is None else max(0, int(v.total_seconds()))
+
+
 def _prop(p: Any) -> str:
     return f"{p.info.name} {p.value}"
 
@@ -206,6 +218,10 @@ def to_notes(n: Any) -> NotesInfo:
         ],
         weekly_discounts_left=_opt_int(getattr(n, "remaining_resin_discounts", None)),
         weekly_discounts_max=_opt_int(getattr(n, "max_resin_discounts", None)),
+        commission_bonus_claimed=_opt_bool(getattr(n, "claimed_commission_reward", None)),
+        realm_recovery_seconds=_opt_seconds(getattr(n, "remaining_realm_currency_recovery_time", None)),
+        transformer_recovery_seconds=_opt_seconds(getattr(n, "remaining_transformer_recovery_time", None)),
+        expeditions_max=_opt_int(getattr(n, "max_expeditions", None)),
     )
 
 

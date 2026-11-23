@@ -54,6 +54,7 @@ class EventInfo:
     start: str | None
     end: str | None
     rewards: list[Reward]
+    finished: bool = False          # HoYoLAB says the player completed it
 
 
 @dataclass(frozen=True)
@@ -145,7 +146,8 @@ def _banner(b: Any, pool: str) -> LiveBanner:
 def to_calendar(cal: Any) -> CalendarInfo:
     banners = [_banner(b, pool) for attr, pool in POOLS for b in getattr(cal, attr, None) or []]
     events = [EventInfo(int(e.id), e.name, _plain(e.description), _ts(e.start_timestamp), _ts(e.end_timestamp),
-                        [Reward(int(r.id), r.name, r.icon, int(r.num), int(r.rarity)) for r in e.rewards])
+                        [Reward(int(r.id), r.name, r.icon, int(r.num), int(r.rarity)) for r in e.rewards],
+                        bool(getattr(e, "is_finished", False)))
               for e in cal.events]
     challenges = []
     for e in cal.challenges:

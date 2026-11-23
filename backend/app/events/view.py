@@ -14,6 +14,7 @@ from app.wishes.types import server_local_now
 
 PRIMOGEM_ID = 201
 ENDING_SOON = timedelta(hours=24)
+ENDING_STRIP = timedelta(days=3)
 PAGE_SIZE = 50
 KEEP_DONE = timedelta(days=60)
 FALLBACK_DAY = {"abyss": 16, "theater": 1}
@@ -35,11 +36,23 @@ def event_rows(calendar: dict, done: set[int], now: datetime) -> list[dict]:
         end = parse_iso(e.get("end"))
         if end is not None and end <= now:
             continue
-        rows.append({**e, "primogems": primogems(e["rewards"]), "done": e["id"] in done,
+        finished = bool(e.get("finished", False))
+        rows.append({**e, "primogems": primogems(e["rewards"]), "finished": finished,
+                     "done": finished or e["id"] in done,
                      "ending_soon": end is not None and end - now <= ENDING_SOON})
     far = datetime.max
     rows.sort(key=lambda r: (r["done"], parse_iso(r.get("end")) or far, r["id"]))
     return rows
+
+
+def ending_within(rows: list[dict], now: datetime, window: timedelta = ENDING_STRIP) -> list[dict]:
+    """Not-done events that end within `window` (the Dashboard's ending-soon strip)."""
+    out = []
+    for r in rows:
+        end = parse_iso(r.get("end"))
+        if not r["done"] and end is not None and now < end <= now + window:
+            out.append(r)
+    return out
 
 
 def events_left(rows: list[dict]) -> dict:

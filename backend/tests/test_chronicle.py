@@ -126,3 +126,11 @@ def test_theater_and_stygian_runs():
     assert [(r.kind, r.season, r.summary, r.teams) for r in s] == [
         ("stygian", "5", {"difficulty": 4, "time_used": 95}, [[10000089]])]
     assert to_theater_runs(NS(unlocked=False, datas=[])) == []
+
+
+def test_calendar_event_finished_flag():
+    cal = NS(character_banners=[], weapon_banners=[], chronicled_banners=[],
+             events=[event(id=1), event(id=2, is_finished=True)], challenges=[])
+    info = to_calendar(cal)
+    assert [e.finished for e in info.events] == [False, True]
+    assert to_json(info)["events"][1]["finished"] is True

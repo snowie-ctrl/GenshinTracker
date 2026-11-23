@@ -173,3 +173,20 @@ def test_to_gap_result_single_character_without_single_results():
 def test_to_gap_result_count_mismatch_fails():
     with pytest.raises(HoyolabError):
         to_gap_result(load_fixture("calculator_batch.json"), [1, 2, 3])
+
+
+def test_notes_new_fields_and_missing_transformer():
+    base = dict(current_resin=10, max_resin=200, remaining_resin_recovery_time=timedelta(minutes=1),
+                completed_commissions=4, max_commissions=4, current_realm_currency=0,
+                max_realm_currency=2400, expeditions=[])
+    notes = to_notes(NS(**base))
+    assert (notes.commission_bonus_claimed, notes.realm_recovery_seconds,
+            notes.transformer_recovery_seconds, notes.expeditions_max) == (None, None, None, None)
+    notes = to_notes(NS(**base, claimed_commission_reward=True,
+                        remaining_realm_currency_recovery_time=timedelta(hours=5),
+                        remaining_transformer_recovery_time=timedelta(days=2, hours=3),
+                        max_expeditions=5))
+    assert notes.commission_bonus_claimed is True
+    assert notes.realm_recovery_seconds == 5 * 3600
+    assert notes.transformer_recovery_seconds == 51 * 3600
+    assert notes.expeditions_max == 5

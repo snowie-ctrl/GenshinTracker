@@ -150,3 +150,15 @@ def test_talent_id_cache_round_trip(session_factory):
         save_talent_ids(s, {10000032: TalentIds(1, 2, 9)})
     with session_factory() as s:
         assert load_talent_ids(s) == {10000032: TalentIds(1, 2, 9)}
+
+
+def test_save_notes_new_fields(session_factory):
+    now = datetime(2026, 11, 22, 12, 0, 0)
+    with session_factory.begin() as s:
+        save_notes(s, NotesInfo(1, 200, 60, 4, 4, 10, 2400, [], None, None, True, 7200, 0, 5), now)
+        row = s.get(LiveNotes, 1)
+        assert row.commission_bonus_claimed is True and row.expeditions_max == 5
+        assert row.realm_currency_full_at == now + timedelta(hours=2)
+        assert row.transformer_ready_at == now
+        save_notes(s, NotesInfo(1, 200, 60, 4, 4, 10, 2400, []), now)
+        assert row.transformer_ready_at is None and row.realm_currency_full_at is None

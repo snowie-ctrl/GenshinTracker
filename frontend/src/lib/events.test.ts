@@ -5,7 +5,7 @@ import { countdownWarn, eventsLeft, leftTotals, primosLine, setDone, sortEvents,
 const NOW = Date.parse('2026-11-21T12:00:00Z');
 
 function row(id: number, end: string | null, done = false, primogems = 0): EventRow {
-	return { id, name: `E${id}`, description: '', start: null, end, rewards: [], primogems, done, ending_soon: false };
+	return { id, name: `E${id}`, description: '', start: null, end, rewards: [], primogems, done, finished: false, ending_soon: false };
 }
 
 describe('timeLeft', () => {

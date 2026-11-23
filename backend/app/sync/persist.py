@@ -103,6 +103,12 @@ def save_notes(session: Session, notes: NotesInfo, now: datetime) -> None:
          "return_at": iso(now + timedelta(seconds=max(0, e.remaining_seconds)))}
         for e in notes.expeditions
     ]
+    row.commission_bonus_claimed = notes.commission_bonus_claimed
+    row.realm_currency_full_at = (None if notes.realm_recovery_seconds is None
+                                  else now + timedelta(seconds=notes.realm_recovery_seconds))
+    row.transformer_ready_at = (None if notes.transformer_recovery_seconds is None
+                                else now + timedelta(seconds=notes.transformer_recovery_seconds))
+    row.expeditions_max = notes.expeditions_max
     row.fetched_at = now
     session.flush()
 

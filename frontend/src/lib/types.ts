@@ -206,7 +206,7 @@ export interface LiveBanner {
 export interface Reward { id: number; name: string; icon: string; count: number; rarity: number }
 export interface EventRow {
 	id: number; name: string; description: string; start: string | null; end: string | null;
-	rewards: Reward[]; primogems: number; done: boolean; ending_soon: boolean;
+	rewards: Reward[]; primogems: number; done: boolean; finished: boolean; ending_soon: boolean;
 }
 export interface EventsLeft { count: number; primogems: number }
 export interface ResetRow { key: 'daily' | 'weekly' | 'abyss' | 'theater' | 'stygian'; label: string; at: string }
