@@ -1,7 +1,7 @@
 # Ad Astra Sub-project 6 — Inventory and Events
 
 **Date:** 2026-11-23
-**Status:** Written 2026-11-23, awaiting user review
+**Status:** Approved 2026-11-23
 **Frame:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 6 of 10). Builds on Foundation (`2026-11-22-ad-astra-foundation-design.md`) and Dashboard (`2026-11-22-ad-astra-dashboard-design.md`); replaces the Events page from Phase 5 (`2026-11-21-phase5-events-profile-map-design.md`) and the Materials tab layout from Phase 2/6.
 **Scope:** Inventory gets a "To farm" strip above a backpack of plain counts. Events becomes a paimon.moe-style timeline with art and a popup, Timers beside it, the Done checklist under it and banner history (by version and phase) at the bottom. A new public announcement feed supplies event art, text, true times and upcoming event wishes. Teapot materials stay in sub-project 10.
 
@@ -11,7 +11,7 @@
 
 | Topic | Decision |
 |---|---|
-| Backpack tiles without a GOOD scan | Show the best-known count: GOOD scan count when a scan exists; otherwise `need − short` for materials you are short on; otherwise "—". Faded at 0 or "—". A hint says a GOOD import fills every count |
+| Backpack tiles without a GOOD scan | Show the best-known count: `need − short` for materials you are short on (live, so it wins over an older scan); otherwise the GOOD scan count when a scan exists; otherwise "—". Faded at 0 or "—". A hint says a GOOD import fills every count |
 | Event data | Both sources merged: HoYoverse's public announcement feed (art, text, times, upcoming wishes) plus the HoYoLAB calendar (rewards, finished flag, accurate times). Calendar-only events still get a bar |
 | Timeline rows | Gameplay events and event wishes. Genius Invokation TCG and Miliastra Wonderland items are left out |
 | Timers column | Resets (daily, weekly, Abyss, Theater, Stygian) plus an "Ending soon" list. Personal timers (resin etc.) stay on the Dashboard |
@@ -197,8 +197,8 @@ A glass card at the top of the Materials tab titled "To farm · N materials":
 
 Category cards below the strip. Each tile shows one number, the best-known count:
 
-1. `scan` when a GOOD scan is active;
-2. otherwise `have` (`need − short`) when the material is short;
+1. `have` (`need − short`) when the material is short (the live HoYoLAB number is newer than a scan; today's rule "live wins over scan");
+2. otherwise `scan` when a GOOD scan is active;
 3. otherwise "—".
 
 Tiles showing 0 or "—" are faded (~35% opacity). No red, no ✓, no `have/need` text; the popover still lists who needs it and the sources. Without a GOOD scan, a one-line hint under the filter bar reads "Import a GOOD scan to see every count" (the import button is already in the bar when the feature is enabled).
