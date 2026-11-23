@@ -57,25 +57,39 @@ export interface SyncStatus { running: boolean; runs: SyncRun[] }
 export interface Expedition { icon: string; finished: boolean; return_at: string }
 export interface Notes {
 	resin: number; resin_max: number; resin_full_at: string;
-	commissions_done: number; commissions_max: number;
-	realm_currency: number; realm_currency_max: number;
-	expeditions: Expedition[]; fetched_at: string;
+	commissions_done: number; commissions_max: number; commission_bonus_claimed: boolean | null;
+	realm_currency: number; realm_currency_max: number; realm_currency_full_at: string | null;
+	expeditions: Expedition[]; expeditions_max: number | null; fetched_at: string;
 }
+export interface Timer { kind: 'resin' | 'realm' | 'transformer' | 'expedition'; label: string; icon: string; ready_at: string }
+export interface DayFarm { weekday: number; domains: FarmDomain[] }
+export interface BuildMaterial {
+	id: number; name: string; icon: string; rarity: number; category: string; category_label: string;
+	need: number; have: number; craft: number;
+}
+export interface BuildCard {
+	character: CharRef; priority: number; progress: number | null; calculated: boolean; ready: boolean;
+	materials: BuildMaterial[];
+}
+export interface PriorityResult { builds: BuildCard[]; completed: CharRef[] }
+export interface DashEvent extends EventRow { kind: 'event' }
+export interface DashReset { kind: 'reset'; id: string; key: string; name: string; end: string; done: false }
+export type DashEventItem = DashEvent | DashReset;
 export interface Dashboard {
 	connection: Connection;
+	display_name: string;
 	notes: Notes | null;
-	building: { count: number; average_progress: number | null };
-	farm_today: { weekday: number; domains: FarmDomain[] };
+	timers: Timer[];
+	ending_soon: EventRow[];
+	server_weekday: number;
+	domains_by_day: Record<string, DayFarm>;
 	weekly_bosses: { discounts_left: number | null; discounts_max: number | null; bosses: WeeklyBoss[] };
-	building_cards: BuildingCard[];
-	build_teams: BuildTeamCard[];
-	gaps: GapStatus;
-	pity: PityLine[];
-	live_banners: LiveBanner[];
-	events_left: EventsLeft & { next: EventRow[] };
-	resets: ResetRow[];
+	builds: BuildCard[];
+	completed: CharRef[];
+	live_banners: DashBanner[];
+	events: DashEventItem[];
 	calendar_fetched_at: string | null;
-	profile_summary: { ar: number | null; fetched_at: string | null; abyss_stars: number | null; theater_act: number | null };
+	gaps: GapStatus;
 }
 export interface StatTile { label: string; value: number }
 export interface RegionView { id: number; name: string; explored: number; reputation: number | null; offerings: { name: string; level: number }[] }
@@ -204,6 +218,7 @@ export interface LiveBanner {
 	id: number; pool: 'character' | 'weapon' | 'chronicled'; name: string; version: string;
 	start: string | null; end: string | null; items: BannerItem[]; pulls: BannerPulls | null;
 }
+export interface DashBanner extends LiveBanner { pity: PityLine | null }
 export interface Reward { id: number; name: string; icon: string; count: number; rarity: number }
 export interface EventRow {
 	id: number; name: string; description: string; start: string | null; end: string | null;

@@ -2,7 +2,8 @@
 export interface IconPath { d: string; evenodd?: boolean }
 
 export const ICON_NAMES = [
-	'dashboard', 'characters', 'teams', 'inventory', 'map', 'events', 'wishes', 'sync', 'profile', 'settings', 'external'
+	'dashboard', 'characters', 'teams', 'inventory', 'map', 'events', 'wishes', 'sync', 'profile', 'settings', 'external',
+	'commission', 'expedition'
 ] as const;
 export type IconName = (typeof ICON_NAMES)[number];
 
@@ -34,5 +35,7 @@ export const ICONS: Record<IconName, IconPath[]> = {
 	sync: [{ d: 'M12 3a9 9 0 0 1 8.5 6H23l-4 5-4-5h2.3A6 6 0 0 0 6.2 9.5L3.6 8A9 9 0 0 1 12 3zM12 21a9 9 0 0 1-8.5-6H1l4-5 4 5H6.7a6 6 0 0 0 11.1.5l2.6 1.5A9 9 0 0 1 12 21z' }],
 	profile: [{ d: 'M3 4h18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm5 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm-4.5 10h9c0-2.5-2-4-4.5-4s-4.5 1.5-4.5 4zM14 8v2h6V8zm0 4v2h5v-2z', evenodd: true }],
 	settings: [{ d: 'M10 1h4l.6 3a8 8 0 0 1 2.2 1.3l2.9-1 2 3.4-2.3 2a8 8 0 0 1 0 2.6l2.3 2-2 3.4-2.9-1A8 8 0 0 1 14.6 20l-.6 3h-4l-.6-3a8 8 0 0 1-2.2-1.3l-2.9 1-2-3.4 2.3-2a8 8 0 0 1 0-2.6l-2.3-2 2-3.4 2.9 1A8 8 0 0 1 9.4 4zm2 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', evenodd: true }],
+	commission: [{ d: 'M5 2h11l4 4v16H5zm10 1.5V7h3.5zM8 10v2h9v-2zm0 4v2h9v-2zm0 4v2h6v-2z', evenodd: true }],
+	expedition: [{ d: 'M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zm0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z', evenodd: true }],
 	external: [{ d: 'M14 3h7v7h-2V6.4l-8.3 8.3-1.4-1.4L17.6 5H14zM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z' }]
 };
