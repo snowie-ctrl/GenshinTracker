@@ -15,6 +15,7 @@ test('timeline bars open a popup that ticks Done, shown on the Dashboard', async
 	await expect(modal).toContainText('60 primos');
 	await modal.getByRole('button', { name: 'Mark done' }).click();
 	await expect(page.getByTestId('event-9002')).toHaveClass(/done/);
+	await expect(page.getByTestId('timers')).not.toContainText('Quick Trial');
 	await expect(page.getByTestId('events-left')).toContainText('2 events left · 420 primos unclaimed');
 	await page.keyboard.press('Escape');
 	await expect(modal).toBeHidden();

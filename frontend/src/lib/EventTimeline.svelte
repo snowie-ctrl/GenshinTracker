@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { timeLeft } from './events';
+	import { countdownWarn, timeLeft } from './events';
 	import { imgSrc } from './img';
 	import { buildAxis, dayTicks, placeBars, todayOffset } from './timeline';
 	import type { TimelineRow } from './types';
@@ -55,7 +55,7 @@
 					style="left:{p.left * 100}%;width:{p.width * 100}%;top:{p.lane * LANE_PX}px;{src ? `background-image:url('${src}')` : ''}"
 					onclick={() => onopen(p.row.key)} onkeydown={(e) => move(e, i)}>
 					<b>{p.row.name}</b>
-					<i class:soon={p.row.ending_soon}>{right(p)}{p.clampedEnd ? ' →' : ''}</i>
+					<i class:soon={!p.row.done && countdownWarn(p.row.end, now, true)}>{right(p)}{p.clampedEnd ? ' →' : ''}</i>
 				</button>
 			{/each}
 		</div>

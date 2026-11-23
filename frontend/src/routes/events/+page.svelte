@@ -16,6 +16,9 @@
 	let now = $state(Date.now());
 	let openKey = $state<string | null>(null);
 	const left = $derived(data ? leftTotals(data.events) : { count: 0, primogems: 0 });
+	const endingSoon = $derived(
+		(data?.ending_soon ?? []).filter((e) => !data?.timeline.find((r) => r.key === e.key)?.done)
+	);
 	const openRow = $derived(data?.timeline.find((r) => r.key === openKey) ?? null);
 
 	$effect(() => {
@@ -84,10 +87,10 @@
 		<section class="panel timers" data-testid="timers">
 			<h2>Timers</h2>
 			{#each data.resets as r (r.key)}<div class="t"><span>{r.label}</span><Countdown at={r.at} {now} /></div>{/each}
-			{#if data.ending_soon.length}
+			{#if endingSoon.length}
 				<h3>Ending soon</h3>
 				<div data-testid="ending-soon">
-					{#each data.ending_soon as e (e.key)}
+					{#each endingSoon as e (e.key)}
 						<button type="button" class="t link" onclick={() => (openKey = e.key)}><span>{e.name}</span><Countdown at={e.end} {now} warn /></button>
 					{/each}
 				</div>
