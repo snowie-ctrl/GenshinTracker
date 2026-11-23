@@ -179,7 +179,7 @@ A glass panel about 330px tall. A CSS grid of four ribbon columns followed by th
 - Clicking the row (ribbons or info section) opens the editor for that team. The switch, the shortfall link, the arrows and Build again do their own action and do not open it.
 - **Reordering:** ▲ and ▼ buttons appear at the row's right edge on hover and on keyboard focus within the row. Drag-to-reorder is removed. Reordering is off while a tag filter is active, with the existing hint.
 - **Shortfall drawer:** "N materials short ▸" toggles a section under the row with the existing `MaterialTile`s (to farm, craft hint, shared mark) and status messages. Open/closed is per team and not stored.
-- **Narrow windows:** below about 1100px wide the info section moves under the four ribbons (single column) and its slant padding no longer applies.
+- **Narrow windows:** at 1400px wide and below (raised from about 1100px during the build so ribbon text stays readable) the info section moves under the four ribbons (single column) and its slant padding no longer applies.
 - **Anchors:** each row keeps `id="team-<id>"`, so the character detail page's "In teams" links still land on the row.
 
 ### 6.6 Preview helper
