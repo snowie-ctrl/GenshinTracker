@@ -2,6 +2,10 @@ export type Goal = 'none' | 'want' | 'build';
 export type Status = 'building' | 'obtained' | 'wanted' | 'unobtained';
 
 export interface Targets { level: number; normal: number; skill: number; burst: number; weapon_level: number }
+export interface TravelerInfo {
+	element_id: number; current: boolean; seen: boolean; unlocked: boolean;
+	talents: Talents; constellation: number; source: 'sync' | 'manual';
+}
 export interface Talents { normal: number; skill: number; burst: number }
 export interface Weapon { name: string; icon: string; rarity: number; level: number; refinement: number }
 
@@ -34,6 +38,7 @@ export interface Artifact {
 	main_stat: string; substats: string[]; icon: string;
 }
 export interface CharacterDetail extends Character {
+	traveler: TravelerInfo | null;
 	artifacts: Artifact[];
 	stats: { name: string; value: string }[];
 	shortfall: { gaps: GapStatus; materials: CharMaterial[]; calculated: boolean } | null;

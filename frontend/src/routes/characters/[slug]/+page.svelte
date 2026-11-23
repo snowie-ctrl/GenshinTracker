@@ -5,6 +5,7 @@
 	import { ownedLabel } from '$lib/good';
 	import { imgSrc } from '$lib/img';
 	import { sync } from '$lib/sync.svelte';
+	import TravelerElementCard from '$lib/TravelerElementCard.svelte';
 	import TagChip from '$lib/TagChip.svelte';
 	import TargetsEditor from '$lib/TargetsEditor.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
@@ -97,6 +98,9 @@
 			{#if saveError}<p class="error">{saveError}</p>{/if}
 		</div>
 	</header>
+	{#if c.traveler}
+		<TravelerElementCard info={c.traveler} onsaved={() => load(page.params.slug ?? '')} />
+	{/if}
 
 	{#if c.goal === 'build' && c.targets}
 		<section class="panel">

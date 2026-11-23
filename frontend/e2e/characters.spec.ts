@@ -54,3 +54,15 @@ test('a pill whose element icon fails to load still shows its label and filters'
 	await pyro.click();
 	await expect(page.getByTestId('card-xiangling')).toBeVisible();
 });
+
+test('Traveler element card: unlock another element', async ({ page }) => {
+	await page.goto('/characters/cryo-traveler');
+	await expect(page.getByRole('heading', { name: 'Cryo Traveler' })).toBeVisible();
+	await expect(page.getByText('From HoYoLAB: current element')).toBeVisible();
+	await page.goto('/characters/anemo-traveler');
+	const toggle = page.getByRole('checkbox', { name: 'Unlocked' });
+	await expect(toggle).not.toBeChecked();
+	await toggle.check();
+	await expect(page.getByRole('heading', { name: 'Current' })).toBeVisible();
+	await expect(page.getByText('Lv 90 · C0')).toBeVisible();
+});

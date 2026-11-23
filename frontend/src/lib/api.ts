@@ -1,7 +1,7 @@
 import type {
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
 	GoodArtifact, GoodStatus, GoodSummary, GoodWeapon, ImportStatus, Inventory, MapKey, MapsResponse, Pool, PoolSummary, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
-	TeamBody, TeamResponse, TeamsResponse, WeaponOption, WishSummary
+	Talents, TeamBody, TeamResponse, TeamsResponse, TravelerInfo, WeaponOption, WishSummary
 } from './types';
 import { historyQuery } from './wishes';
 
@@ -43,6 +43,8 @@ async function upload<T>(path: string, file: File): Promise<T> {
 export const api = {
 	characters: () => request<Character[]>('GET', '/characters'),
 	character: (slug: string) => request<CharacterDetail>('GET', `/characters/${encodeURIComponent(slug)}`),
+	setTraveler: (id: number, body: { unlocked?: boolean; talents?: Talents; constellation?: number }) =>
+		request<TravelerInfo>('PUT', `/traveler/${id}`, body),
 	setGoal: (id: number, body: { goal?: Goal; targets?: Targets; planned_weapon_id?: number | null }) =>
 		request<Character>('PUT', `/characters/${id}/goal`, body),
 	inventory: () => request<Inventory>('GET', '/inventory'),

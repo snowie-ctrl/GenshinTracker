@@ -6,8 +6,8 @@ describe('skippedNote', () => {
 		expect(skippedNote({ ok: true, skipped: 'fresh' })).toBe('skipped: fresh');
 	});
 	it('lists characters the gaps part could not plan by name', () => {
-		expect(skippedNote({ ok: true, count: 3, skipped: ['Traveler'] })).toBe('not planned: Traveler');
-		expect(skippedNote({ ok: true, skipped: ['Traveler', 'Aloy'] })).toBe('not planned: Traveler, Aloy');
+		expect(skippedNote({ ok: true, count: 3, skipped: ['Aloy'] })).toBe('not planned: Aloy');
+		expect(skippedNote({ ok: true, skipped: ['Aloy', 'Nefer'] })).toBe('not planned: Aloy, Nefer');
 	});
 	it('says nothing when nothing was skipped', () => {
 		expect(skippedNote({ ok: true })).toBe('');

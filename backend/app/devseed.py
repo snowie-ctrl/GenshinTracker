@@ -24,8 +24,11 @@ CHARACTERS = [
     (10000087, "Neuvillette", "neuvillette", 5, "Hydro", "Catalyst", "UI_AvatarIcon_Neuvillette"),
     (10000052, "Raiden Shogun", "raiden-shogun", 5, "Electro", "Polearm", "UI_AvatarIcon_Shougun"),
     (10000025, "Xingqiu", "xingqiu", 4, "Hydro", "Sword", "UI_AvatarIcon_Xingqiu"),
+    (1000000507, "Cryo Traveler", "cryo-traveler", 5, "Cryo", "Sword", "UI_AvatarIcon_PlayerGirl"),
+    (1000000502, "Anemo Traveler", "anemo-traveler", 5, "Anemo", "Sword", "UI_AvatarIcon_PlayerGirl"),
 ]
-OWNED = {10000032: (80, (6, 8, 8)), 10000089: (90, (9, 9, 9)), 10000023: (80, (6, 6, 6)), 10000073: (90, (8, 8, 8))}
+OWNED = {10000032: (80, (6, 8, 8)), 10000089: (90, (9, 9, 9)), 10000023: (80, (6, 6, 6)), 10000073: (90, (8, 8, 8)),
+         1000000507: (90, (4, 9, 10))}
 GOALS = {10000032: "build", 10000089: "build", 10000047: "want", 10000087: "build"}
 WEAPON = WeaponInfo("Favonius Sword", "https://enka.network/ui/UI_EquipIcon_Sword_Zephyrus.png", 4, 90, 3, 11401)
 
@@ -97,7 +100,8 @@ def seed(root: Path) -> None:
         s.merge(GameMeta(key="map_embed_appsample", value={"allowed": True, "checked_at": iso(now)}))
         s.flush()
         names = {c[0]: c[1] for c in CHARACTERS}
-        save_roster(s, [RosterEntry(cid, cid, names[cid], None, lvl, 1, 10, WEAPON)
+        save_roster(s, [RosterEntry(cid, 10000007 if cid == 1000000507 else cid, names[cid],
+                                    "Cryo" if cid == 1000000507 else None, lvl, 1, 10, WEAPON)
                         for cid, (lvl, _t) in OWNED.items()], now)
         art = ArtifactInfo(1, "Noblesse Oblige", 5, 20, "HP 4780", ["CRIT Rate 3.9%", "ER 11.0%"],
                            "https://enka.network/ui/UI_RelicIcon_15007_4.png")

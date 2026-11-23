@@ -16,6 +16,7 @@ def test_devseed_creates_expected_statuses(tmp_path):
         "xiangling": ("obtained", False), "nahida": ("obtained", False),
         "kazuha": ("wanted", False), "neuvillette": ("wanted", True),
         "raiden-shogun": ("unobtained", False), "xingqiu": ("unobtained", False),
+        "cryo-traveler": ("obtained", False), "anemo-traveler": ("unobtained", False),
     }
     assert dash["notes"]["resin"] == 120
 
