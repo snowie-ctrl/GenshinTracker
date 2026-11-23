@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { api, errorMessage } from '$lib/api';
-	import CharacterCard from '$lib/CharacterCard.svelte';
-	import FilterPill from '$lib/FilterPill.svelte';
+	import CharacterFilterBar from '$lib/CharacterFilterBar.svelte';
+	import CharacterTile from '$lib/CharacterTile.svelte';
 	import TagChip from '$lib/TagChip.svelte';
 	import { loadCollapsed, saveCollapsed } from '$lib/collapse';
-	import { RARITY_STYLE, elementStyle } from '$lib/elements';
+	import { loadCharacterView, saveCharacterView } from '$lib/characterView';
 	import {
-		ELEMENTS, SECTIONS, WEAPON_TYPES, deriveStatus, emptyFilters, groupCharacters, type Filters
+		SECTIONS, deriveStatus, emptyFilters, groupCharacters, type Filters
 	} from '$lib/status';
 	import { sync } from '$lib/sync.svelte';
 	import { keepKnownTags } from '$lib/teams';
@@ -19,7 +19,11 @@
 	let toast = $state<string | null>(null);
 	let filters = $state<Filters>(emptyFilters());
 	let collapsed = $state<Record<Status, boolean>>(loadCollapsed());
-	const groups = $derived(groupCharacters(chars, filters));
+	const view = loadCharacterView();
+	let sort = $state(view.sort);
+	let size = $state(view.size);
+	const groups = $derived(groupCharacters(chars, filters, sort));
+	$effect(() => saveCharacterView({ size, sort }));
 
 	$effect(() => {
 		void sync.version;
@@ -67,20 +71,7 @@
 
 <h1>Characters</h1>
 
-<div class="filters">
-	<input placeholder="Search name" bind:value={filters.search} aria-label="Search characters" />
-	{#each ELEMENTS as el (el)}
-		<FilterPill label={el} on={filters.elements.includes(el)} color={elementStyle(el).color}
-			image={elementStyle(el).icon} onclick={() => (filters.elements = toggle(filters.elements, el))} />
-	{/each}
-	{#each WEAPON_TYPES as w (w)}
-		<FilterPill label={w} on={filters.weapons.includes(w)} onclick={() => (filters.weapons = toggle(filters.weapons, w))} />
-	{/each}
-	{#each [5, 4] as r (r)}
-		<FilterPill label="{r}★" on={filters.rarities.includes(r)} color={RARITY_STYLE[r].color} ink={RARITY_STYLE[r].ink}
-			onclick={() => (filters.rarities = toggle(filters.rarities, r))} />
-	{/each}
-</div>
+<CharacterFilterBar bind:filters bind:sort bind:size />
 
 {#if tags.length}
 	<div class="filters" data-testid="team-tag-filter">
@@ -111,7 +102,7 @@
 			{#if !collapsed[section.status]}
 				<div class="grid">
 					{#each groups[section.status] as c (c.id)}
-						<CharacterCard character={c} onGoal={(g) => setGoal(c, g)} />
+						<CharacterTile character={c} {size} onGoal={(g) => setGoal(c, g)} />
 					{:else}
 						<p class="muted">None.</p>
 					{/each}
@@ -123,7 +114,6 @@
 
 <style>
 	.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
-	.filters input { width: 180px; }
 	section { margin-bottom: 18px; }
 	.section-head {
 		background: none; border: none; padding: 4px 0; display: flex; gap: 8px; align-items: center;

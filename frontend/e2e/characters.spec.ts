@@ -76,3 +76,30 @@ test('Traveler element card: out-of-range talent snaps back to the saved value',
 	await normal.blur();
 	await expect(normal).toHaveValue('10');
 });
+
+test('large tiles persist across a reload and switch back', async ({ page }) => {
+	await page.goto('/characters');
+	await page.getByRole('button', { name: 'Large', exact: true }).click();
+	await expect(page.getByTestId('card-xiangling')).toHaveClass(/large/);
+	await page.reload();
+	await expect(page.getByTestId('card-xiangling')).toHaveClass(/large/);
+	await page.getByRole('button', { name: 'Small', exact: true }).click();
+	await expect(page.getByTestId('card-xiangling')).toHaveClass(/small/);
+});
+
+test('sort toggles reorder sections; unowned tiles are grey', async ({ page }) => {
+	await page.goto('/characters');
+	const rarity = page.getByRole('button', { name: 'Rarity', exact: true });
+	await expect(rarity).toHaveAttribute('aria-pressed', 'true');
+	await rarity.click();
+	const ids = await page.getByTestId('section-obtained').locator('[data-testid^="card-"]')
+		.evaluateAll((els) => els.map((e) => (e.textContent ?? '').trim()));
+	expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
+	await rarity.click();                                   // restore the default
+	await expect(rarity).toHaveAttribute('aria-pressed', 'true');
+
+	const section = page.getByTestId('section-unobtained');
+	await section.getByRole('button', { name: /Unobtained/ }).click();
+	await expect(section.getByTestId('card-xingqiu')).toHaveClass(/unowned/);
+	await section.getByRole('button', { name: /Unobtained/ }).click();
+});
