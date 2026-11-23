@@ -1,3 +1,4 @@
+import copy
 import json
 from pathlib import Path
 
@@ -46,6 +47,16 @@ def test_description_is_plain_paragraphs():
     d = by_id(parse(LIST, CONTENT, -5))[201].description
     assert "<" not in d and "&amp;" not in d
     assert d.split("\n\n") == ["〓Event Duration〓", "2026/11/20 10:00 – 2026/11/30 03:59", "Dig up & smash test blocks."]
+
+
+def test_malformed_items_are_skipped_not_fatal():
+    feed = copy.deepcopy(LIST)
+    event_group = next(g for g in feed["data"]["list"] if g["type_id"] == 1)
+    event_group["list"].append({"title": "No ann_id", "subtitle": "No id", "banner": "", "type": 1,
+                                "start_time": "2026-11-18 05:00:00", "end_time": "2026-11-30 03:59:59"})
+    event_group["list"].append({"ann_id": 299, "title": "Bad start", "subtitle": "Bad start", "banner": "",
+                                "start_time": "not a date", "end_time": "2026-11-30 03:59:59", "type": 1})
+    assert sorted(a.ann_id for a in parse(feed, CONTENT, -5)) == [201, 202, 204, 205, 206]
 
 
 async def test_fetch_sends_only_fixed_params_and_region():

@@ -83,18 +83,21 @@ def parse(ann_list: dict, ann_content: dict, offset_hours: int) -> list[Announce
             title, sub = item.get("title") or "", item.get("subtitle") or ""
             if "genius invokation" in f"{title} {sub}".lower():
                 continue
-            ann_id = int(item["ann_id"])
-            body = content.get(ann_id, {})
-            start, end = _times(body.get("content") or "", offset_hours)
-            out.append(Announcement(
-                ann_id=ann_id,
-                kind="wish" if title.lower().startswith("event wish") else "event",
-                name=_name(item), title=title, start=start, end=end,
-                window_start=_utc(item["start_time"], "%Y-%m-%d %H:%M:%S", offset_hours) if item.get("start_time") else None,
-                window_end=_utc(item["end_time"], "%Y-%m-%d %H:%M:%S", offset_hours) if item.get("end_time") else None,
-                image=item.get("banner") or body.get("banner") or None,
-                description=plain_text(body.get("content") or ""),
-            ))
+            try:
+                ann_id = int(item["ann_id"])
+                body = content.get(ann_id, {})
+                start, end = _times(body.get("content") or "", offset_hours)
+                out.append(Announcement(
+                    ann_id=ann_id,
+                    kind="wish" if title.lower().startswith("event wish") else "event",
+                    name=_name(item), title=title, start=start, end=end,
+                    window_start=_utc(item["start_time"], "%Y-%m-%d %H:%M:%S", offset_hours) if item.get("start_time") else None,
+                    window_end=_utc(item["end_time"], "%Y-%m-%d %H:%M:%S", offset_hours) if item.get("end_time") else None,
+                    image=item.get("banner") or body.get("banner") or None,
+                    description=plain_text(body.get("content") or ""),
+                ))
+            except (KeyError, TypeError, ValueError):
+                continue  # one malformed item is skipped; the rest of the feed still parses
     return out
 
 
