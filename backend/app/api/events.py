@@ -23,16 +23,19 @@ class DoneIn(BaseModel):
     done: bool
 
 
+def _latest_run(session: Session) -> SyncRun | None:
+    return session.scalars(select(SyncRun).where(SyncRun.finished_at.is_not(None), SyncRun.trigger != "gaps")
+                           .order_by(SyncRun.id.desc()).limit(1)).first()
+
+
 def last_error(session: Session, part: str) -> str | None:
-    run = session.scalars(select(SyncRun).where(SyncRun.finished_at.is_not(None), SyncRun.trigger != "gaps")
-                          .order_by(SyncRun.id.desc()).limit(1)).first()
+    run = _latest_run(session)
     p = ((run.parts or {}) if run is not None else {}).get(part) or {}
     return None if p.get("ok", True) else p.get("error")
 
 
 def announcements_error(session: Session) -> str | None:
-    run = session.scalars(select(SyncRun).where(SyncRun.finished_at.is_not(None), SyncRun.trigger != "gaps")
-                          .order_by(SyncRun.id.desc()).limit(1)).first()
+    run = _latest_run(session)
     return ((run.parts or {}).get("calendar") or {}).get("announcements_error") if run is not None else None
 
 
