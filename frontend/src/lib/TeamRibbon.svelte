@@ -6,7 +6,9 @@
 
 	let { member: m, onBuildAgain }: { member: TeamMember | null; onBuildAgain: (m: TeamMember) => void } = $props();
 
-	const INFO_H = 150;                                   // fixed info block height (px) so the inset is known
+	// Fixed info block height (px) so the slant inset is known; tall enough for name, level, weapon,
+	// artifact sets, role and the Not building / Build again line together.
+	const INFO_H = 200;
 	const inset = slantInset(INFO_H) + 10;
 	const el = $derived(elementStyle(m?.element));
 	const splash = $derived(m ? imgSrc(m.splash) : null);
@@ -55,7 +57,8 @@
 	.unowned .bg { background: linear-gradient(180deg, #2a2d38, #0b0e1a 85%); }
 	.unowned .nm img { filter: grayscale(1); }
 	.info { position: absolute; left: 0; right: 0; bottom: 0; height: var(--info-h); box-sizing: border-box; overflow: hidden;
-		padding: 28px 10px 10px var(--inset); transform: skewX(calc(var(--sk) * -1)); transform-origin: bottom left;
+		display: flex; flex-direction: column; justify-content: flex-end;
+		padding: 10px 10px 10px var(--inset); transform: skewX(calc(var(--sk) * -1)); transform-origin: bottom left;
 		font-size: 12px; text-align: left; }
 	/* The fade lives on the skewed layer so it fills the whole parallelogram, not an upright box. */
 	.shade { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--info-h) + 30px);
@@ -70,6 +73,9 @@
 	.set { position: relative; width: 24px; height: 24px; }
 	.set img, .noicon { width: 24px; height: 24px; display: grid; place-items: center; }
 	.set b { position: absolute; right: -3px; bottom: -3px; font-size: 9px; background: #10131f; border-radius: 6px; padding: 0 3px; }
+	/* Lines keep their height; the role line is the one that gives way if space runs out. */
+	.info > * { flex-shrink: 0; }
+	.info > .role { flex-shrink: 1; min-height: 0; }
 	.role { font-style: italic; color: var(--cream-dim, #b9ad95); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.badge { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #3a3f50; color: #cfd3df; }
 	.warn { color: var(--warn); margin-top: 3px; }

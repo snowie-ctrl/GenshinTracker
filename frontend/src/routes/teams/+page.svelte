@@ -87,7 +87,7 @@
 		data = { ...data, teams: data.teams.map((t) => (t.id === team.id ? { ...t, has_build_tag: on } : t)) };
 		try {
 			const r = await api.setTeamBuild(team.id, on);
-			const msg = changeMessage('', r.raised, r.lowered).replace(/^ · /, '');
+			const msg = changeMessage('', r.raised, r.lowered);
 			if (msg) notice = msg;
 			await load();
 		} catch (e) {
