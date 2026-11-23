@@ -12,6 +12,14 @@
 	} = $props();
 	let toast = $state<string | null>(null);
 	let overrides = $state<Record<string, boolean>>({});
+	// Drop an override once the server agrees with it, so later server changes win.
+	$effect(() => {
+		const stale = weekly.bosses.filter((b) => b.name in overrides && overrides[b.name] === b.done);
+		if (stale.length === 0) return;
+		const next = { ...overrides };
+		for (const b of stale) delete next[b.name];
+		overrides = next;
+	});
 	const bosses = $derived(weekly.bosses.map((b) => ({ ...b, done: overrides[b.name] ?? b.done }))
 		.sort((a, b) => Number(a.done) - Number(b.done)));
 

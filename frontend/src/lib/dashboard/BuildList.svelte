@@ -39,7 +39,10 @@
 		<ol class="list">
 			{#each shown as card, i (card.character.id)}
 				<li draggable={!saving}
-					ondragstart={() => (dragFrom = i)}
+					ondragstart={(e) => {
+						dragFrom = i;
+						if (e.dataTransfer) { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }
+					}}
 					ondragover={(e) => e.preventDefault()}
 					ondrop={(e) => { e.preventDefault(); if (dragFrom !== null) move(dragFrom, i); dragFrom = null; }}
 					ondragend={() => (dragFrom = null)}>

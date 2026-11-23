@@ -8,7 +8,19 @@
 	let { events, fetchedAt, now }: { events: DashEventItem[]; fetchedAt: string | null; now: number } = $props();
 	let overrides = $state<Record<number, boolean>>({});
 	let toast = $state<string | null>(null);
-	const rows = $derived(events.map((e) => (e.kind === 'event' && e.id in overrides ? { ...e, done: overrides[e.id] } : e)));
+	const rows = $derived(events.map((e) => {
+		if (e.kind !== 'event') return e;
+		if (e.finished) return { ...e, done: true };
+		return e.id in overrides ? { ...e, done: overrides[e.id] } : e;
+	}));
+	// Drop an override once the server agrees with it (or the event finished), so later server changes win.
+	$effect(() => {
+		const stale = events.filter((e) => e.kind === 'event' && e.id in overrides && (e.finished || overrides[e.id] === e.done));
+		if (stale.length === 0) return;
+		const next = { ...overrides };
+		for (const e of stale) if (e.kind === 'event') delete next[e.id];
+		overrides = next;
+	});
 
 	async function toggle(id: number, done: boolean) {
 		overrides = { ...overrides, [id]: done };

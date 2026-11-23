@@ -14,12 +14,16 @@
 	const fullText = (ms: number | null) => (ms === null ? '' : ms <= 0 ? 'Full' : `Full in ${formatDuration(ms)}`);
 </script>
 
-{#if connection.status === 'missing'}
+{#if connection.status === 'missing' && !notes}
 	<section class="panel" data-testid="bubbles">Connect HoYoLAB in <a href="/settings">Settings</a> to see your account here.</section>
 {:else}
-	<div class="bubbles" data-testid="bubbles">
+	<div class="bubbles-wrap" data-testid="bubbles">
+	{#if connection.status === 'missing'}
+		<p class="muted notice">Connect HoYoLAB in <a href="/settings">Settings</a> to refresh these.</p>
+	{/if}
+	<div class="bubbles">
 		<section class="panel bubble" data-testid="bubble-resin">
-			<img src={imgSrc('UI_ItemIcon_210')} alt="" />
+			{#if imgSrc('UI_ItemIcon_210')}<img src={imgSrc('UI_ItemIcon_210')} alt="" />{/if}
 			<div><div class="label">Original Resin</div>
 				<div class="big">{notes ? notes.resin : '—'}{#if notes}<span class="muted">/{notes.resin_max}</span>{/if}</div>
 				<div class="muted">{fullText(resinIn)}</div></div>
@@ -33,7 +37,7 @@
 				{/if}</div>
 		</section>
 		<section class="panel bubble" data-testid="bubble-realm">
-			<img src={imgSrc('UI_ItemIcon_204')} alt="" />
+			{#if imgSrc('UI_ItemIcon_204')}<img src={imgSrc('UI_ItemIcon_204')} alt="" />{/if}
 			<div><div class="label">Realm Currency</div>
 				<div class="big">{notes ? notes.realm_currency : '—'}{#if notes}<span class="muted">/{notes.realm_currency_max}</span>{/if}</div>
 				<div class="muted">{fullText(realmIn)}</div></div>
@@ -47,9 +51,11 @@
 				{/each}</div>{/if}</div>
 		</section>
 	</div>
+	</div>
 {/if}
 
 <style>
+	.notice { margin: 0 0 8px; }
 	.bubbles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 	.bubble { display: flex; gap: 12px; align-items: center; }
 	.bubble > img, .icon { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; color: var(--gold); }
