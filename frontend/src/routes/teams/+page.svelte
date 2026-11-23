@@ -1,26 +1,26 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { api, errorMessage } from '$lib/api';
 	import { shouldPoll } from '$lib/materials';
 	import { sync } from '$lib/sync.svelte';
 	import TagChip from '$lib/TagChip.svelte';
 	import TagManager from '$lib/TagManager.svelte';
-	import TeamCard from '$lib/TeamCard.svelte';
+	import TeamRow from '$lib/TeamRow.svelte';
 	import {
+		changeMessage, memberLookup, willLower,
 		filterActive, filterTeams, loadTeamFilter, moveItem, pruneTeamFilter, saveTeamFilter, toggleTag, toggleUntagged,
 		type TeamFilter
 	} from '$lib/teams';
-	import type { TagWithCount, TeamMember, TeamsResponse } from '$lib/types';
+	import type { TagWithCount, Team, TeamMember, TeamsResponse } from '$lib/types';
 
 	let data = $state<TeamsResponse | null>(null);
 	let tags = $state<TagWithCount[]>([]);
 	let error = $state<string | null>(null);
 	let toast = $state<string | null>(null);
-	let saved = $state<string | null>(page.url.searchParams.get('saved'));
+	let notice = $state<string | null>(null);
 	let filter = $state<TeamFilter>(loadTeamFilter());
 	let showTags = $state(false);
-	let dragId = $state<number | null>(null);
 	let now = $state(Date.now());
 	const shown = $derived(data ? filterTeams(data.teams, filter) : []);
 	// Moving a team among a filtered subset would shuffle hidden teams in surprising ways.
@@ -32,7 +32,6 @@
 	});
 
 	onMount(() => {
-		if (saved) history.replaceState(history.state, '', `/teams${location.hash}`);
 		const t = setInterval(() => {
 			now = Date.now();
 			if (shouldPoll(data?.gaps)) load();
@@ -74,9 +73,27 @@
 		return data ? data.teams.findIndex((t) => t.id === id) : -1;
 	}
 
-	function drop(targetId: number) {
-		if (dragId !== null && dragId !== targetId) reorderTo(indexOf(dragId), indexOf(targetId));
-		dragId = null;
+	function openEditor(id: number | 'new') {
+		void goto(`/teams?edit=${id}`, { noScroll: true, keepFocus: true });
+	}
+
+	async function setBuild(team: Team, on: boolean) {
+		if (!data) return;
+		if (!on) {
+			const names = willLower(data.teams, memberLookup(data.teams), team.id, { memberIds: team.members.map((m) => m.id), hasBuild: false });
+			if (names.length && !confirm(`Turn off Build? This moves ${names.join(', ')} off Build.`)) return;
+		}
+		const before = data.teams;
+		data = { ...data, teams: data.teams.map((t) => (t.id === team.id ? { ...t, has_build_tag: on } : t)) };
+		try {
+			const r = await api.setTeamBuild(team.id, on);
+			const msg = changeMessage('', r.raised, r.lowered).replace(/^ · /, '');
+			if (msg) notice = msg;
+			await load();
+		} catch (e) {
+			if (data) data = { ...data, teams: before };
+			toast = `Could not change Build for ${team.name}: ${errorMessage(e)}`;
+		}
 	}
 
 	async function buildAgain(m: TeamMember) {
@@ -91,7 +108,7 @@
 
 <div class="head">
 	<h1>Teams</h1>
-	<a class="button primary" href="/teams/new" data-testid="new-team">New team</a>
+	<button type="button" class="primary" data-testid="new-team" onclick={() => openEditor('new')}>New team</button>
 	<button type="button" onclick={() => (showTags = !showTags)} aria-expanded={showTags}>Manage tags</button>
 </div>
 
@@ -106,7 +123,7 @@
 
 {#if showTags}<TagManager onChange={load} />{/if}
 {#if toast}<div class="toast error">{toast} <button type="button" onclick={() => (toast = null)}>Dismiss</button></div>{/if}
-{#if saved}<div class="toast ok" role="status">{saved} <button type="button" onclick={() => (saved = null)}>Dismiss</button></div>{/if}
+{#if notice}<div class="toast ok" role="status">{notice} <button type="button" onclick={() => (notice = null)}>Dismiss</button></div>{/if}
 {#if error}<p class="error">{error}</p>{/if}
 
 {#if data}
@@ -114,7 +131,7 @@
 		<section class="panel">
 			<h2>Make your first team</h2>
 			<p class="muted">Tag a team <strong>Build</strong> to add its members to the planner.</p>
-			<a href="/teams/new">New team</a>
+			<button type="button" onclick={() => openEditor('new')}>New team</button>
 		</section>
 	{:else if shown.length === 0}
 		<p class="muted">No team has these tags.</p>
@@ -122,12 +139,10 @@
 		<p class="muted" data-testid="reorder-hint">Reordering is off while a tag filter is on. Show All to reorder teams.</p>
 	{/if}
 	{#each shown as team (team.id)}
-		<div role="listitem" draggable={canReorder} ondragstart={() => (dragId = canReorder ? team.id : null)} ondragend={() => (dragId = null)}
-			ondragover={(e) => e.preventDefault()} ondrop={() => drop(team.id)}>
-			<TeamCard {team} gaps={data.gaps} connected={data.connected} {now} onBuildAgain={buildAgain}
-				onMove={(d) => reorderTo(indexOf(team.id), indexOf(team.id) + d)} reorderable={canReorder}
-				first={indexOf(team.id) === 0} last={indexOf(team.id) === data.teams.length - 1} />
-		</div>
+		<TeamRow {team} gaps={data.gaps} connected={data.connected} {now} reorderable={canReorder}
+			first={indexOf(team.id) === 0} last={indexOf(team.id) === data.teams.length - 1}
+			onMove={(d) => reorderTo(indexOf(team.id), indexOf(team.id) + d)} onOpen={() => openEditor(team.id)}
+			onBuild={(on) => setBuild(team, on)} onBuildAgain={buildAgain} />
 	{/each}
 {:else if !error}
 	<p class="muted">Loading…</p>
@@ -138,8 +153,4 @@
 	.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; align-items: center; }
 	.toast { margin-bottom: 10px; }
 	.ok { color: var(--accent); }
-	a.button.primary {
-		background: var(--accent); color: #111; border: 1px solid var(--accent); border-radius: 6px;
-		padding: 4px 10px; font-weight: 600; text-decoration: none;
-	}
 </style>
