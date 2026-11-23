@@ -135,6 +135,10 @@ class LiveNotes(Base):
     realm_currency_max: Mapped[int] = mapped_column(Integer)
     weekly_discounts_left: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weekly_discounts_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    commission_bonus_claimed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    realm_currency_full_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    transformer_ready_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expeditions_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     expeditions: Mapped[list] = mapped_column(JSON)
     fetched_at: Mapped[datetime] = mapped_column(DateTime)
 
@@ -195,6 +199,7 @@ class CharacterGoal(Base):
     target_burst: Mapped[int | None] = mapped_column(Integer, nullable=True)
     target_weapon_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
     planned_weapon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    priority: Mapped[int | None] = mapped_column(Integer, nullable=True)   # Build order, 1 = first (sub-project 3)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
