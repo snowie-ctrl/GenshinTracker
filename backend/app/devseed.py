@@ -3,6 +3,8 @@ import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from sqlalchemy import select
+
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import (ChallengeRun, CharacterGoal, GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon,
@@ -163,10 +165,10 @@ def seed(root: Path) -> None:
         merge(s, demo_wishes(start), "game", now)
     with sf.begin() as s:
         ids = {c[2]: c[0] for c in CHARACTERS}             # slug -> id
-        s.add(Tag(id=2, name="abyss", name_key="abyss", color="red", builtin=False))
+        abyss = s.scalar(select(Tag).where(Tag.name_key == "abyss")).id   # created by migration 0009
         teams = [
             (1, "Abyss Furina", "Demo: Build + abyss.", [("furina", "on-field"), ("bennett", "battery"),
-                                                         ("xingqiu", "off-field hydro")], [1, 2]),
+                                                         ("xingqiu", "off-field hydro")], [1, abyss]),
             (2, "Archons only", "", [("furina", ""), ("nahida", ""), ("raiden-shogun", "")], []),
         ]
         for order, (tid, name, notes, members, tags) in enumerate(teams):

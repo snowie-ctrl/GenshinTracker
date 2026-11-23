@@ -7,7 +7,7 @@ from app.planner.requests import snapshot
 from app.api.teams import team_views
 from app.teams.view import build_team_cards
 from test_api_planner import setup                  # Bennett owned + Build, catalogue, totals, gaps
-from helpers import make_client
+from helpers import drop_default_tags, make_client
 
 BEN, FUR, XL, NAH = 10000032, 10000089, 10000023, 10000073
 
@@ -31,6 +31,7 @@ def body(members=(BEN,), tags=(), new_tags=(), name="Abyss Pyro", notes="", role
 
 def test_create_list_get_update_delete(paths):
     sf = setup(paths)
+    drop_default_tags(sf)
     mark_calculated(sf)
     with sf.begin() as s:
         s.execute(delete(OwnedArtifact).where(OwnedArtifact.character_id == BEN))
@@ -115,7 +116,8 @@ def test_reorder_endpoint(paths):
 
 
 def test_tag_endpoints(paths):
-    setup(paths)
+    sf = setup(paths)
+    drop_default_tags(sf)
     with make_client(paths) as client:
         fun = client.post("/api/tags", json={"name": "fun"}).json()
         assert client.post("/api/tags", json={"name": "FUN"}).status_code == 409

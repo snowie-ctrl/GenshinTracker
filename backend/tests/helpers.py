@@ -102,3 +102,11 @@ def wait_for_sync(client: TestClient, timeout: float = 5.0) -> dict:
         if time.monotonic() > deadline:
             raise TimeoutError("sync did not finish")
         time.sleep(0.02)
+
+
+def drop_default_tags(sf) -> None:
+    """Remove the migration's default tags so a test starts with only Build."""
+    from sqlalchemy import delete
+    from app.db.models import Tag
+    with sf.begin() as s:
+        s.execute(delete(Tag).where(Tag.builtin.is_(False)))

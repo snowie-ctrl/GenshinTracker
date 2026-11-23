@@ -93,7 +93,7 @@ def test_phase4_tables_and_build_tag(paths):
     insp = inspect(engine)
     assert {"team", "team_member", "tag", "team_tag"} <= set(insp.get_table_names())
     with engine.connect() as conn:
-        row = conn.exec_driver_sql("SELECT id, name, name_key, color, builtin FROM tag").one()
+        row = conn.exec_driver_sql("SELECT id, name, name_key, color, builtin FROM tag WHERE builtin = 1").one()
     engine.dispose()
     assert tuple(row) == (1, "Build", "build", "orange", 1)
 

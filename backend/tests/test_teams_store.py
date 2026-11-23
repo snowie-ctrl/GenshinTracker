@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from app.db.models import CharacterGoal, Tag, Team, TeamMember
 from app.teams import store
 from app.teams.store import BUILD_TAG_ID, MemberIn, TeamError
-from helpers import seed_game
+from helpers import drop_default_tags, seed_game
 
 BEN, FUR, XL, NAH = 10000032, 10000089, 10000023, 10000073
 
@@ -12,6 +12,7 @@ BEN, FUR, XL, NAH = 10000032, 10000089, 10000023, 10000073
 @pytest.fixture
 def sf(session_factory):
     seed_game(session_factory)
+    drop_default_tags(session_factory)
     return session_factory
 
 
@@ -199,3 +200,9 @@ def test_failed_write_rolls_back_everything(sf, monkeypatch):
         assert s.scalar(select(func.count()).select_from(Team)) == 0
         assert s.scalar(select(Tag).where(Tag.name_key == "fresh")) is None
     assert goals(sf, BEN) == ["none"]
+
+
+def test_palette_accepts_navy_and_gold(sf):
+    with sf.begin() as s:
+        t = store.create_tag(s, "night", color="navy")
+        assert store.update_tag(s, t.id, None, "gold").color == "gold"

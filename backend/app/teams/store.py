@@ -12,7 +12,7 @@ from app.teams.goals import raise_to_build
 from app.timeutil import utcnow
 
 BUILD_TAG_ID = 1
-TAG_COLORS = ("orange", "red", "yellow", "green", "teal", "blue", "purple", "pink")
+TAG_COLORS = ("orange", "red", "yellow", "green", "teal", "blue", "purple", "pink", "navy", "gold")
 NAME_MAX, NOTES_MAX, ROLE_MAX, TAG_MAX, MEMBERS_MAX = 60, 2000, 40, 30, 4
 
 
