@@ -1,0 +1,21 @@
+{"retcode": 0, "message": "OK", "data": {"timezone": -5, "list": [
+  {"type_id": 2, "type_label": "Game", "list": [
+    {"ann_id": 100, "title": "Update Details", "subtitle": "Update Details", "banner": "https://sdk.hoyoverse.com/upload/ann/test/game.png",
+     "start_time": "2026-11-04 00:00:00", "end_time": "2026-12-15 23:00:00", "type": 2}]},
+  {"type_id": 1, "type_label": "Event", "list": [
+    {"ann_id": 201, "title": "\"Digging Days\" Event: Dig and Win", "subtitle": "Digging Days", "banner": "https://sdk.hoyoverse.com/upload/ann/test/dig.png",
+     "start_time": "2026-11-18 05:00:00", "end_time": "2026-11-30 03:59:59", "type": 1},
+    {"ann_id": 202, "title": "Event Wish \"Test Abundance\" - Boosted Drop Rate", "subtitle": "Event Wish \"Test Abundance\"", "banner": "",
+     "start_time": "2026-11-19 09:00:00", "end_time": "2026-12-15 14:59:59", "type": 1},
+    {"ann_id": 203, "title": "\"Genius Invokation TCG\" Test Mode", "subtitle": "Genius Invokation TCG - Test Mode", "banner": "https://sdk.hoyoverse.com/upload/ann/test/tcg.png",
+     "start_time": "2026-11-19 05:00:00", "end_time": "2026-12-07 03:59:59", "type": 1},
+    {"ann_id": 204, "title": "\"Grand Test\" Event: Participate", "subtitle": "Grand Test", "banner": "https://sdk.hoyoverse.com/upload/ann/test/grand.png",
+     "start_time": "2026-11-02 05:00:00", "end_time": "2026-12-16 00:00:00", "type": 1},
+    {"ann_id": 205, "title": "Login Gift: Test Rewards", "subtitle": "Test Rewards", "banner": "https://sdk.hoyoverse.com/upload/ann/test/login.png",
+     "start_time": "2026-11-02 05:00:00", "end_time": "2026-12-14 03:59:59", "type": 1},
+    {"ann_id": 206, "title": "Event Wish \"Test Invocation\" - Epitome Invocation", "subtitle": "Event Wish - Test Invocation", "banner": "https://sdk.hoyoverse.com/upload/ann/test/weapon.png",
+     "start_time": "2026-11-19 09:00:00", "end_time": "2026-12-15 14:59:59", "type": 1}]},
+  {"type_id": 26, "type_label": "Miliastra Wonderland", "list": [
+    {"ann_id": 300, "title": "Season Opening", "subtitle": "Season", "banner": "https://sdk.hoyoverse.com/upload/ann/test/mw.png",
+     "start_time": "2026-11-02 05:00:00", "end_time": "2026-12-16 00:00:00", "type": 26}]}
+]}}
