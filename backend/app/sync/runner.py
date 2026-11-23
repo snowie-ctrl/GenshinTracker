@@ -201,7 +201,12 @@ class SyncManager:
             with self._sf.begin() as s:
                 data = to_json(cal)
                 save_snapshot(s, "calendar", data, now)
-                record(s, anns, data, now)
+                try:
+                    with s.begin_nested():  # a savepoint: a failed event log never rolls back the snapshot
+                        record(s, anns, data, now)
+                except Exception as e:
+                    log.warning("Event log update failed: %s", type(e).__name__)
+                    result.setdefault("announcements_error", _failure(e)["error"])
                 return result, unknown_character_ids(s, character_ids(cal))
         if part == "profile":
             profile = await source.get_profile()
