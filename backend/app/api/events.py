@@ -1,5 +1,3 @@
-from typing import Literal
-
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -92,9 +90,8 @@ def set_done(event_id: int, body: DoneIn, ctx: AppContext = Depends(get_ctx)) ->
 
 
 @router.get("/banners/history")
-def get_banner_history(pool: Literal["character", "weapon", "chronicled"] = "character",
-                       q: str = Query("", max_length=100), page: int = Query(1, ge=1),
+def get_banner_history(q: str = Query("", max_length=100), page: int = Query(1, ge=1),
                        ctx: AppContext = Depends(get_ctx)) -> dict:
     with ctx.session_factory() as s:
         pulls = pulls_by_banner(summarize(s, utcnow(), offset_hours(region(ctx))))
-        return banner_history(s, pool, q, page, pulls)
+        return banner_history(s, q, page, pulls)

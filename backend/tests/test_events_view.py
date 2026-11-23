@@ -95,25 +95,54 @@ def test_live_banners_with_pulls():
     assert out["upcoming"][0]["pulls"] is None
 
 
-def test_banner_history_filter_search_page(session_factory):
+def gb(pool, start, version, name="B", f5=(), f4=(), order=0):
+    return GameBanner(key=f"{pool}|{start}|{order}", pool=pool, name=name, short_name=name, start=start,
+                      end=start, timezone_dependent=True, timezone_dependent_end=False, order=order,
+                      featured_5=list(f5), featured_4=list(f4), version=version)
+
+
+def test_banner_history_versions_phases_search_and_paging(session_factory):
     seed_game(session_factory)
     with session_factory.begin() as s:
-        for i in range(55):
-            s.add(GameBanner(key=f"character|2020-01-{i:02d}|0", pool="character", name=f"Banner {i}",
-                             short_name="Furina" if i == 3 else f"B{i}", start=f"2020-{1 + i // 28:02d}-{1 + i % 28:02d} 10:00:00",
-                             end="2020-12-31 10:00:00", timezone_dependent=False, timezone_dependent_end=False,
-                             order=0, featured_5=[10000089] if i == 3 else [], featured_4=[10000032], version="1.0"))
-        s.add(GameBanner(key="weapon|x|0", pool="weapon", name="W", short_name="W", start="2020-01-01 10:00:00",
-                         end="2020-01-20 10:00:00", timezone_dependent=False, timezone_dependent_end=False, order=0,
-                         featured_5=[], featured_4=[], version="1.0"))
+        s.add(gb("character", "2026-11-04 06:00:00", "9.9", "Tide of Furina", [10000089], [10000032]))
+        s.add(gb("weapon", "2026-11-04 06:00:00", "9.9", "Epitome Invocation"))
+        s.add(gb("chronicled", "2026-11-04 06:00:00", "9.9", "Chronicle"))
+        s.add(gb("character", "2026-10-14 18:00:00", "9.8", "Older"))
+        s.add(gb("standard", "2000-01-01 00:00:00", None, "Wanderlust"))
+        s.add(gb("standard", "2000-01-02 00:00:00", "9.9", "Wanderlust 9.9"))   # standard pool never shown
+        for i in range(8):
+            s.add(gb("character", f"2020-{i + 1:02d}-01 06:00:00", f"1.{i}", f"Old {i}"))
     with session_factory() as s:
-        page1 = banner_history(s, "character", "", 1, {})
-        page2 = banner_history(s, "character", "", 2, {})
-        found = banner_history(s, "character", "furina", 1, {"character|2020-01-03|0": {"pulls": 7, "fives": [], "fours": []}})
-    assert page1["total"] == 55 and len(page1["rows"]) == 50 and len(page2["rows"]) == 5
-    assert page1["rows"][0]["start"] >= page1["rows"][1]["start"]          # newest first
-    assert [r["key"] for r in found["rows"]] == ["character|2020-01-03|0"]
-    assert found["rows"][0]["featured_5"][0]["name"] == "Furina" and found["rows"][0]["pulls"]["pulls"] == 7
+        page1 = banner_history(s, "", 1, {"character|2026-11-04 06:00:00|0": {"pulls": 7, "fives": ["Furina"], "fours": []}})
+        page2 = banner_history(s, "", 2, {})
+        found = banner_history(s, "furina", 1, {})
+    assert page1["total_versions"] == 10 and page1["page_size"] == 6
+    assert [v["version"] for v in page1["versions"]] == ["9.9", "9.8", "1.7", "1.6", "1.5", "1.4"]
+    assert len(page2["versions"]) == 4
+    top = page1["versions"][0]["phases"][0]
+    assert [b["pool"] for b in top["banners"]] == ["character", "weapon", "chronicled"]
+    assert top["banners"][0]["featured_5"][0]["name"] == "Furina" and top["banners"][0]["pulls"]["pulls"] == 7
+    assert top["upcoming"] is False
+    assert [v["version"] for v in found["versions"]] == ["9.9"]
+    assert [b["name"] for b in found["versions"][0]["phases"][0]["banners"]] == ["Tide of Furina"]
+
+
+def test_banner_history_upcoming_phase_from_log(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        s.add(gb("character", "2026-11-04 06:00:00", "9.9", "Tide of Furina"))
+        s.add(EventLog(key="ann:5", kind="wish:character", name="Next Wish", start="2026-11-24T10:00:00Z",
+                       end="2026-12-15T06:59:00Z", image="https://sdk.hoyoverse.com/upload/ann/test/n.png",
+                       description="", calendar_id=None, first_seen=NOW, last_seen=NOW))
+        s.add(EventLog(key="ann:6", kind="wish:character", name="Matched Wish", start="2026-11-03T22:00:00Z",
+                       end="2026-11-24T06:59:00Z", image=None, description="", calendar_id=None,
+                       first_seen=NOW, last_seen=NOW))
+    with session_factory() as s:
+        out = banner_history(s, "", 1, {})
+    phases = out["versions"][0]["phases"]
+    assert [p["upcoming"] for p in phases] == [False, True]
+    assert phases[1]["image"].endswith("n.png") and phases[1]["banners"][0]["name"] == "Next Wish"
+    assert phases[1]["banners"][0]["featured_5"] == []
 
 
 def test_cleanup_event_done(session_factory):

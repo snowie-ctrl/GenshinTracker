@@ -61,9 +61,9 @@ def test_events_without_snapshot_and_error(paths):
 def test_banner_history_endpoint(paths):
     sf_for(paths)
     with make_client(paths) as client:
-        body = client.get("/api/banners/history?pool=character&q=&page=1").json()
-        assert body == {"total": 0, "page": 1, "page_size": 50, "rows": []}
-        assert client.get("/api/banners/history?pool=nope").status_code == 422
+        body = client.get("/api/banners/history?q=&page=1").json()
+        assert body == {"total_versions": 0, "page": 1, "page_size": 6, "versions": []}
+        assert client.get("/api/banners/history?page=0").status_code == 422
 
 
 def test_banner_history_wildcards_are_literal(paths):
@@ -74,9 +74,9 @@ def test_banner_history_wildcards_are_literal(paths):
                          timezone_dependent=False, timezone_dependent_end=False, order=0,
                          featured_5=[], featured_4=[], version="1.0"))
     with make_client(paths) as client:
-        assert client.get("/api/banners/history?pool=character&q=%25").json()["total"] == 0
-        assert client.get("/api/banners/history?pool=character&q=_").json()["total"] == 0
-        assert client.get("/api/banners/history?pool=character&q=plain").json()["total"] == 1
+        assert client.get("/api/banners/history?q=%25").json()["total_versions"] == 0
+        assert client.get("/api/banners/history?q=_").json()["total_versions"] == 0
+        assert client.get("/api/banners/history?q=plain").json()["total_versions"] == 1
 
 
 def test_done_validation(paths):
