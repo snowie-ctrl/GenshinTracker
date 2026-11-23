@@ -81,3 +81,24 @@ def test_build_sections_ready_completed_and_not_calculated():
     nc = builds[1000000502]
     assert (nc["calculated"], nc["ready"], nc["materials"]) == (False, False, [])
     assert [c["id"] for c in out["completed"]] == [1000000507]          # calculated, no gap rows
+
+
+def test_failed_higher_tier_craft_does_not_drain_pool():
+    gaps = {10: {3: (1, 1)}, 20: {2: (2, 2)}}
+    d = data({1: Total(0, 0, 6), 3: Total(1, 1, 0), 2: Total(2, 2, 0)}, gaps)   # 6 green held only
+    a = allocate(d, [10, 20])
+    assert a[10][3] == Allocation(1, 0, 0) and a[20][2] == Allocation(2, 0, 2)
+
+
+def test_partial_multi_tier_craft_leaves_rest_for_later_gap():
+    gaps = {10: {3: (2, 2)}, 20: {2: (1, 1)}}
+    d = data({1: Total(0, 0, 12), 3: Total(2, 2, 0), 2: Total(1, 1, 0)}, gaps)  # 12 green held
+    a = allocate(d, [10, 20])
+    assert a[10][3] == Allocation(2, 0, 1) and a[20][2] == Allocation(1, 0, 1)
+
+
+def test_duplicate_ids_in_order_are_ignored():
+    gaps = {10: {2: (5, 5)}}
+    d = data({2: Total(5, 3, 0)}, gaps)                    # 2 held
+    assert allocate(d, [10, 10])[10][2] == Allocation(5, 2, 0)
+    assert len(build_sections(d, [10, 10], material_index(d), {})["builds"]) == 1

@@ -16,7 +16,7 @@ class Allocation:
 
 
 def held_counts(data: PlannerData) -> dict[int, int]:
-    """need - short + spare: exact while short overall, a lower bound otherwise (then everyone is covered)."""
+    """What the bag holds (need - short + spare), as far as the calculator reports it."""
     return {mid: max(0, t.need - t.short + t.spare) for mid, t in data.totals.items()}
 
 
@@ -29,7 +29,7 @@ def _lower_tiers(data: PlannerData) -> dict[int, list[int]]:
     return out
 
 
-def _craft(remaining: dict[int, int], lower: list[int], n: int) -> int:
+def _craft_raw(remaining: dict[int, int], lower: list[int], n: int) -> int:
     """Make up to n of the tier above `lower[-1]` from `remaining`, 3 -> 1, recursing down the chain."""
     if not lower or n <= 0:
         return 0
@@ -37,13 +37,20 @@ def _craft(remaining: dict[int, int], lower: list[int], n: int) -> int:
     want = 3 * n
     direct = min(want, remaining.get(below, 0))
     remaining[below] = remaining.get(below, 0) - direct
-    total = direct + _craft(remaining, lower[:-1], want - direct)
+    total = direct + _craft_raw(remaining, lower[:-1], want - direct)
     made = total // 3
     remaining[below] += total - made * 3          # unused units (held or just crafted) stay in the bag
     return made
 
 
+def _craft(remaining: dict[int, int], lower: list[int], n: int) -> int:
+    """Transactional craft: dry-run on a copy to learn how many whole units can be made, then consume exactly that."""
+    made = _craft_raw(dict(remaining), lower, n)
+    return _craft_raw(remaining, lower, made) if made > 0 else 0
+
+
 def allocate(data: PlannerData, order: list[int]) -> dict[int, dict[int, Allocation]]:
+    order = list(dict.fromkeys(order))
     remaining = held_counts(data)
     rows: dict[int, dict[int, list[int]]] = {}
     for cid in order:                               # exact pass
@@ -83,7 +90,7 @@ def _material_rows(alloc: dict[int, Allocation], index: dict[int, dict]) -> list
 
 def build_sections(data: PlannerData, order: list[int], index: dict[int, dict],
                    progress: dict[int, float | None]) -> dict:
-    order = [cid for cid in order if cid in data.characters]
+    order = [cid for cid in dict.fromkeys(order) if cid in data.characters]
     alloc = allocate(data, order)
     builds, completed = [], []
     for cid in order:
