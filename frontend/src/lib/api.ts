@@ -54,7 +54,7 @@ export const api = {
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
 	profile: () => request<ProfileResponse>('GET', '/profile'),
 	settings: () => request<Settings>('GET', '/settings'),
-	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string; default_map?: MapKey; good_import_enabled?: boolean; background_animated?: boolean }) =>
+	saveSettings: (body: { sync_interval_minutes?: number; default_targets?: Targets; game_install_path?: string; default_map?: MapKey; good_import_enabled?: boolean; background_animated?: boolean; display_name?: string }) =>
 		request<Settings>('PUT', '/settings', body),
 	goodStatus: () => request<GoodStatus>('GET', '/good/status'),
 	importGood: (file: File) => upload<GoodSummary>('/good/import', file),

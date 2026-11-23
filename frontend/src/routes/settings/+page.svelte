@@ -21,6 +21,18 @@
 		{ id: 'map', label: 'Map' }
 	];
 	let appearanceNote = $state<string | null>(null);
+	let displayNameNote = $state<string | null>(null);
+
+	async function saveDisplayName(input: HTMLInputElement) {
+		displayNameNote = null;
+		try {
+			const saved = await api.saveSettings({ display_name: input.value });
+			input.value = saved.display_name;
+			displayNameNote = 'Saved';
+		} catch (e) {
+			displayNameNote = errorMessage(e);
+		}
+	}
 
 	async function setBackground(input: HTMLInputElement) {
 		appearanceNote = null;
@@ -338,6 +350,13 @@
 						Animated background
 					</label>
 					<p class="muted">Drifting space dust behind every page. It also stays still when your system's reduce-motion setting is on.</p>
+					<label class="inline">
+						Display name
+						<input type="text" maxlength="40" value={settings?.display_name ?? ''}
+							onchange={(e) => saveDisplayName(e.currentTarget)} data-testid="display-name" />
+					</label>
+					<p class="muted">Shown in the Dashboard greeting. Leave blank for “Traveler”. Kept on this computer only.</p>
+					{#if displayNameNote}<span class="muted" data-testid="display-name-note">{displayNameNote}</span>{/if}
 					{#if appearanceNote}<span class="error" data-testid="appearance-note">{appearanceNote}</span>{/if}
 				</div>
 			</section>

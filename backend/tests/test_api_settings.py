@@ -191,3 +191,13 @@ def test_background_animated_rejects_non_boolean(paths):
     with make_client(paths) as client:
         assert client.put("/api/settings", json={"background_animated": [1]}).status_code == 422
         assert client.get("/api/settings").json()["background_animated"] is True
+
+
+def test_display_name_default_trim_and_cap(paths):
+    with make_client(paths) as client:
+        assert client.get("/api/settings").json()["display_name"] == ""
+        assert client.put("/api/settings", json={"display_name": "  Aether  "}).json()["display_name"] == "Aether"
+        long = client.put("/api/settings", json={"display_name": "x" * 60}).json()["display_name"]
+        assert long == "x" * 40
+        assert client.put("/api/settings", json={"display_name": ""}).json()["display_name"] == ""
+        assert client.put("/api/settings", json={"display_name": "y" * 201}).status_code == 422

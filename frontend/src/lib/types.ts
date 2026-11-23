@@ -96,6 +96,7 @@ export interface Settings {
 	game_install_path: string;
 	good_import_enabled: boolean;
 	background_animated: boolean;
+	display_name: string;
 	gamedata: {
 		artifact_sets: { fetched_at: string | null; last_error: string | null; count: number };
 		fetched_at: string | null; last_error: string | null; count: number;

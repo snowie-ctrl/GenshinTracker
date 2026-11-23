@@ -11,6 +11,7 @@ DEFAULTS: dict[str, object] = {
     "default_targets": DEFAULT_TARGETS,
     "hoyolab_status": None,  # None | "connected" | "expired"
     "game_install_path": "",   # blank = auto-detect from the game's log file
+    "display_name": "",   # Dashboard greeting (sub-project 3); local only
     "default_map": "hoyolab",  # hoyolab | appsample
     "good_import_enabled": False,   # opt-in GOOD scanner import (Phase 6)
     "background_animated": True,    # Ad Astra drifting-dust background (Foundation)

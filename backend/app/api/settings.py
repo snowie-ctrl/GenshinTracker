@@ -16,6 +16,8 @@ from app.settings.store import get_setting, set_setting
 
 router = APIRouter()
 
+DISPLAY_NAME_MAX = 40
+
 
 class SettingsIn(BaseModel):
     sync_interval_minutes: int | None = Field(default=None, ge=1, le=1440)
@@ -24,6 +26,7 @@ class SettingsIn(BaseModel):
     default_map: Literal["hoyolab", "appsample"] | None = None
     good_import_enabled: bool | None = None
     background_animated: bool | None = None
+    display_name: str | None = Field(default=None, max_length=200)
 
 
 class HoyolabIn(BaseModel):
@@ -61,6 +64,7 @@ def settings_payload(ctx: AppContext, s: Session) -> dict:
         "default_map": get_setting(s, "default_map"),
         "good_import_enabled": bool(get_setting(s, "good_import_enabled")),
         "background_animated": bool(get_setting(s, "background_animated")),
+        "display_name": str(get_setting(s, "display_name") or ""),
         "level_caps": LEVEL_CAPS,
         "gamedata": gamedata_status(s),
     }
@@ -87,6 +91,8 @@ def put_settings(body: SettingsIn, ctx: AppContext = Depends(get_ctx)) -> dict:
             set_setting(s, "good_import_enabled", body.good_import_enabled)
         if body.background_animated is not None:
             set_setting(s, "background_animated", body.background_animated)
+        if body.display_name is not None:
+            set_setting(s, "display_name", body.display_name.strip()[:DISPLAY_NAME_MAX])
         return settings_payload(ctx, s)
 
 

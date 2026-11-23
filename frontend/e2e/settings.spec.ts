@@ -61,3 +61,15 @@ test('a failed background save snaps the toggle back and shows the error', async
 	await expect(toggle).toBeChecked();
 	await expect(page.getByTestId('starfield')).toHaveAttribute('data-animated', 'true');
 });
+
+test('display name saves and trims', async ({ page }) => {
+	await page.goto('/settings');
+	const input = page.getByTestId('display-name');
+	await input.fill('  Lumine  ');
+	await input.blur();
+	await expect(page.getByTestId('display-name-note')).toHaveText('Saved');
+	await expect(input).toHaveValue('Lumine');
+	await input.fill('');
+	await input.blur();
+	await expect(input).toHaveValue('');
+});
