@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Python: `C:/Users/smoki/Documents/Code-Development/GenshinTracker/.venv/Scripts/python.exe`; backend tests run from `backend/` with `<python> -m pytest -q`.
+- Python: the repo venv's `.venv/Scripts/python.exe` (in the main checkout, one level above `.claude/worktrees/`); backend tests run from `backend/` with `<python> -m pytest -q`.
 - Frontend checks from `frontend/`: `npm run check`, `npx vitest run`, `npm run build`, `PYTHON=<python> npx playwright test` (workers 1; one shared seeded server; every test restores any state it changes).
 - The feed request sends only fixed parameters plus the server region: `game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&region=<server>&level=60`. No cookie, no UID, no nickname, no email.
 - Unofficial API code lives only in `backend/app/sync/` (and `wishes/`).
