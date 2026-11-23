@@ -7,7 +7,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import GameCharacter, OwnedCharacter, Tag, Team, TeamMember, TeamTag
-from app.gamedata.yatta import canonical_id
 from app.settings.store import default_targets
 from app.teams.goals import raise_to_build
 from app.timeutil import utcnow
@@ -115,7 +114,7 @@ def save_team(s: Session, team_id: int | None, name: str, notes: str, members: l
     clean_notes = _text(notes, NOTES_MAX, "Notes", required=False)
     if not 1 <= len(members) <= MEMBERS_MAX:
         raise TeamError(422, "A team needs 1 to 4 members")
-    ids = [canonical_id(m.character_id) for m in members]
+    ids = [m.character_id for m in members]
     if len(set(ids)) != len(ids):
         raise TeamError(422, "A character can be in a team only once")
     roles = [_text(m.role, ROLE_MAX, "Role", required=False) for m in members]

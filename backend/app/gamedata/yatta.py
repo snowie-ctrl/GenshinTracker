@@ -12,7 +12,6 @@ YATTA_AVATAR_URL = "https://gi.yatta.moe/api/v2/en/avatar"
 from app.gamedata.traveler import (BODY_IDS, MANEKIN_RAW_IDS, TRAVELER_ELEMENTS, TRAVELER_PENDING, body_icon,
                                    traveler_id, traveler_name)
 
-MANEKIN_ID = 10000117    # legacy: removed in Task 5
 VARIANT_ICONS = {10000005: "UI_AvatarIcon_PlayerBoy", 10000007: "UI_AvatarIcon_PlayerGirl"}
 
 ELEMENTS = {

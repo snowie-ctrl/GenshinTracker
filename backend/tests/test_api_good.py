@@ -138,7 +138,6 @@ def test_inventory_to_farm_unchanged_by_import(paths):
                 assert after[mid][k] == m[k], (mid, k)
 
 
-@pytest.mark.xfail(reason="rewritten in Task 4/5", strict=False)
 def test_weapons_and_artifacts_lists(paths):
     setup(paths)
     with make_client(paths) as client:
@@ -153,7 +152,7 @@ def test_weapons_and_artifacts_lists(paths):
         assert [(a["set_name"], a["slot"]) for a in arts] == [
             ("Gladiator's Finale", "flower"), ("Noblesse Oblige", "goblet"), ("Noblesse Oblige", "sands")]
         assert arts[0]["icon"] == "UI_RelicIcon_15001_4" and arts[1]["icon"] == "UI_RelicIcon_15007_1"
-        assert arts[0]["holder"]["slug"] == "traveler"
+        assert arts[0]["holder"]["slug"] == "anemo-traveler"
         assert arts[2]["holder"] is None and arts[2]["location"] == "SomeNewCharacter"
 
 

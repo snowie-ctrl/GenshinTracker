@@ -42,11 +42,13 @@ class KeyIndex:
     sets: dict[str, int]
     characters: dict[str, int]
     known_material_keys: frozenset[str]
+    traveler_current: int | None = None
 
     @classmethod
     def build(cls, session: Session) -> "KeyIndex":
         from app.db.models import GameArtifactSet, GameCharacter, GameMaterial, GameMeta, GameWeapon
         from app.gamedata.service import META_MAT_KEYS
+        from app.traveler.store import current_element_id
         meta = session.get(GameMeta, META_MAT_KEYS)
         return cls(
             materials=_index(session.execute(select(GameMaterial.id, GameMaterial.name)
@@ -57,15 +59,16 @@ class KeyIndex:
             characters=_index(session.execute(select(GameCharacter.id, GameCharacter.name)
                                               .order_by(GameCharacter.id)), "character"),
             known_material_keys=frozenset(meta.value or []) if meta is not None else frozenset(),
+            traveler_current=current_element_id(session),
         )
 
     def character(self, key: str) -> int | None:
-        from app.gamedata.yatta import MANEKIN_ID
-        TRAVELER_ID = 10000005  # Task 5
-        if not key:
+        from app.gamedata.traveler import TRAVELER_ELEMENTS, traveler_id
+        if not key or key in ("Manekin", "Manekina"):
             return None
+        if key == "Traveler":
+            return self.traveler_current
         if key.startswith("Traveler"):
-            return TRAVELER_ID
-        if key in ("Manekin", "Manekina"):
-            return MANEKIN_ID
+            element = key[len("Traveler"):]
+            return traveler_id(element) if element in TRAVELER_ELEMENTS else None
         return self.characters.get(key)

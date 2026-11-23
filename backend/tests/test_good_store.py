@@ -66,7 +66,7 @@ def test_holders_traveler_and_unknown(session_factory):
     free = [w for w in m.weapons if w["location"] is None]
     assert len(free) == 2 and all(w["character_id"] is None for w in free)
     traveler = next(a for a in m.artifacts if a["location"] == "TravelerAnemo")
-    assert traveler["character_id"] == 10000005
+    assert traveler["character_id"] == 1000000502
     unknown = next(a for a in m.artifacts if a["location"] == "SomeNewCharacter")
     assert unknown["character_id"] is None            # equipped by someone we can't name, not "unequipped"
 
@@ -78,7 +78,7 @@ def test_index_maps_manekina_and_collisions_keep_first(session_factory, caplog):
     caplog.set_level(logging.INFO)
     idx = index(session_factory)
     assert idx.weapons["FavoniusSword"] == 11401
-    assert idx.character("Manekina") == idx.character("Manekin") == 10000117
+    assert idx.character("Manekina") is None and idx.character("Manekin") is None
     assert idx.character("") is None
     assert "FavoniusSword" in caplog.text
 

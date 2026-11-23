@@ -77,7 +77,7 @@ def test_removals_change_no_goals(sf):
 
 def test_validation(sf):
     cases = [
-        dict(members=()), dict(members=(BEN, FUR, XL, NAH, 10000005)), dict(members=(BEN, BEN)),
+        dict(members=()), dict(members=(BEN, FUR, XL, NAH, 1000000507)), dict(members=(BEN, BEN)),
         dict(members=(424242,)), dict(name="   "), dict(name="x" * 61), dict(notes="x" * 2001),
         dict(roles={BEN: "x" * 41}), dict(tags=(999,)),
     ]
@@ -92,10 +92,13 @@ def test_validation(sf):
     assert e.value.status == 404 and e.value.message == "Team not found"
 
 
-@pytest.mark.xfail(reason="rewritten in Task 4/5", strict=False)
-def test_traveler_variant_is_stored_canonically(sf):
-    tid, _ = save(sf, members=(10000007,))
-    assert members_of(sf, tid) == [(0, 10000005, "")]
+def test_traveler_element_ids_saved_and_raw_or_manekin_ids_rejected(sf):
+    tid, _ = save(sf, members=(1000000507,))
+    assert members_of(sf, tid) == [(0, 1000000507, "")]
+    for bad in (10000007, 10000005, 10000117):
+        with pytest.raises(TeamError) as e:
+            save(sf, members=(bad,))
+        assert e.value.status == 422 and "Unknown character" in e.value.message
 
 
 def test_new_tag_reuses_existing_case_insensitively(sf):
