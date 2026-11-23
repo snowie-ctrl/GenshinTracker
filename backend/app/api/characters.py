@@ -7,14 +7,18 @@ from sqlalchemy.orm import Session
 
 from app.context import AppContext, get_ctx
 from app.api.planner import gaps_for, planner_view
-from app.db.models import CharacterGoal, GameCharacter, GameWeapon, OwnedArtifact, OwnedCharacter
+from app.api.traveler import traveler_payload
+from app.db.models import (CharacterGoal, GameCharacter, GameWeapon, OwnedArtifact, OwnedCharacter,
+                           TravelerElement)
 from app.domain import Current, Targets, derive_status, progress, resolve_targets
+from app.gamedata.traveler import is_traveler
 from app.gamedata.yatta import splash_for
 from app.planner.characters import character_shortfall
 from app.schemas import TargetsIn
 from app.settings.store import default_targets
 from app.teams.store import memberships
 from app.timeutil import utcnow
+from app.traveler.store import current_element_id
 
 router = APIRouter()
 
@@ -123,6 +127,11 @@ def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
             payload["stats"] = o.stats if o is not None else []
             payload["planned_weapon"] = planned_weapon(s, r, o)
             payload["teams"] = memberships(s).get(payload["id"], [])
+            if is_traveler(payload["id"]):
+                payload["traveler"] = traveler_payload(s.get(TravelerElement, payload["id"]), payload["id"],
+                                                       current_element_id(s))
+            else:
+                payload["traveler"] = None
             if payload["goal"] == "build":
                 data, index = planner_view(s)
                 payload["shortfall"] = {"gaps": gaps_for(ctx, s),
