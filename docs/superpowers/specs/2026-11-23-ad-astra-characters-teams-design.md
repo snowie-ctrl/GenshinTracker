@@ -1,7 +1,7 @@
 # Ad Astra Sub-project 4 — Characters Overview and Teams
 
 **Date:** 2026-11-23
-**Status:** Design approved in chat 2026-11-23; awaiting written-spec review
+**Status:** Approved 2026-11-23
 **Frame:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 4 of 10). Builds on Foundation (`2026-11-22-ad-astra-foundation-design.md`), Traveler per element (`2026-11-22-ad-astra-traveler-per-element-design.md`) and Dashboard (`2026-11-22-ad-astra-dashboard-design.md`). Replaces the page parts of Phase 4 Teams (`2026-11-21-phase4-teams-design.md` §7.2–7.4) and changes its goal rule (§4: teams now also lower goals).
 **Scope:** Restyle the Characters overview (small/large tiles, sort toggles, greyed unowned characters, full width) and redesign Teams (slanted character ribbons with splash art, team info section, popup editor, coloured default tags, Build switch that both raises and lowers members' goals, shortfall drawer).
 
