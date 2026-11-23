@@ -1,7 +1,7 @@
 # Ad Astra sub-project 3: Dashboard
 
 **Date:** 2026-11-22
-**Status:** Design approved in chat 2026-11-22; written spec awaiting the user's review
+**Status:** Approved by the user 2026-11-22
 **Depends on:** sub-project 1 (Foundation) and sub-project 2 (Traveler per element), both merged (main at bd3d1ed)
 **Parent:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 3)
 
@@ -117,8 +117,10 @@ These are removed:
 ## 4. Data model (migration 0008)
 
 **`character_goal.priority`**, a nullable integer.
-- Effective order of Build characters: `(priority is null, priority, updated_at, character_id)`. Characters without a number come last, in the order they were marked Build.
-- Leaving Build clears `priority`, so marking a character Build again puts it at the end.
+- Entering Build sets `priority` to one more than the highest current Build priority, so a newly marked character goes to the end. Leaving Build clears it, so marking a character Build again also puts it at the end.
+- The migration numbers the Build rows that already exist, 1…n by `character_id`.
+- Effective order of Build characters: `(priority is null, priority, character_id)`. A row without a number (only possible if a goal row is written directly, as tests do) comes last.
+- `updated_at` is deliberately not used for ordering, because editing targets changes it. (Clarified while planning, 2026-11-22.)
 - Goal changes go through **one shared helper**, which both the Characters goal endpoint (`api/characters.py`) and the Teams Build propagation (`teams/goals.py`) call. That way the rule is applied everywhere.
 - Each Traveler element (`10000005*100+element`) has its own goal row, so each element has its own priority.
 
@@ -245,8 +247,8 @@ Existing pieces are reused: `MaterialTile`, `MaterialPopover`, `Countdown`, the 
   - Netted mode gives `craft` = 0.
   - A not-calculated character gets no materials.
   - Two Traveler elements are allocated as separate entries.
-- **Priority order:** null priorities last by `updated_at`; leaving Build clears the number through the Characters endpoint and through Teams propagation.
-- **Migration 0008:** upgrade and downgrade, with existing rows keeping null values.
+- **Priority order:** entering Build appends, null priorities sort last by id, and leaving Build clears the number. Covers both the Characters endpoint and Teams propagation.
+- **Migration 0008:** upgrade numbers the existing Build rows by id and leaves other rows null; downgrade drops the columns.
 - **Notes parsing:** the new fields, including a missing transformer, and persistence of `realm_currency_full_at` and `transformer_ready_at`.
 - **Calendar:** `finished` is parsed; an old snapshot without it reads as false; a finished event counts as done and drops out of `ending_soon`.
 - **`/api/dashboard`:** the new shape; `domains_by_day` has 7 days with Sunday showing all domains; cards follow priority order; `timers` are sorted.
