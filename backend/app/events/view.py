@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import EventDone, GameBanner, GameCharacter, GameWeapon, HoyolabSnapshot
+from app.db.models import EventDone, EventLog, GameBanner, GameCharacter, GameWeapon, HoyolabSnapshot
+from app.events.log import match_banner
 from app.servertime import RESET_HOUR, offset_hours, server_day, week_start
 from app.timeutil import iso
 from app.wishes.pity import BannerWindow, PoolResult
@@ -17,6 +18,9 @@ ENDING_SOON = timedelta(hours=24)
 ENDING_STRIP = timedelta(days=3)
 PAGE_SIZE = 50
 KEEP_DONE = timedelta(days=60)
+TIMELINE_BACK = timedelta(days=21)
+ENDING_LIST = timedelta(days=3)
+ENDING_LIST_MAX = 5
 FALLBACK_DAY = {"abyss": 16, "theater": 1}
 LABELS = {"daily": "Daily reset", "weekly": "Weekly reset", "abyss": "Spiral Abyss",
           "theater": "Imaginarium Theater", "stygian": "Stygian Onslaught"}
@@ -130,7 +134,7 @@ def resets(calendar: dict | None, now: datetime, region: str | None,
     return [{"key": k, "label": LABELS[k], "at": iso(at[k])} for k in LABELS if k in at]
 
 
-def _items(session: Session) -> dict[int, dict]:
+def history_items(session: Session) -> dict[int, dict]:
     out = {w.id: {"id": w.id, "name": w.name, "icon": w.icon, "rarity": w.rarity}
            for w in session.scalars(select(GameWeapon))}
     out.update({c.id: {"id": c.id, "name": c.name, "icon": c.icon, "rarity": c.rarity}
@@ -138,8 +142,52 @@ def _items(session: Session) -> dict[int, dict]:
     return out
 
 
+def _featured(b: GameBanner, items: dict[int, dict]) -> dict:
+    def item(i: int) -> dict:
+        return items.get(i, {"id": i, "name": f"Item {i}", "icon": None, "rarity": 0})
+    return {"featured_5": [item(i) for i in b.featured_5 or []], "featured_4": [item(i) for i in b.featured_4 or []]}
+
+
+def timeline_rows(log_rows: list[EventLog], calendar: dict, done: set[int], banners: list[GameBanner],
+                  items: dict[int, dict], pulls: dict[str, dict], now: datetime) -> list[dict]:
+    cal = {e["id"]: e for e in calendar.get("events", [])}
+    cutoff = now - TIMELINE_BACK
+    out = []
+    for r in log_rows:
+        c = cal.get(r.calendar_id) if r.calendar_id is not None else None
+        start = (c or {}).get("start") or r.start
+        end = (c or {}).get("end") or r.end
+        end_dt = parse_iso(end)
+        if end_dt is not None and end_dt < cutoff:
+            continue
+        wish = r.kind.startswith("wish")
+        pool = r.kind.split(":", 1)[1] if wish and ":" in r.kind else None
+        finished = bool((c or {}).get("finished", False))
+        row = {"key": r.key, "kind": "wish" if wish else "event", "pool": pool, "name": r.name,
+               "start": start, "end": end, "image": r.image, "description": r.description,
+               "calendar_id": r.calendar_id if c is not None else None,
+               "rewards": (c or {}).get("rewards", []), "primogems": primogems((c or {}).get("rewards", [])),
+               "finished": finished, "done": (not wish) and c is not None and (finished or c["id"] in done),
+               "ending_soon": False, "items": None, "pulls": None}
+        row["ending_soon"] = (not row["done"]) and end_dt is not None and now < end_dt <= now + ENDING_SOON
+        if wish and pool is not None:
+            b = match_banner(pool, start, banners)
+            if b is not None:
+                row["items"], row["pulls"] = _featured(b, items), pulls.get(b.key)
+        out.append(row)
+    far = "9999"
+    out.sort(key=lambda r: (r["start"] or "", r["end"] or far, r["name"]))
+    return out
+
+
+def ending_soon_list(rows: list[dict], now: datetime) -> list[dict]:
+    soon = [r for r in rows if not r["done"] and (e := parse_iso(r.get("end"))) is not None and now < e <= now + ENDING_LIST]
+    soon.sort(key=lambda r: r["end"])
+    return [{"key": r["key"], "kind": r["kind"], "name": r["name"], "end": r["end"]} for r in soon[:ENDING_LIST_MAX]]
+
+
 def banner_history(session: Session, pool: str, q: str, page: int, pulls: dict[str, dict]) -> dict:
-    items = _items(session)
+    items = history_items(session)
     query = select(GameBanner).where(GameBanner.pool == pool)
     text = q.strip().lower()
     if text:
@@ -154,13 +202,9 @@ def banner_history(session: Session, pool: str, q: str, page: int, pulls: dict[s
     rows = session.scalars(query.order_by(GameBanner.start.desc(), GameBanner.order)
                            .offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE))
 
-    def item(i: int) -> dict:
-        return items.get(i, {"id": i, "name": f"Item {i}", "icon": None, "rarity": 0})
-
     return {"total": total, "page": page, "page_size": PAGE_SIZE, "rows": [
         {"key": b.key, "name": b.name, "short_name": b.short_name, "start": b.start, "end": b.end,
-         "featured_5": [item(i) for i in b.featured_5 or []], "featured_4": [item(i) for i in b.featured_4 or []],
-         "pulls": pulls.get(b.key)} for b in rows]}
+         **_featured(b, items), "pulls": pulls.get(b.key)} for b in rows]}
 
 
 def cleanup_event_done(session: Session, now: datetime) -> int:

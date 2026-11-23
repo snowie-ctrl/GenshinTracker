@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.api.planner import is_connected, region
 from app.context import AppContext, get_ctx
-from app.db.models import ChallengeRun, EventDone, GameBanner, HoyolabSnapshot, SyncRun
-from app.events.view import banner_history, event_rows, events_left, live_banners, pulls_by_banner, resets
+from app.db.models import ChallengeRun, EventDone, EventLog, GameBanner, HoyolabSnapshot, SyncRun
+from app.events.view import (
+    banner_history, ending_soon_list, event_rows, events_left, history_items, live_banners, pulls_by_banner, resets,
+    timeline_rows,
+)
 from app.servertime import offset_hours
 from app.timeutil import iso, utcnow
 from app.wishes.pity import banner_windows, summarize
@@ -25,6 +28,12 @@ def last_error(session: Session, part: str) -> str | None:
                           .order_by(SyncRun.id.desc()).limit(1)).first()
     p = ((run.parts or {}) if run is not None else {}).get(part) or {}
     return None if p.get("ok", True) else p.get("error")
+
+
+def announcements_error(session: Session) -> str | None:
+    run = session.scalars(select(SyncRun).where(SyncRun.finished_at.is_not(None), SyncRun.trigger != "gaps")
+                          .order_by(SyncRun.id.desc()).limit(1)).first()
+    return ((run.parts or {}).get("calendar") or {}).get("announcements_error") if run is not None else None
 
 
 def challenge_periods(session: Session) -> dict[str, str | None]:
@@ -44,13 +53,18 @@ def events_payload(ctx: AppContext, s: Session, results=None) -> dict:
     calendar = snap.data if snap is not None else {"banners": [], "events": [], "challenges": []}
     offset = offset_hours(reg)
     pulls = pulls_by_banner(results if results is not None else summarize(s, now, offset))
-    windows = banner_windows(list(s.scalars(select(GameBanner))), offset)
+    banners = list(s.scalars(select(GameBanner)))
+    windows = banner_windows(banners, offset)
     done = set(s.scalars(select(EventDone.event_id)))
     rows = event_rows(calendar, done, now)
+    log_rows = list(s.scalars(select(EventLog)))
+    timeline = timeline_rows(log_rows, calendar, done, banners, history_items(s), pulls, now)
     return {"connected": is_connected(ctx, s), "fetched_at": iso(snap.fetched_at) if snap else None,
             "error": last_error(s, "calendar"),
             "banners": live_banners(calendar, now, windows, pulls, offset),
             "events": rows, "events_left": events_left(rows),
+            "timeline": timeline, "ending_soon": ending_soon_list(timeline, now),
+            "announcements_error": announcements_error(s),
             "resets": resets(snap.data if snap is not None else None, now, reg, challenge_periods(s))}
 
 

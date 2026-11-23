@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 
-from app.db.models import EventDone, GameBanner, HoyolabSnapshot
+from app.db.models import EventDone, EventLog, GameBanner, HoyolabSnapshot
 from app.events.view import (
-    banner_history, cleanup_event_done, ending_within, event_rows, events_left, live_banners, primogems, resets,
+    banner_history, cleanup_event_done, ending_soon_list, ending_within, event_rows, events_left, history_items,
+    live_banners, primogems, resets, timeline_rows,
 )
 from app.wishes.pity import BannerWindow
 from helpers import seed_game
@@ -154,3 +155,50 @@ def test_ending_within_three_days_skips_done_and_far():
     assert ending_within(rows, NOW) == []
     rows = event_rows(CAL, set(), NOW)
     assert [r["id"] for r in ending_within(rows, NOW)] == [2]
+
+
+def log(key, name, start, end, kind="event", calendar_id=None, image=None):
+    return EventLog(key=key, kind=kind, name=name, start=start, end=end, image=image, description="Text",
+                    calendar_id=calendar_id, first_seen=NOW, last_seen=NOW)
+
+
+def test_timeline_window_calendar_override_and_done():
+    rows = [log("ann:1", "Long", "2026-11-01T00:00:00Z", "2026-12-30T00:00:00Z", calendar_id=1),
+            log("ann:2", "Old", "2026-10-01T00:00:00Z", "2026-10-20T00:00:00Z"),          # ended > 21 days ago
+            log("ann:3", "Recent", "2026-11-01T00:00:00Z", "2026-11-10T00:00:00Z"),       # ended 11 days ago
+            log("ann:4", "Ticked", "2026-11-10T00:00:00Z", "2026-11-21T20:00:00Z", calendar_id=2)]
+    out = timeline_rows(rows, CAL, {2}, [], {}, {}, NOW)
+    by = {r["key"]: r for r in out}
+    assert set(by) == {"ann:1", "ann:3", "ann:4"}
+    assert by["ann:1"]["end"] == "2026-11-30T04:00:00Z"                 # calendar's end wins
+    assert by["ann:1"]["primogems"] == 420 and by["ann:1"]["done"] is False
+    assert by["ann:4"]["done"] is True and by["ann:4"]["ending_soon"] is False   # done rows never warn
+    assert by["ann:3"]["rewards"] == [] and by["ann:3"]["calendar_id"] is None
+    # starts after the calendar override: ann:3 Nov 1; ann:4 and ann:1 both Nov 10 (calendar), ann:4 ends first
+    assert [r["key"] for r in out] == ["ann:3", "ann:4", "ann:1"]
+
+
+def test_timeline_wish_items_and_pulls(session_factory):
+    seed_game(session_factory)
+    b = GameBanner(key="character|2026-11-21 18:00:00|0", pool="character", name="B", short_name="B",
+                   start="2026-11-21 18:00:00", end="2026-12-12 14:59:00", timezone_dependent=True,
+                   timezone_dependent_end=False, order=0, featured_5=[10000089], featured_4=[10000032], version="9.9")
+    with session_factory() as s:
+        items = history_items(s)
+    rows = [log("ann:7", "Wish A", "2026-11-21T10:00:00Z", "2026-12-12T06:59:00Z", kind="wish:character"),
+            log("ann:8", "Wish B", "2026-12-20T10:00:00Z", "2027-01-12T06:59:00Z", kind="wish:character")]
+    out = {r["key"]: r for r in timeline_rows(rows, CAL, set(), [b], items, {b.key: {"pulls": 3, "fives": [], "fours": []}}, NOW)}
+    assert out["ann:7"]["kind"] == "wish" and out["ann:7"]["pool"] == "character"
+    assert out["ann:7"]["items"]["featured_5"][0]["name"] == "Furina"
+    assert out["ann:7"]["pulls"]["pulls"] == 3 and out["ann:7"]["done"] is False
+    assert out["ann:8"]["items"] is None and out["ann:8"]["pulls"] is None
+
+
+def test_ending_soon_list():
+    rows = [{"key": "a", "kind": "event", "name": "A", "end": "2026-11-22T00:00:00Z", "done": False},
+            {"key": "b", "kind": "event", "name": "B", "end": "2026-11-22T00:00:00Z", "done": True},
+            {"key": "c", "kind": "wish", "name": "C", "end": "2026-11-21T18:00:00Z", "done": False},
+            {"key": "d", "kind": "event", "name": "D", "end": "2026-11-29T00:00:00Z", "done": False},
+            {"key": "e", "kind": "event", "name": "E", "end": "2026-11-20T00:00:00Z", "done": False}]
+    assert [r["key"] for r in ending_soon_list(rows, NOW)] == ["c", "a"]
+    assert set(ending_soon_list(rows, NOW)[0]) == {"key", "kind", "name", "end"}

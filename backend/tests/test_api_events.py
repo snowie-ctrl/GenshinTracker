@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from app.db.models import ChallengeRun, EventDone, GameBanner, HoyolabSnapshot, SyncRun
+from app.db.models import ChallengeRun, EventDone, EventLog, GameBanner, HoyolabSnapshot, SyncRun
 from app.events.view import cleanup_event_done
 from app.timeutil import iso, utcnow
 from helpers import make_client
@@ -109,3 +109,21 @@ def test_cleanup_keeps_done_rows_without_snapshot(paths):
         assert cleanup_event_done(s, now) == 0
     with sf() as s:
         assert s.get(EventDone, 1) is not None
+
+
+def test_events_payload_has_timeline_and_feed_error(paths):
+    sf = sf_for(paths)
+    now = utcnow()
+    with sf.begin() as s:
+        s.add(HoyolabSnapshot(part="calendar", data={"banners": [], "events": [], "challenges": []}, fetched_at=now))
+        s.add(EventLog(key="ann:1", kind="event", name="Fest", start=iso(now - timedelta(days=1)),
+                       end=iso(now + timedelta(hours=10)), image=None, description="", calendar_id=None,
+                       first_seen=now, last_seen=now))
+        s.add(SyncRun(trigger="manual", started_at=now, finished_at=now,
+                      parts={"calendar": {"ok": True, "count": 0, "announcements_error": "AnnouncementError: x"}}))
+    with make_client(paths) as client:
+        body = client.get("/api/events").json()
+    assert [r["key"] for r in body["timeline"]] == ["ann:1"]
+    assert body["ending_soon"] == [{"key": "ann:1", "kind": "event", "name": "Fest", "end": body["timeline"][0]["end"]}]
+    assert body["announcements_error"] == "AnnouncementError: x"
+    assert "banners" in body and "events" in body                 # Dashboard fields kept

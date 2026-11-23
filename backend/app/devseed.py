@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import (ChallengeRun, CharacterGoal, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
+from app.db.models import (ChallengeRun, CharacterGoal, EventLog, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
@@ -217,11 +217,11 @@ def seed(root: Path) -> None:
                                    {"id": 10000032, "name": "Bennett", "icon": "UI_AvatarIcon_Bennett",
                                     "rarity": 4}]}],
             "events": [
-                {"id": 9001, "name": "Fishing Festival", "description": "", "start": None,
+                {"id": 9001, "name": "Fishing Festival", "description": "", "start": iso(now - timedelta(days=6)),
                  "end": iso(now + timedelta(days=9)), "rewards": [{**primo, "count": 420}]},
-                {"id": 9002, "name": "Quick Trial", "description": "", "start": None,
+                {"id": 9002, "name": "Quick Trial", "description": "", "start": iso(now - timedelta(days=2)),
                  "end": iso(now + timedelta(hours=5)), "rewards": [{**primo, "count": 60}]},
-                {"id": 9003, "name": "Photo Event", "description": "", "start": None,
+                {"id": 9003, "name": "Photo Event", "description": "", "start": iso(now - timedelta(days=4)),
                  "end": iso(now + timedelta(days=2)), "rewards": []},
                 {"id": 9004, "name": "Daily Check-in Event", "description": "", "start": None,
                  "end": iso(now + timedelta(days=5)), "rewards": [], "finished": True},
@@ -233,6 +233,20 @@ def seed(root: Path) -> None:
                             "end": iso(now + timedelta(days=12))}],
         }
         s.add(HoyolabSnapshot(part="calendar", data=calendar, fetched_at=now))
+        art = "https://sdk.hoyoverse.com/upload/ann/demo/{}.png"
+        demo_log = [
+            ("ann:9001", "event", "Fishing Festival", now - timedelta(days=6), now + timedelta(days=9), "fish", 9001),
+            ("ann:9002", "event", "Quick Trial", now - timedelta(days=2), now + timedelta(hours=5), "trial", 9002),
+            ("cal:9003", "event", "Photo Event", now - timedelta(days=4), now + timedelta(days=2), None, 9003),
+            ("ann:9100", "wish:character", "Tide of Furina", b_start, b_end, "wish", None),
+            ("ann:9101", "wish:character", "Next Phase Wish", b_end + timedelta(minutes=1), b_end + timedelta(days=21), "next", None),
+            ("ann:9102", "event", "Ended Carnival", now - timedelta(days=20), now - timedelta(days=5), "carnival", None),
+        ]
+        for key, kind, name, start_at, end_at, img, cal_id in demo_log:
+            s.add(EventLog(key=key, kind=kind, name=name, start=iso(start_at), end=iso(end_at),
+                           image=art.format(img) if img else None,
+                           description=f"Demo text for {name}.\n\nSecond paragraph.", calendar_id=cal_id,
+                           first_seen=now, last_seen=now))
         profile = {
             "stats": {"ar": 58, "days_active": 900, "achievements": 640, "characters": 48,
                       "chests": {"common": 2100, "exquisite": 1500, "precious": 420, "luxurious": 130,
