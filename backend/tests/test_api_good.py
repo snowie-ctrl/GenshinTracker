@@ -1,4 +1,3 @@
-import pytest
 from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import CharacterGoal, GameArtifactSet, GameMaterial, GameMeta, GameWeapon
 from app.gamedata.service import META_MAT_KEYS

@@ -2,7 +2,6 @@
 HoYoLAB only reports the current element; other elements keep what was last seen or typed in."""
 from __future__ import annotations
 
-import logging
 from datetime import datetime
 
 from sqlalchemy import delete, select
@@ -14,7 +13,6 @@ from app.gamedata.traveler import (TRAVELER_ELEMENTS, TRAVELER_IDS, TRAVELER_PEN
 from app.settings.store import get_setting, set_setting
 from app.timeutil import utcnow
 
-log = logging.getLogger(__name__)
 TALENT_META = "talent_ids"   # same key as app.sync.persist.TALENT_META
 
 

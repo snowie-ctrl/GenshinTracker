@@ -1,4 +1,3 @@
-import pytest
 from app.db.models import CharacterGoal
 from app.planner.requests import build_inputs, gap_requests, has_work, snapshot
 from app.sync.hoyolab import TalentIds

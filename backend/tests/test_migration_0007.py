@@ -120,3 +120,37 @@ def test_downgrade_folds_elements_back(paths):
         assert conn.execute(text("SELECT character_id FROM team_member WHERE team_id=1 ORDER BY slot")).all() == [
             (10000032,), (10000005,)]
     engine.dispose()
+
+
+def test_null_talent_cache_does_not_abort_upgrade(paths):
+    engine = make_engine(paths.db_file)
+    upgrade(engine, "0006")
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO game_meta (key, value) VALUES ('talent_ids', 'null')"))
+    upgrade(engine, "head")
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM game_meta WHERE key='talent_ids'")).scalar() == 1
+    engine.dispose()
+
+
+def test_upgrade_boy_traveler_artifacts_and_good_artifact(paths):
+    engine = make_engine(paths.db_file)
+    upgrade(engine, "0006")
+    with engine.begin() as conn:
+        owned(conn, 10000005, "Dendro", "UI_AvatarIcon_PlayerBoy")
+        for cid in (10000005, 10000117):
+            conn.execute(text(
+                "INSERT INTO owned_artifact (character_id, slot, set_name, rarity, level, main_stat, substats, icon) "
+                "VALUES (:c, 1, 'S', 5, 20, 'HP', '[]', 'i')"), dict(c=cid))
+        conn.execute(text(
+            "INSERT INTO good_artifact (set_id, slot, rarity, level, main_stat, substats, location, character_id, lock) "
+            "VALUES (1, 'flower', 5, 20, 'hp', '[]', 'Traveler', 10000005, 0)"))
+    upgrade(engine, "head")
+    with engine.connect() as conn:
+        q = lambda sql: conn.execute(text(sql)).all()  # noqa: E731
+        settings = dict(q("SELECT key, value FROM setting"))
+        assert json.loads(settings["traveler_body"]) == "boy"
+        assert json.loads(settings["traveler_current_element"]) == "Dendro"
+        assert q("SELECT count(*) FROM owned_artifact WHERE character_id IN (10000005, 10000117)") == [(0,)]
+        assert q("SELECT character_id FROM good_artifact") == [(1000000504,)]
+    engine.dispose()

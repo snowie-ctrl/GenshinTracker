@@ -63,7 +63,9 @@ def _drop_talent_cache(bind, ids) -> None:
     row = bind.execute(sa.text("SELECT value FROM game_meta WHERE key='talent_ids'")).first()
     if row is None or row[0] is None:
         return
-    value = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+    value = (json.loads(row[0]) if isinstance(row[0], str) else row[0]) or {}
+    if not isinstance(value, dict):
+        return
     kept = {k: v for k, v in value.items() if int(k) not in ids}
     bind.execute(sa.text("UPDATE game_meta SET value=:v WHERE key='talent_ids'"), {"v": json.dumps(kept)})
 
