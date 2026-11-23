@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.db.models import ChallengeRun
-from app.profile.view import challenge_views, profile_summary, profile_view
+from app.profile.view import challenge_views, profile_view
 from helpers import seed_game
 
 NOW = datetime(2026, 11, 21, 12, 0, 0)
@@ -51,10 +51,8 @@ def test_challenge_views_current_and_past(session_factory):
         add_run(s, "theater", "77", "2026-11-01T04:00:00Z", {"act": 8})
     with session_factory() as s:
         v = challenge_views(s, NOW)
-        summary = profile_summary(s, NOW)
     assert v["abyss"]["current"]["season"] == "101"
     assert v["abyss"]["current"]["teams"][0][0]["name"] == "Furina"
     assert [r["season"] for r in v["abyss"]["past"]] == ["100", "99"]
     assert v["theater"]["current"] is None and v["theater"]["past"][0]["season"] == "77"
     assert v["stygian"] == {"current": None, "past": []}
-    assert summary == {"ar": None, "fetched_at": None, "abyss_stars": 36, "theater_act": None}

@@ -5,7 +5,9 @@
 	import { imgSrc } from '$lib/img';
 	import type { DashEventItem } from '$lib/types';
 
-	let { events, fetchedAt, now }: { events: DashEventItem[]; fetchedAt: string | null; now: number } = $props();
+	let { events, fetchedAt, now, onchanged }: {
+		events: DashEventItem[]; fetchedAt: string | null; now: number; onchanged?: () => void;
+	} = $props();
 	let overrides = $state<Record<number, boolean>>({});
 	let toast = $state<string | null>(null);
 	const rows = $derived(events.map((e) => {
@@ -27,6 +29,7 @@
 		try {
 			await api.setEventDone(id, done);
 			toast = null;
+			onchanged?.();
 		} catch (e) {
 			overrides = { ...overrides, [id]: !done };
 			toast = errorMessage(e);

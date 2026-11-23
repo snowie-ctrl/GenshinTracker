@@ -118,7 +118,7 @@ def test_gap_status_stale_pending_failed_and_disconnected(session_factory):
         assert gap_status(s, pending=True, connected=True)["pending"] is True
 
 
-from app.planner.characters import building_cards, character_shortfall
+from app.planner.characters import character_shortfall
 from app.planner.data import Domain
 from app.planner.today import farm_today, weekly_bosses
 
@@ -168,14 +168,6 @@ def test_character_shortfall_shared_ignores_characters_no_longer_set_to_build():
     assert rows[2]["shared"] is False
 
 
-def test_building_cards_only_short_and_fully_built():
-    d = planner_fixture()
-    d.characters[30] = CharRef(30, "Xiangling", "xiangling", None)
-    cards = {c["character"]["id"]: c for c in building_cards(d, {10: 0.5, 20: 0.8, 30: 1.0}, material_index(d))}
-    assert [m["id"] for m in cards[20]["materials"]] == [2, 51]     # 3 is met, so not listed
-    assert cards[30]["materials"] == [] and cards[30]["skipped"] is False
-
-
 def test_calculated_only_for_characters_unchanged_since_last_success(session_factory):
     seed_game(session_factory)
     with session_factory.begin() as s:
@@ -189,9 +181,6 @@ def test_calculated_only_for_characters_unchanged_since_last_success(session_fac
     with session_factory() as s:
         d = load(s)
     assert d.calculated == {10000032}
-    cards = {c["character"]["id"]: c for c in building_cards(d, {}, material_index(d))}
-    assert cards[10000032]["calculated"] is True and cards[10000032]["materials"] == []   # in snapshot, no rows
-    assert cards[10000089]["calculated"] is False and cards[10000089]["materials"] == []
     with session_factory.begin() as s:
         s.get(CharacterGoal, 10000032).target_skill = 9                                    # changed since
         s.get(GapRun, 1).ok = False                                                        # failure keeps snapshot

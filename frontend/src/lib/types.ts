@@ -140,7 +140,6 @@ export interface InventoryCategory { key: string; label: string; materials: Mate
 export interface Inventory { gaps: GapStatus; categories: InventoryCategory[]; good: GoodRef | null }
 export interface FarmDomain { id: number; name: string; kind: 'talent' | 'weapon'; weekdays: number[]; materials: Material[]; characters: CharRef[] }
 export interface WeeklyBoss { name: string; done: boolean; materials: Material[]; characters: CharRef[] }
-export interface BuildingCard { character: CharRef; progress: number | null; materials: CharMaterial[]; skipped: boolean; calculated: boolean }
 export interface WeaponOption { id: number; name: string; icon: string; rarity: number; weapon_type: string; owned?: OwnedWeapon | null }
 export interface PlannedWeapon { id: number; name: string; icon: string; rarity: number; equipped: boolean }
 

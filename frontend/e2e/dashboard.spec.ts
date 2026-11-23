@@ -64,3 +64,16 @@ test('a failed reorder rolls back and shows an error', async ({ page }) => {
 	await expect(page.getByTestId('build-card-bennett')).toContainText('P1');
 	await expect(page.getByTestId('build-card-furina')).not.toContainText('P1');
 });
+
+test('ticking an event done drops it from ending soon, and unticking brings it back', async ({ page }) => {
+	await page.goto('/');
+	const box = page.getByTestId('dash-event-9003').getByRole('checkbox');
+	await expect(page.getByTestId('ending-soon')).toContainText('Photo Event');
+	try {
+		await box.check();
+		await expect(page.getByTestId('ending-soon')).not.toContainText('Photo Event');
+	} finally {
+		if (await box.isChecked()) await box.uncheck();
+	}
+	await expect(page.getByTestId('ending-soon')).toContainText('Photo Event');
+});

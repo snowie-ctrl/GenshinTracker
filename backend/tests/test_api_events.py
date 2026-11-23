@@ -36,6 +36,17 @@ def test_events_endpoint_and_done(paths):
         assert client.get("/api/events").json()["events_left"]["count"] == 2
 
 
+def test_done_echo_is_true_for_finished_event(paths):
+    sf = sf_for(paths)
+    seed_calendar(sf)
+    with sf.begin() as s:
+        snap = s.get(HoyolabSnapshot, "calendar")
+        snap.data = {**snap.data, "events": [{**snap.data["events"][0], "finished": True}, snap.data["events"][1]]}
+    with make_client(paths) as client:
+        assert client.put("/api/events/9001/done", json={"done": False}).json() == {"id": 9001, "done": True}
+        assert client.put("/api/events/9002/done", json={"done": False}).json() == {"id": 9002, "done": False}
+
+
 def test_events_without_snapshot_and_error(paths):
     sf = sf_for(paths)
     with sf.begin() as s:

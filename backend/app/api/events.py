@@ -68,7 +68,10 @@ def set_done(event_id: int, body: DoneIn, ctx: AppContext = Depends(get_ctx)) ->
             s.add(EventDone(event_id=event_id, done_at=utcnow()))
         elif not body.done and row is not None:
             s.delete(row)
-    return {"id": event_id, "done": body.done}
+        snap = s.get(HoyolabSnapshot, "calendar")
+        events = snap.data.get("events", []) if snap is not None else []
+        finished = any(e.get("id") == event_id and e.get("finished", False) for e in events)
+    return {"id": event_id, "done": body.done or finished}
 
 
 @router.get("/banners/history")

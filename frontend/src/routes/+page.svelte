@@ -30,12 +30,16 @@
 		return () => clearInterval(t);
 	});
 
+	let loadSeq = 0;
 	async function load() {
+		const seq = ++loadSeq;
 		try {
-			data = await api.dashboard();
+			const d = await api.dashboard();
+			if (seq !== loadSeq) return;   // a newer load is in flight or done
+			data = d;
 			error = null;
 		} catch (e) {
-			error = errorMessage(e);
+			if (seq === loadSeq) error = errorMessage(e);
 		}
 	}
 
@@ -46,6 +50,7 @@
 	});
 
 	function saved(r: PriorityResult) {
+		loadSeq++;   // drop any older load still in flight; it would overwrite this order
 		if (data) data = { ...data, builds: r.builds, completed: r.completed };
 		void load();   // domain and boss cards re-rank by the new priority
 	}
@@ -64,13 +69,13 @@
 			<WeeklyBosses weekly={data.weekly_bosses} hasBuilds={data.builds.length + data.completed.length > 0}
 				gaps={data.gaps} {now} />
 			<!-- Sub-project 8 adds the Artifact domains section here. -->
-			<BuildList builds={data.builds} gaps={data.gaps} {now} onsaved={saved} />
+			<BuildList builds={data.builds} completedCount={data.completed.length} gaps={data.gaps} {now} onsaved={saved} />
 			<CompletedBuilds completed={data.completed} />
 		</div>
 		<aside class="side">
 			<TimerList timers={data.timers} {now} />
 			<LiveBanners banners={data.live_banners} fetchedAt={data.calendar_fetched_at} {now} />
-			<EventList events={data.events} fetchedAt={data.calendar_fetched_at} {now} />
+			<EventList events={data.events} fetchedAt={data.calendar_fetched_at} {now} onchanged={load} />
 		</aside>
 	</div>
 {/if}

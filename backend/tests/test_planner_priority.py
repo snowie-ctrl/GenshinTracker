@@ -102,3 +102,11 @@ def test_duplicate_ids_in_order_are_ignored():
     d = data({2: Total(5, 3, 0)}, gaps)                    # 2 held
     assert allocate(d, [10, 10])[10][2] == Allocation(5, 2, 0)
     assert len(build_sections(d, [10, 10], material_index(d), {})["builds"]) == 1
+
+
+def test_ready_counts_gap_rows_whose_material_is_missing_from_the_index():
+    gaps = {10: {2: (3, 0), 999: (4, 4)}}                  # 999 is unknown to the index, nothing held
+    d = data({2: Total(3, 0, 3)}, gaps)
+    card = build_sections(d, [10], material_index(d), {})["builds"][0]
+    assert [m["id"] for m in card["materials"]] == [2]     # the unknown row is not shown ...
+    assert card["ready"] is False                          # ... but still keeps the card from being Ready

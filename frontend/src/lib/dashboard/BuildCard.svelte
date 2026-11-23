@@ -23,8 +23,10 @@
 			{/if}
 		</div>
 		<span class="moves">
-			<button type="button" aria-label="Move {card.character.name} up" disabled={disabled || first} onclick={onup}>▲</button>
-			<button type="button" aria-label="Move {card.character.name} down" disabled={disabled || last} onclick={ondown}>▼</button>
+			<button type="button" aria-label="Move {card.character.name} up" data-move="up" disabled={first} aria-disabled={disabled}
+				onclick={() => { if (!disabled) onup(); }}>▲</button>
+			<button type="button" aria-label="Move {card.character.name} down" data-move="down" disabled={last} aria-disabled={disabled}
+				onclick={() => { if (!disabled) ondown(); }}>▼</button>
 		</span>
 	</div>
 	{#if !card.calculated}
@@ -50,7 +52,7 @@
 	.title { font-weight: 600; }
 	.moves { display: inline-flex; gap: 4px; }
 	.moves button { background: transparent; border: 1px solid var(--glass-border); color: var(--text); border-radius: 6px; width: 28px; height: 26px; cursor: pointer; }
-	.moves button:disabled { opacity: 0.35; cursor: default; }
+	.moves button:disabled, .moves button[aria-disabled="true"] { opacity: 0.35; cursor: default; }
 	.bar { width: 140px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 	.bar span { display: block; height: 100%; background: var(--building); }
 	.tiles-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }

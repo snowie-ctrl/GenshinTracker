@@ -102,6 +102,6 @@ def build_sections(data: PlannerData, order: list[int], index: dict[int, dict],
         materials = _material_rows(alloc[cid], index) if calculated else []
         builds.append({"character": ref.to_dict(), "priority": len(builds) + 1, "progress": progress.get(cid),
                        "calculated": calculated,
-                       "ready": calculated and all(m["have"] + m["craft"] >= m["need"] for m in materials),
+                       "ready": calculated and all(a.have + a.craft >= a.need for a in alloc[cid].values()),
                        "materials": materials})
     return {"builds": builds, "completed": completed}
