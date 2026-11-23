@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { api, errorMessage } from '$lib/api';
 	import { shouldPoll } from '$lib/materials';
 	import { sync } from '$lib/sync.svelte';
 	import TagChip from '$lib/TagChip.svelte';
 	import TagManager from '$lib/TagManager.svelte';
+	import TeamEditorModal from '$lib/TeamEditorModal.svelte';
 	import TeamRow from '$lib/TeamRow.svelte';
 	import {
 		changeMessage, memberLookup, willLower,
@@ -73,8 +75,21 @@
 		return data ? data.teams.findIndex((t) => t.id === id) : -1;
 	}
 
+	const editParam = $derived(page.url.searchParams.get('edit'));
+	const editId = $derived(editParam === 'new' ? null : editParam !== null && /^\d+$/.test(editParam) ? Number(editParam) : undefined);
+
 	function openEditor(id: number | 'new') {
 		void goto(`/teams?edit=${id}`, { noScroll: true, keepFocus: true });
+	}
+
+	function closeEditor() {
+		void goto('/teams', { noScroll: true, keepFocus: true });
+	}
+
+	async function editorDone(message: string) {
+		notice = message;
+		await goto('/teams', { noScroll: true });
+		await load();
 	}
 
 	async function setBuild(team: Team, on: boolean) {
@@ -146,6 +161,16 @@
 	{/each}
 {:else if !error}
 	<p class="muted">Loading…</p>
+{/if}
+
+{#if editParam !== null && data}
+	{#key editParam}
+		{#if editId === undefined}
+			<TeamEditorModal teamId={-1} teams={data.teams} onClose={closeEditor} onDone={editorDone} />
+		{:else}
+			<TeamEditorModal teamId={editId} teams={data.teams} onClose={closeEditor} onDone={editorDone} />
+		{/if}
+	{/key}
 {/if}
 
 <style>

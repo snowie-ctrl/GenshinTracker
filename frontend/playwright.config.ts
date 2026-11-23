@@ -8,6 +8,9 @@ const python = process.env.PYTHON ?? 'python';
 
 export default defineConfig({
 	testDir: 'e2e',
+	// Every spec shares one stateful server; a spec's brief change (e.g. a member raised to Build) must not
+	// race another spec's assertions, so files run one at a time.
+	workers: 1,
 	use: { baseURL: `http://127.0.0.1:${PORT}` },
 	webServer: {
 		// Fresh fake data every run; offline so no network or HoYoLAB is touched.
