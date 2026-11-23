@@ -10,7 +10,10 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 	await expect(page.getByRole('button', { name: 'Import GOOD file' })).toHaveCount(0);   // off by default
 
 	await page.goto('/settings');
-	await page.getByTestId('good-settings').getByRole('checkbox', { name: 'Use GOOD inventory import' }).check();
+	await Promise.all([
+		page.waitForResponse((r) => r.url().includes('/api/settings') && r.request().method() === 'PUT' && r.ok()),
+		page.getByTestId('good-settings').getByRole('checkbox', { name: 'Use GOOD inventory import' }).check(),
+	]);
 	await expect(page.getByTestId('good-settings').getByRole('button', { name: 'Import GOOD file' })).toBeVisible();
 
 	await page.goto('/inventory');
@@ -44,7 +47,10 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 	await expect(page.getByTestId('artifact-card')).toContainText('Pyro DMG Bonus');
 
 	await page.goto('/settings');
-	await page.getByTestId('good-settings').getByRole('checkbox', { name: 'Use GOOD inventory import' }).uncheck();
+	await Promise.all([
+		page.waitForResponse((r) => r.url().includes('/api/settings') && r.request().method() === 'PUT' && r.ok()),
+		page.getByTestId('good-settings').getByRole('checkbox', { name: 'Use GOOD inventory import' }).uncheck(),
+	]);
 	await page.goto('/inventory');
 	await expect(page.getByTestId('tile-100055')).toHaveClass(/dim/);      // data loaded
 	await expect(page.getByTestId('tile-100055')).not.toContainText('37');

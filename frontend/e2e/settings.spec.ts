@@ -29,15 +29,16 @@ test('settings are grouped with an index that jumps to each section', async ({ p
 
 test('turning the animated background off is remembered across reloads', async ({ page }) => {
 	await page.goto('/settings');
+	await page.waitForLoadState('networkidle'); // the initial settings load must not land after the toggle
 	const toggle = page.getByLabel('Animated background');
 	await expect(toggle).toBeChecked();
 	await expect(page.getByTestId('starfield')).toHaveAttribute('data-animated', 'true');
-	await toggle.uncheck();
+	await Promise.all([page.waitForResponse((r) => r.url().includes('/api/settings') && r.request().method() === 'PUT' && r.ok()), toggle.uncheck()]);
 	await expect(page.getByTestId('starfield')).toHaveAttribute('data-animated', 'false');
 	await page.reload();
 	await expect(page.getByLabel('Animated background')).not.toBeChecked();
 	await expect(page.getByTestId('starfield')).toHaveAttribute('data-animated', 'false');
-	await page.getByLabel('Animated background').check(); // leave the seed as we found it
+	await Promise.all([page.waitForResponse((r) => r.url().includes('/api/settings') && r.request().method() === 'PUT' && r.ok()), page.getByLabel('Animated background').check()]); // leave the seed as we found it
 	await expect(page.getByTestId('starfield')).toHaveAttribute('data-animated', 'true');
 });
 

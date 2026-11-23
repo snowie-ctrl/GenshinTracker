@@ -62,7 +62,7 @@
 		<div class="centre">
 			<Greeting name={data.display_name} {now} />
 			<NoteBubbles notes={data.notes} connection={data.connection} {now} />
-			{#if data.notes}<p class="muted small">As of {timeAgo(data.notes.fetched_at, now)} · {gapLabel(data.gaps, now)}</p>{/if}
+			<p class="muted small">{#if data.notes}As of {timeAgo(data.notes.fetched_at, now)} · {/if}{gapLabel(data.gaps, now)}</p>
 			<EndingSoon events={data.ending_soon} {now} />
 			<DomainDays days={data.domains_by_day} today={data.server_weekday}
 				hasBuilds={data.builds.length + data.completed.length > 0} gaps={data.gaps} {now} />
