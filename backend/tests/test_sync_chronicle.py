@@ -1,4 +1,5 @@
-from app.db.models import ChallengeRun, HoyolabSnapshot, SyncRun
+from app.db.models import ChallengeRun, EventLog, HoyolabSnapshot, SyncRun
+from app.sync.announcements import Announcement, AnnouncementError
 from app.sync.chronicle import CalendarInfo, ChallengeRunInfo, EventInfo, Reward
 from app.sync.hoyolab import HoyolabError
 from fakes import Clock, FakeSource
@@ -108,3 +109,32 @@ async def test_gaps_only_run_never_runs_chronicle_parts(paths, session_factory):
     m.start_gaps()
     await m.wait()
     assert source.calls.count("calendar") == before
+
+
+ANN = Announcement(501, "event", "Fest", "Fest", "2026-11-19T04:00:00Z", "2026-12-01T04:00:00Z", None, None,
+                   "https://sdk.hoyoverse.com/upload/ann/test/fest.png", "About the fest.")
+
+
+async def test_calendar_part_records_announcements(paths, session_factory):
+    seed_game(session_factory)
+    m = manager(paths, session_factory, FakeSource(calendar=CAL, announcements=[ANN]))
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["calendar"] == {"ok": True, "count": 1}
+    with session_factory() as s:
+        row = s.get(EventLog, "ann:501")
+        assert row.calendar_id == 9001 and row.image.endswith("fest.png")
+
+
+async def test_feed_failure_keeps_calendar(paths, session_factory):
+    seed_game(session_factory)
+    m = manager(paths, session_factory,
+                FakeSource(calendar=CAL, fail={"announcements": AnnouncementError("getAnnList: retcode -1")}))
+    await m.request("manual")
+    await m.wait()
+    part = last_run(session_factory).parts["calendar"]
+    assert part["ok"] is True and part["count"] == 1
+    assert part["announcements_error"] == "AnnouncementError: getAnnList: retcode -1"
+    with session_factory() as s:
+        assert s.get(HoyolabSnapshot, "calendar").data["events"][0]["id"] == 9001
+        assert s.get(EventLog, "cal:9001") is not None          # the calendar event still gets a bar

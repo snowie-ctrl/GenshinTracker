@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import GAPS_DEBOUNCE_SECONDS, MANUAL_SYNC_MIN_SECONDS
 from app.db.models import GapRun, SyncRun
+from app.events.log import record
 from app.planner.requests import build_inputs, gap_requests, has_work, snapshot
 from app.settings.store import get_setting, set_setting
 from app.sync.backup import backup_db
@@ -189,9 +190,19 @@ class SyncManager:
         now = self._clock()
         if part == "calendar":
             cal = await source.get_calendar()
+            result: dict = {"ok": True, "count": len(cal.events)}
+            try:
+                anns = await source.get_announcements()
+            except AuthExpired:
+                raise
+            except Exception as e:  # the feed is extra: its failure never costs the calendar
+                log.warning("Announcement feed failed: %s", type(e).__name__)
+                anns, result["announcements_error"] = [], _failure(e)["error"]
             with self._sf.begin() as s:
-                save_snapshot(s, "calendar", to_json(cal), now)
-                return {"ok": True, "count": len(cal.events)}, unknown_character_ids(s, character_ids(cal))
+                data = to_json(cal)
+                save_snapshot(s, "calendar", data, now)
+                record(s, anns, data, now)
+                return result, unknown_character_ids(s, character_ids(cal))
         if part == "profile":
             profile = await source.get_profile()
             with self._sf.begin() as s:
