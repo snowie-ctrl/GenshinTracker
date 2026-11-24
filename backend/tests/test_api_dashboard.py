@@ -6,7 +6,7 @@ from helpers import make_client
 from test_api_planner import mark_calculated, setup, sf_for
 
 KEYS = {"connection", "display_name", "notes", "timers", "ending_soon", "server_weekday", "domains_by_day",
-        "weekly_bosses", "builds", "completed", "live_banners", "events", "calendar_fetched_at", "gaps"}
+        "weekly_bosses", "artifact_domains", "builds", "completed", "live_banners", "events", "calendar_fetched_at", "gaps"}
 
 
 def test_dashboard_empty_account(paths):
@@ -90,3 +90,17 @@ def test_dashboard_events_ending_soon_and_finished(paths):
     assert [e["id"] for e in body["ending_soon"]] == [1]
     finished = next(e for e in body["events"] if e.get("id") == 2)
     assert finished["done"] is True and finished["finished"] is True
+
+
+def test_dashboard_artifact_domains(paths):
+    sf = setup(paths)
+    from app.db.models import GameArtifactDomain, GameArtifactSet
+    with sf.begin() as s:
+        s.merge(GameArtifactSet(id=15007, name="Noblesse Oblige", icon="UI_RelicIcon_15007_4", sort_order=2))
+        s.add(GameArtifactDomain(id=5101, name="Domain of Blessing: Stone Chamber", entrance="Clear Pool and Mountain Cavern",
+                                 region="Liyue", elements=["Hydro"], set_ids=[15007]))
+        s.get(CharacterGoal, 10000032).artifact_target = {"sets": [{"set_id": 15007, "pieces": 4}], "main": {}, "subs": []}
+    with make_client(paths) as client:
+        block = client.get("/api/dashboard").json()["artifact_domains"]
+    assert block["domains"][0]["entrance"] == "Clear Pool and Mountain Cavern"
+    assert block["domains"][0]["sets"][0]["characters"][0]["id"] == 10000032
