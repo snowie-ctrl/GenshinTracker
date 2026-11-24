@@ -1,7 +1,7 @@
 # Ad Astra Sub-project 8 — Artifact Planning
 
 **Date:** 2026-11-24
-**Status:** Draft, awaiting user review
+**Status:** Approved by the user 2026-11-24 (plan-time amendments in sections 5, 3.2, 6.4 and 9 marked "amended while planning")
 **Frame:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 8 of 10). Fills the slots left by Dashboard (`2026-11-22-ad-astra-dashboard-design.md`, section 3.1 item 6) and Character detail (`2026-11-23-ad-astra-character-detail-design.md`, `BuildArtifacts.svelte`).
 **Scope:** Artifact domains from genshin-db, per-character artifact targets (sets, main stats, substat priority) on the Build tab with a check against equipped gear, an Artifact domains section on the Dashboard, and the domain-image spike result.
 
@@ -63,6 +63,7 @@
 ```
 
 - `sets` may be empty (only stats targeted). A target with no sets is never counted on the Dashboard.
+- `sets` may also hold a single 2-piece entry: the "2 + 2" mode before the second set is chosen (amended while planning).
 - Each `main` list may be empty (no preference for that slot).
 - **Stat keys** (`backend/app/artifacts/stats.py`):
   - Main: `hp%`, `atk%`, `def%`, `em`, `er`, `crit_rate`, `crit_dmg`, `heal`, `pyro`, `hydro`, `electro`, `cryo`, `anemo`, `geo`, `dendro`, `phys`.
@@ -128,10 +129,11 @@ ArtifactCheck
 ## 5. API
 
 - `GET /api/characters/{slug}` adds:
-  - `targets.artifacts` — the stored target or `null`;
+  - `artifact_target` — the stored target or `null` (top level, not inside `targets`; amended while planning: `TargetsIn` requires every level field and feeds the material planner, so artifacts stay separate);
   - `artifacts_done` — boolean;
   - `artifact_check` — section 4.2, always present (status `"none"` without a target).
-- `PUT /api/characters/{id}/goal` accepts `targets.artifacts` (`ArtifactTargetIn` or `null` to clear) and top-level `artifacts_done`. Omitting either keeps the stored value.
+  `artifact_target` and `artifacts_done` are also in the `GET /api/characters` list rows.
+- `PUT /api/characters/{id}/goal` accepts top-level `artifact_target` (`ArtifactTargetIn` or `null` to clear) and `artifacts_done`. Omitting either keeps the stored value. `artifacts_done` is only stored while the goal is Build.
 - `GET /api/artifact-sets` (new) → `[{id, name, icon, domain: {id, name, entrance, region} | null}]`, sorted by name; for the Build picker.
 - `GET /api/dashboard` adds `artifact_domains` (section 6.2).
 
@@ -185,11 +187,11 @@ Card layout:
 
 - Components: `BuildArtifacts` (rewritten), `ArtifactSetPicker`, `StatPills`, `SubstatOrder`, `ArtifactDomains`.
 - `lib/artifacts.ts` (pure, vitest): `STAT_LABELS`, `SLOT_OPTIONS`, `moveSub(order, from, to)`, `setsFor(mode, current)` (switching 4-piece ↔ 2 + 2 keeps the first set).
-- `api.artifactSets()`, types `ArtifactTarget`, `ArtifactCheck`, `ArtifactSetOption`, `ArtifactDomainsView`; `Targets` gains `artifacts`.
+- `api.artifactSets()`, types `ArtifactTarget`, `ArtifactCheck`, `ArtifactSetOption`, `ArtifactDomainsView`; `Character` gains `artifact_target` and `artifacts_done`, `CharacterDetail` gains `artifact_check`.
 
 ### 6.4 Correction to the Dashboard spec
 
-The Dashboard spec said talent domain cards keep "an empty image slot" for this spike. The built `DomainDays.svelte` has no such slot, so nothing changes there; the spike result (no source) is recorded in section 2.
+The Dashboard spec said talent domain cards keep "an empty image slot" for this spike. `DomainDays.svelte` has that slot (an empty `.image` div); it is removed, since the spike found no source (amended while planning; an earlier draft of this section wrongly said the slot did not exist).
 
 ---
 
@@ -229,7 +231,7 @@ The Dashboard spec said talent domain cards keep "an empty image slot" for this 
 - `/api/artifact-sets` shape and domain join; `/api/characters/{slug}` new fields.
 - Dashboard `artifact_domains`: counting rule (met, done, no sets), priority ordering of characters and domains, `needed` flags, `other`, `hint`, hidden state.
 
-**Dev seed:** stores the trimmed domain list (with a current `artifact_domains_fetched_at`) so Playwright never calls genshin-db; gives two Build characters set targets — one `met`, one `missing` — and a third Build character wanting a set from the same domain as the missing one.
+**Dev seed:** stores the trimmed domain list (with a current `artifact_domains_fetched_at`) so Playwright never calls genshin-db; gives Bennett a target ticked Artifacts done (amended while planning: done by the tick rather than by gear, so the shared seed gear used by Teams and Profile stays unchanged; pytest covers `met` by gear), Furina a 2 + 2 target (Noblesse from Stone Chamber, Gladiator from no domain) that is `missing`, and Neuvillette a 4-piece Bloodstained Chivalry target from the same domain.
 
 **Frontend**
 
