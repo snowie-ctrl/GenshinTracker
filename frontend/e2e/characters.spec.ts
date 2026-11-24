@@ -149,7 +149,7 @@ test('Build tab edits targets and keeps them', async ({ page }) => {
 	await expect(page.getByLabel('Target elemental skill')).toHaveValue('10');
 	await expect(page.getByLabel('Target constellation')).toHaveValue('6');
 	await expect(page.getByTestId('build-artifacts')).toContainText('Substat priority');
-	await expect(page.getByTestId('build-suggestions-slot')).toContainText('sub-project 9');
+	await expect(page.getByTestId('build-suggestions')).toContainText('Suggestions');
 	await page.getByLabel('Target elemental skill').selectOption(before);
 	await page.getByLabel('Target constellation').selectOption('1');
 	await expect(page.getByLabel('Target elemental skill')).toHaveValue(before);
@@ -178,7 +178,7 @@ test('Build tab on a non-Build character offers Set to Build', async ({ page }) 
 
 test('Guide shows talents with numbers, passives and constellations', async ({ page }) => {
 	await page.goto('/characters/furina/guide');
-	await expect(page.getByTestId('guide-howto-slot')).toContainText('sub-project 9');
+	await expect(page.getByTestId('guide-howto')).toContainText('How to play');
 	const talents = page.getByTestId('guide-talents');
 	await expect(talents.getByText('Furina Skill')).toBeVisible();
 	await expect(talents.getByRole('columnheader', { name: /\(now\)/ }).first()).toBeVisible();

@@ -2,6 +2,7 @@
 	import { getCharacterPage } from '$lib/characterPage.svelte';
 	import { imgSrc } from '$lib/img';
 	import { buildValue, scalingColumns } from '$lib/kit';
+	import GuideLink from '$lib/GuideLink.svelte';
 	import KitText from '$lib/KitText.svelte';
 	import ScalingTable from '$lib/ScalingTable.svelte';
 	import type { KitTalent, TalentRole } from '$lib/types';
@@ -28,7 +29,7 @@
 	}
 </script>
 
-<div class="slot howto" data-testid="guide-howto-slot"><b>How to play</b> · Role, team comps, rotations and talent priority arrive with sub-project 9.</div>
+<GuideLink slug={c.slug} />
 
 {#if p.kitState === 'loading'}
 	<p class="muted">Loading talents…</p>
@@ -78,8 +79,6 @@
 {/if}
 
 <style>
-	.howto { margin-bottom: 12px; }
-	.howto b { color: var(--text); }
 	.two { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; align-items: start; }
 	.gap { margin-top: 12px; }
 	.t, .cons { display: flex; gap: 12px; margin-bottom: 14px; }
