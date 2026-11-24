@@ -29,7 +29,7 @@ class FakeSource:
 
     def __init__(self, roster=None, notes=NOTES, fail=None, gate: asyncio.Event | None = None,
                  gaps: GapResult | None = None, gaps_gate: asyncio.Event | None = None,
-                 calendar=None, profile=None, challenges=None):
+                 calendar=None, profile=None, challenges=None, announcements=None):
         self.roster = roster if roster is not None else [
             make_roster(10000032, name="Bennett"), make_roster(10000089, level=90, name="Furina"),
         ]
@@ -41,6 +41,7 @@ class FakeSource:
         self.calendar = calendar
         self.profile = profile
         self.challenges = challenges
+        self.announcements = announcements
         self.calls: list = []
 
     async def get_roster(self):
@@ -100,6 +101,12 @@ class FakeSource:
         if "challenges" in self.fail:
             raise self.fail["challenges"]
         return list(self.challenges or [])
+
+    async def get_announcements(self):
+        self.calls.append("announcements")
+        if "announcements" in self.fail:
+            raise self.fail["announcements"]
+        return list(self.announcements or [])
 
 
 class Clock:

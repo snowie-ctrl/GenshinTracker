@@ -91,8 +91,8 @@ export const api = {
 	deleteTag: (id: number) => request<{ ok: boolean }>('DELETE', `/tags/${id}`),
 	events: () => request<EventsResponse>('GET', '/events'),
 	setEventDone: (id: number, done: boolean) => request<{ id: number; done: boolean }>('PUT', `/events/${id}/done`, { done }),
-	bannerHistory: (pool: string, q: string, page: number) =>
-		request<BannerHistoryPage>('GET', `/banners/history?pool=${encodeURIComponent(pool)}&q=${encodeURIComponent(q)}&page=${page}`)
+	bannerHistory: (q: string, page: number) =>
+		request<BannerHistoryPage>('GET', `/banners/history?q=${encodeURIComponent(q)}&page=${page}`)
 };
 
 export function errorMessage(e: unknown): string {

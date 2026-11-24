@@ -1,24 +1,25 @@
 import type { CharMaterial, GapStatus, Material } from './types';
 import { timeAgo } from './time';
 
-export type InventoryFilter = 'all' | 'needed' | 'farm' | 'owned';
+export type InventoryFilter = 'all' | 'owned';
 export type Tone = 'short' | 'met' | 'none';
-export interface TileView { main: string; badge: string | null; hint: string | null; tone: Tone }
+export interface TileView { main: string; badge: string | null; craft: string | null; hint: string | null; tone: Tone }
 
 export function tileView(m: Material): TileView {
 	if (m.state === 'short') {
 		return {
 			main: `${m.have ?? 0}/${m.need}`,
 			badge: m.to_farm > 0 ? `−${m.to_farm}` : null,
+			craft: null,
 			hint: m.craftable > 0 ? `craft ${m.craftable}` : null,
 			tone: 'short'
 		};
 	}
 	if (m.state === 'met') {
 		const main = m.scan != null && m.scan >= m.need ? `${m.scan}/${m.need} ✓` : `✓ ${m.need}`;
-		return { main, badge: null, hint: null, tone: 'met' };
+		return { main, badge: null, craft: null, hint: null, tone: 'met' };
 	}
-	return { main: m.scan != null ? String(m.scan) : '', badge: null, hint: null, tone: 'none' };
+	return { main: m.scan != null ? String(m.scan) : '', badge: null, craft: null, hint: null, tone: 'none' };
 }
 
 /** Unneeded tiles are dimmed unless a GOOD scan says you own some. */
@@ -28,8 +29,8 @@ export function tileDim(m: Material): boolean {
 
 export function charTileView(m: CharMaterial): TileView {
 	const hint = m.shared ? 'shared' : null;
-	if (m.short > 0) return { main: `${m.need - m.short}/${m.need}`, badge: `−${m.short}`, hint, tone: 'short' };
-	return { main: `✓ ${m.need}`, badge: null, hint, tone: 'met' };
+	if (m.short > 0) return { main: `${m.need - m.short}/${m.need}`, badge: `−${m.short}`, craft: null, hint, tone: 'short' };
+	return { main: `✓ ${m.need}`, badge: null, craft: null, hint, tone: 'met' };
 }
 
 export interface CharMaterialGroup { key: string; label: string; materials: CharMaterial[] }
@@ -47,14 +48,37 @@ export function groupByCategory(ms: CharMaterial[]): CharMaterialGroup[] {
 
 export function filterMaterials(ms: Material[], filter: InventoryFilter, query: string): Material[] {
 	const q = query.trim().toLowerCase();
-	return ms.filter((m) => {
-		const passes =
-			filter === 'all' ? true
-			: filter === 'needed' ? m.state !== 'unneeded'
-			: filter === 'owned' ? (m.scan ?? 0) > 0
-			: m.to_farm > 0;
-		return passes && (!q || m.name.toLowerCase().includes(q));
-	});
+	return ms.filter((m) => (filter === 'all' || (m.scan ?? 0) > 0) && (!q || m.name.toLowerCase().includes(q)));
+}
+
+export function readInventoryFilter(stored: string | null): InventoryFilter {
+	return stored === 'owned' ? 'owned' : 'all';
+}
+
+/** Live HoYoLAB count when short (newest), else the GOOD scan, else unknown. */
+export function bestKnownCount(m: Material): number | null {
+	if (m.state === 'short' && m.have != null) return m.have;
+	return m.scan ?? null;
+}
+
+export function backpackView(m: Material): TileView {
+	const n = bestKnownCount(m);
+	return { main: n === null ? '—' : String(n), badge: null, craft: null, hint: null, tone: 'none' };
+}
+
+export function backpackDim(m: Material): boolean {
+	return !bestKnownCount(m);
+}
+
+export function farmView(m: Material): TileView {
+	const n = bestKnownCount(m);
+	return {
+		main: n === null ? '—' : String(n),
+		badge: m.to_farm > 0 ? `−${m.to_farm}` : null,
+		craft: m.craftable > 0 ? `+${m.craftable}` : null,
+		hint: null,
+		tone: 'none'
+	};
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

@@ -2,7 +2,10 @@
 	import { api, errorMessage } from '$lib/api';
 	import MaterialPopover from '$lib/MaterialPopover.svelte';
 	import MaterialTile from '$lib/MaterialTile.svelte';
-	import { filterMaterials, gapLabel, shouldPoll, tileDim, tileView, type InventoryFilter } from '$lib/materials';
+	import {
+		backpackDim, backpackView, farmView, filterMaterials, gapLabel, gapsSettled, readInventoryFilter, shouldPoll,
+		type InventoryFilter
+	} from '$lib/materials';
 	import { sync } from '$lib/sync.svelte';
 	import { scanAgeNote } from '$lib/good';
 	import { timeAgo } from '$lib/time';
@@ -12,16 +15,11 @@
 	import type { Inventory } from '$lib/types';
 
 	const FILTER_KEY = 'gt.inventory.filter';
-	const BASE_FILTERS: { key: InventoryFilter; label: string }[] = [
-		{ key: 'all', label: 'All' },
-		{ key: 'needed', label: 'Needed' },
-		{ key: 'farm', label: 'To farm' }
-	];
+	const BASE_FILTERS: { key: InventoryFilter; label: string }[] = [{ key: 'all', label: 'All' }];
 
 	function readFilter(): InventoryFilter {
 		try {
-			const v = localStorage.getItem(FILTER_KEY);
-			return v === 'needed' || v === 'farm' || v === 'owned' ? v : 'all';
+			return readInventoryFilter(localStorage.getItem(FILTER_KEY));
 		} catch {
 			return 'all';
 		}
@@ -97,7 +95,9 @@
 			.map((c) => ({ ...c, shown: filterMaterials(c.materials, activeFilter, query) }))
 			.filter((c) => c.shown.length > 0)
 	);
-	const anyNeeded = $derived((data?.categories ?? []).some((c) => c.materials.some((m) => m.state !== 'unneeded')));
+	const farm = $derived((data?.categories ?? []).flatMap((c) => c.materials.filter((m) => m.to_farm > 0)));
+	const needsAny = $derived((data?.categories ?? []).some((c) => c.materials.some((m) => m.state !== 'unneeded')));
+	const searching = $derived(query.trim().length > 0);
 </script>
 
 <h1>Inventory</h1>
@@ -136,15 +136,35 @@
 		{#if data.gaps.skipped.length}
 			<p class="muted">{data.gaps.skipped.join(', ')} planning isn't supported yet.</p>
 		{/if}
-		{#if !anyNeeded}<p class="muted">Set characters to Build to plan farming.</p>{/if}
+		{#if goodEnabled && !data.good}<p class="muted" data-testid="scan-hint">Import a GOOD scan to see every count.</p>{/if}
+		{#if !searching}
+			<section class="panel" data-testid="to-farm">
+				<h2>To farm{#if farm.length} · {farm.length} material{farm.length === 1 ? '' : 's'}{/if}</h2>
+				{#if farm.length}
+					<div class="grid">
+						{#each farm as m (m.id)}
+							<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={farmView(m)} testid="farm-{m.id}">
+								{#snippet popover()}<MaterialPopover material={m} scannedAt={data?.good?.imported_at ?? null} />{/snippet}
+							</MaterialTile>
+						{/each}
+					</div>
+				{:else if gapsSettled(data.gaps) && !needsAny}
+					<p class="muted">Set characters to Build to plan farming.</p>
+				{:else if gapsSettled(data.gaps)}
+					<p class="muted">Nothing to farm ✓</p>
+				{:else}
+					<p class="muted">{gapLabel(data.gaps, now)}</p>
+				{/if}
+			</section>
+		{/if}
 
 		{#each sections as c (c.key)}
 			<section class="panel" data-testid="category-{c.key}">
 				<h2>{c.label}</h2>
 				<div class="grid">
 					{#each c.shown as m (m.id)}
-						<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={tileView(m)}
-							dim={tileDim(m)} testid="tile-{m.id}">
+						<MaterialTile name={m.name} icon={m.icon} rarity={m.rarity} view={backpackView(m)}
+							dim={backpackDim(m)} testid="tile-{m.id}">
 							{#snippet popover()}<MaterialPopover material={m} scannedAt={data?.good?.imported_at ?? null} />{/snippet}
 						</MaterialTile>
 					{/each}

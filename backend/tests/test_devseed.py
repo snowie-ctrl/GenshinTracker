@@ -1,4 +1,6 @@
 from app.config import Paths
+from app.db.engine import make_engine, make_session_factory
+from app.db.models import EventLog
 from app.devseed import seed
 from helpers import make_client
 
@@ -19,6 +21,8 @@ def test_devseed_creates_expected_statuses(tmp_path):
         "cryo-traveler": ("obtained", False), "anemo-traveler": ("unobtained", False),
     }
     assert dash["notes"]["resin"] == 120
+    with make_session_factory(make_engine(paths.db_file))() as s:
+        assert s.query(EventLog).count() == 6
 
 
 def test_devseed_contains_planner_data(tmp_path):

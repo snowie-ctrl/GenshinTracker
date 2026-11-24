@@ -1,0 +1,8 @@
+{"retcode": 0, "message": "OK", "data": {"list": [
+  {"ann_id": 201, "banner": "", "content": "<p><span>〓Event Duration〓</span></p><p><span>&lt;t class=\"t_lc\" contenteditable=\"false\"&gt;2026/11/20 10:00&lt;/t&gt; – &lt;t class=\"t_lc\" contenteditable=\"false\"&gt;2026/11/30 03:59&lt;/t&gt;</span></p><p><span>Dig up &amp; smash test blocks.</span></p><p><img src=\"https://sdk.hoyoverse.com/upload/ann/test/inline.png\"></p>"},
+  {"ann_id": 202, "banner": "https://sdk.hoyoverse.com/upload/ann/test/wish.png", "content": "<p>〓Wish Duration〓</p><p>&lt;t class=\"t_lc\" contenteditable=\"false\"&gt;2026/11/24 18:00&lt;/t&gt; – &lt;t class=\"t_lc\" contenteditable=\"false\"&gt;2026/12/15 14:59&lt;/t&gt;</p><p>Test character featured.</p>"},
+  {"ann_id": 203, "banner": "", "content": "<p>TCG text</p>"},
+  {"ann_id": 204, "banner": "", "content": "<p>〓Event Duration〓</p><p>Available throughout the entirety of Version 9.9</p><p>Defend the test.</p>"},
+  {"ann_id": 205, "banner": "", "content": "<p>〓Event Duration〓</p><p>After the update – &lt;t class=\"t_gl\" contenteditable=\"false\"&gt;2026/12/14 03:59&lt;/t&gt;</p><p>Log in.</p>"},
+  {"ann_id": 206, "banner": "", "content": "<p>&lt;t class=\"t_lc\" contenteditable=\"false\"&gt;2026/11/24 18:00&lt;/t&gt; – &lt;t class=\"t_lc\" contenteditable=\"false\"&gt;2026/12/15 14:59&lt;/t&gt;</p>"}
+]}}

@@ -8,8 +8,10 @@ from typing import Any, Awaitable, Callable, Mapping, Protocol, Sequence
 
 import aiohttp
 import genshin
+import httpx
 
 from app.gamedata.yatta import canonical_id
+from app.sync.announcements import Announcement, fetch_announcements
 from app.sync.chronicle import (
     CalendarInfo, ChallengeRunInfo, ProfileInfo, to_abyss_run, to_calendar, to_profile, to_stygian_runs,
     to_theater_runs,
@@ -156,6 +158,7 @@ class HoyolabSource(Protocol):
     async def get_calendar(self) -> CalendarInfo: ...
     async def get_profile(self) -> ProfileInfo: ...
     async def get_challenges(self) -> list[ChallengeRunInfo]: ...
+    async def get_announcements(self) -> list[Announcement]: ...
 
 
 # --- mappers ---------------------------------------------------------------
@@ -359,6 +362,11 @@ class GenshinPySource:
         for r in runs:
             seen[(r.kind, r.season)] = r
         return list(seen.values())
+
+    async def get_announcements(self) -> list[Announcement]:
+        """Public feed: no cookie and no UID, only the server region."""
+        async with httpx.AsyncClient() as http:
+            return await fetch_announcements(http, self._region)
 
 
 async def fetch_accounts(cookies: dict[str, str]) -> list[Account]:

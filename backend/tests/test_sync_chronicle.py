@@ -1,6 +1,8 @@
-from app.db.models import ChallengeRun, HoyolabSnapshot, SyncRun
+from app.db.models import ChallengeRun, EventLog, HoyolabSnapshot, SyncRun
+from app.sync.announcements import Announcement, AnnouncementError
 from app.sync.chronicle import CalendarInfo, ChallengeRunInfo, EventInfo, Reward
-from app.sync.hoyolab import HoyolabError
+from app.settings.store import get_setting
+from app.sync.hoyolab import AuthExpired, HoyolabError
 from fakes import Clock, FakeSource
 from helpers import seed_game
 from test_sync_runner import START, last_run, manager
@@ -108,3 +110,65 @@ async def test_gaps_only_run_never_runs_chronicle_parts(paths, session_factory):
     m.start_gaps()
     await m.wait()
     assert source.calls.count("calendar") == before
+
+
+ANN = Announcement(501, "event", "Fest", "Fest", "2026-11-19T04:00:00Z", "2026-12-01T04:00:00Z", None, None,
+                   "https://sdk.hoyoverse.com/upload/ann/test/fest.png", "About the fest.")
+
+
+async def test_calendar_part_records_announcements(paths, session_factory):
+    seed_game(session_factory)
+    m = manager(paths, session_factory, FakeSource(calendar=CAL, announcements=[ANN]))
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["calendar"] == {"ok": True, "count": 1}
+    with session_factory() as s:
+        row = s.get(EventLog, "ann:501")
+        assert row.calendar_id == 9001 and row.image.endswith("fest.png")
+
+
+async def test_feed_failure_keeps_calendar(paths, session_factory):
+    seed_game(session_factory)
+    m = manager(paths, session_factory,
+                FakeSource(calendar=CAL, fail={"announcements": AnnouncementError("getAnnList: retcode -1")}))
+    await m.request("manual")
+    await m.wait()
+    part = last_run(session_factory).parts["calendar"]
+    assert part["ok"] is True and part["count"] == 1
+    assert part["announcements_error"] == "AnnouncementError: getAnnList: retcode -1"
+    with session_factory() as s:
+        assert s.get(HoyolabSnapshot, "calendar").data["events"][0]["id"] == 9001
+        assert s.get(EventLog, "cal:9001") is not None          # the calendar event still gets a bar
+
+
+async def test_event_log_failure_keeps_calendar_snapshot(paths, session_factory, monkeypatch):
+    import app.sync.runner as runner_mod
+
+    def boom(session, anns, calendar, now):
+        session.add(EventLog(key="ann:777", kind="event", name="Partial", first_seen=now, last_seen=now))
+        session.flush()                       # a partial write that the savepoint must roll back
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(runner_mod, "record", boom)
+    seed_game(session_factory)
+    m = manager(paths, session_factory, FakeSource(calendar=CAL, announcements=[ANN]))
+    await m.request("manual")
+    await m.wait()
+    part = last_run(session_factory).parts["calendar"]
+    assert part["ok"] is True and part["count"] == 1
+    assert part["announcements_error"] == "RuntimeError: boom"
+    with session_factory() as s:
+        assert s.get(HoyolabSnapshot, "calendar").data["events"][0]["id"] == 9001
+        assert s.get(EventLog, "ann:777") is None     # rolled back to the savepoint
+
+
+async def test_auth_expired_from_feed_propagates(paths, session_factory):
+    seed_game(session_factory)
+    source = FakeSource(calendar=CAL, fail={"announcements": AuthExpired("x")})
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["calendar"] == {"ok": False, "error": "skipped: HoYoLAB login expired"}
+    with session_factory() as s:
+        assert get_setting(s, "hoyolab_status") == "expired"
+        assert s.get(HoyolabSnapshot, "calendar") is None

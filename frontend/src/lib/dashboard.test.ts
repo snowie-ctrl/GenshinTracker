@@ -37,9 +37,9 @@ describe('moveItem', () => {
 
 describe('buildTileView', () => {
 	it('shows allocation, craft hint and what is still missing', () => {
-		expect(buildTileView(m(9, 8, 1))).toEqual({ main: '8/9', badge: null, hint: '+1 craft', tone: 'met' });
-		expect(buildTileView(m(9, 2, 3))).toEqual({ main: '2/9', badge: '−4', hint: '+3 craft', tone: 'short' });
-		expect(buildTileView(m(20, 0, 0))).toEqual({ main: '0/20', badge: '−20', hint: null, tone: 'short' });
+		expect(buildTileView(m(9, 8, 1))).toEqual({ main: '8/9', badge: null, craft: null, hint: '+1 craft', tone: 'met' });
+		expect(buildTileView(m(9, 2, 3))).toEqual({ main: '2/9', badge: '−4', craft: null, hint: '+3 craft', tone: 'short' });
+		expect(buildTileView(m(20, 0, 0))).toEqual({ main: '0/20', badge: '−20', craft: null, hint: null, tone: 'short' });
 		expect(covered(m(9, 8, 1))).toBe(true);
 		expect(covered(m(9, 8, 0))).toBe(false);
 	});

@@ -30,6 +30,7 @@ export function buildTileView(m: BuildMaterial): TileView {
 	return {
 		main: `${m.have}/${m.need}`,
 		badge: left > 0 ? `−${left}` : null,
+		craft: null,
 		hint: m.craft > 0 ? `+${m.craft} craft` : null,
 		tone: left === 0 ? 'met' : 'short'
 	};

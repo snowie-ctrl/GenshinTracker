@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.db.models import EventDone, GameBanner, GameCharacter, GameWeapon, HoyolabSnapshot
+from app.db.models import EventDone, EventLog, GameBanner, GameCharacter, GameWeapon, HoyolabSnapshot
+from app.events.log import match_banner
 from app.servertime import RESET_HOUR, offset_hours, server_day, week_start
 from app.timeutil import iso
 from app.wishes.pity import BannerWindow, PoolResult
@@ -15,8 +16,10 @@ from app.wishes.types import server_local_now
 PRIMOGEM_ID = 201
 ENDING_SOON = timedelta(hours=24)
 ENDING_STRIP = timedelta(days=3)
-PAGE_SIZE = 50
 KEEP_DONE = timedelta(days=60)
+TIMELINE_BACK = timedelta(days=21)
+ENDING_LIST = timedelta(days=3)
+ENDING_LIST_MAX = 5
 FALLBACK_DAY = {"abyss": 16, "theater": 1}
 LABELS = {"daily": "Daily reset", "weekly": "Weekly reset", "abyss": "Spiral Abyss",
           "theater": "Imaginarium Theater", "stygian": "Stygian Onslaught"}
@@ -130,7 +133,7 @@ def resets(calendar: dict | None, now: datetime, region: str | None,
     return [{"key": k, "label": LABELS[k], "at": iso(at[k])} for k in LABELS if k in at]
 
 
-def _items(session: Session) -> dict[int, dict]:
+def history_items(session: Session) -> dict[int, dict]:
     out = {w.id: {"id": w.id, "name": w.name, "icon": w.icon, "rarity": w.rarity}
            for w in session.scalars(select(GameWeapon))}
     out.update({c.id: {"id": c.id, "name": c.name, "icon": c.icon, "rarity": c.rarity}
@@ -138,29 +141,106 @@ def _items(session: Session) -> dict[int, dict]:
     return out
 
 
-def banner_history(session: Session, pool: str, q: str, page: int, pulls: dict[str, dict]) -> dict:
-    items = _items(session)
-    query = select(GameBanner).where(GameBanner.pool == pool)
-    text = q.strip().lower()
-    if text:
-        ids = [i for i, it in items.items() if text in it["name"].lower()]
-        matching = [b.key for b in session.scalars(select(GameBanner).where(GameBanner.pool == pool))
-                    if set(b.featured_5 or []) & set(ids) or set(b.featured_4 or []) & set(ids)]
-        query = query.where(or_(func.lower(GameBanner.name).contains(text, autoescape=True),
-                                func.lower(GameBanner.short_name).contains(text, autoescape=True),
-                                GameBanner.key.in_(matching)))
-    total = session.scalar(select(func.count()).select_from(query.subquery())) or 0
-    page = max(1, page)
-    rows = session.scalars(query.order_by(GameBanner.start.desc(), GameBanner.order)
-                           .offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE))
-
+def _featured(b: GameBanner, items: dict[int, dict]) -> dict:
     def item(i: int) -> dict:
         return items.get(i, {"id": i, "name": f"Item {i}", "icon": None, "rarity": 0})
+    return {"featured_5": [item(i) for i in b.featured_5 or []], "featured_4": [item(i) for i in b.featured_4 or []]}
 
-    return {"total": total, "page": page, "page_size": PAGE_SIZE, "rows": [
-        {"key": b.key, "name": b.name, "short_name": b.short_name, "start": b.start, "end": b.end,
-         "featured_5": [item(i) for i in b.featured_5 or []], "featured_4": [item(i) for i in b.featured_4 or []],
-         "pulls": pulls.get(b.key)} for b in rows]}
+
+def timeline_rows(log_rows: list[EventLog], calendar: dict, done: set[int], banners: list[GameBanner],
+                  items: dict[int, dict], pulls: dict[str, dict], now: datetime) -> list[dict]:
+    cal = {e["id"]: e for e in calendar.get("events", [])}
+    cutoff = now - TIMELINE_BACK
+    out = []
+    for r in log_rows:
+        c = cal.get(r.calendar_id) if r.calendar_id is not None else None
+        start = (c or {}).get("start") or r.start
+        end = (c or {}).get("end") or r.end
+        end_dt = parse_iso(end)
+        if end_dt is not None and end_dt < cutoff:
+            continue
+        wish = r.kind.startswith("wish")
+        pool = r.kind.split(":", 1)[1] if wish and ":" in r.kind else None
+        finished = bool((c or {}).get("finished", False))
+        row = {"key": r.key, "kind": "wish" if wish else "event", "pool": pool, "name": r.name,
+               "start": start, "end": end, "image": r.image, "description": r.description,
+               "calendar_id": r.calendar_id if c is not None else None,
+               "rewards": (c or {}).get("rewards", []), "primogems": primogems((c or {}).get("rewards", [])),
+               "finished": finished, "done": (not wish) and c is not None and (finished or c["id"] in done),
+               "ending_soon": False, "items": None, "pulls": None}
+        row["ending_soon"] = (not row["done"]) and end_dt is not None and now < end_dt <= now + ENDING_SOON
+        if wish and pool is not None:
+            b = match_banner(pool, start, banners)
+            if b is not None:
+                row["items"], row["pulls"] = _featured(b, items), pulls.get(b.key)
+        out.append(row)
+    far = "9999"
+    out.sort(key=lambda r: (r["start"] or "", r["end"] or far, r["name"]))
+    return out
+
+
+def ending_soon_list(rows: list[dict], now: datetime) -> list[dict]:
+    soon = [r for r in rows if not r["done"] and (e := parse_iso(r.get("end"))) is not None and now < e <= now + ENDING_LIST]
+    soon.sort(key=lambda r: r["end"])
+    return [{"key": r["key"], "kind": r["kind"], "name": r["name"], "end": r["end"]} for r in soon[:ENDING_LIST_MAX]]
+
+
+HISTORY_PAGE = 6
+POOL_ORDER = {"character": 0, "weapon": 1, "chronicled": 2}
+
+
+def _banner_dict(b: GameBanner, items: dict[int, dict], pulls: dict[str, dict]) -> dict:
+    return {"key": b.key, "pool": b.pool, "name": b.name, **_featured(b, items), "pulls": pulls.get(b.key)}
+
+
+def banner_history(session: Session, q: str, page: int, pulls: dict[str, dict]) -> dict:
+    items = history_items(session)
+    banners = [b for b in session.scalars(select(GameBanner)) if b.version and b.pool in POOL_ORDER]  # no standard/beginner
+    text = q.strip().lower()
+
+    def matches(b: GameBanner) -> bool:
+        if not text:
+            return True
+        names = [items.get(i, {}).get("name", "") for i in (b.featured_5 or []) + (b.featured_4 or [])]
+        return any(text in n.lower() for n in [b.name, b.short_name, *names])
+
+    phases: dict[tuple[str, str], list[GameBanner]] = {}
+    for b in banners:
+        phases.setdefault((b.version, b.start[:10]), []).append(b)
+    versions: dict[str, list[dict]] = {}
+    for (version, _day), group in phases.items():
+        shown = [b for b in group if matches(b)]
+        if not shown:
+            continue
+        shown.sort(key=lambda b: (POOL_ORDER.get(b.pool, 9), b.order))
+        versions.setdefault(version, []).append({
+            "start": min(b.start for b in group), "end": max(b.end for b in group), "upcoming": False, "image": None,
+            "banners": [_banner_dict(b, items, pulls) for b in shown]})
+
+    if banners:
+        newest = max(banners, key=lambda b: b.start)
+        newest_at = datetime.fromisoformat(newest.start.replace(" ", "T"))
+        upcoming: dict[str, list[EventLog]] = {}
+        for r in session.scalars(select(EventLog).where(EventLog.kind.like("wish%"))):
+            pool = r.kind.split(":", 1)[1] if ":" in r.kind else "character"
+            start = parse_iso(r.start)
+            if start is None or start <= newest_at or match_banner(pool, r.start, banners) is not None:
+                continue
+            if text and text not in r.name.lower():
+                continue
+            upcoming.setdefault(r.start[:10], []).append(r)
+        for _day, group in sorted(upcoming.items()):
+            versions.setdefault(newest.version, []).append({
+                "start": min(r.start for r in group), "end": max(r.end or r.start for r in group), "upcoming": True,
+                "image": next((r.image for r in group if r.image), None),
+                "banners": [{"key": r.key, "pool": r.kind.split(":", 1)[-1], "name": r.name, "featured_5": [],
+                             "featured_4": [], "pulls": None} for r in group]})
+
+    ordered = sorted(versions.items(), key=lambda kv: max(p["start"] for p in kv[1]), reverse=True)
+    page = max(1, page)
+    chunk = ordered[(page - 1) * HISTORY_PAGE: page * HISTORY_PAGE]
+    return {"total_versions": len(ordered), "page": page, "page_size": HISTORY_PAGE,
+            "versions": [{"version": v, "phases": sorted(ps, key=lambda p: p["start"])} for v, ps in chunk]}
 
 
 def cleanup_event_done(session: Session, now: datetime) -> int:

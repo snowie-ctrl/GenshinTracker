@@ -141,9 +141,9 @@ export function teamTileView(m: TeamMaterial): TileView {
 	const hints = [m.craftable > 0 ? `craft ${m.craftable}` : null, m.shared ? 'shared' : null].filter(Boolean);
 	const hint = hints.length ? hints.join(' · ') : null;
 	if (m.short > 0) {
-		return { main: `${m.need - m.short}/${m.need}`, badge: m.to_farm > 0 ? `−${m.to_farm}` : null, hint, tone: 'short' };
+		return { main: `${m.need - m.short}/${m.need}`, badge: m.to_farm > 0 ? `−${m.to_farm}` : null, craft: null, hint, tone: 'short' };
 	}
-	return { main: `✓ ${m.need}`, badge: null, hint, tone: 'met' };
+	return { main: `✓ ${m.need}`, badge: null, craft: null, hint, tone: 'met' };
 }
 
 /** The panel lists only what is still short for the team. */

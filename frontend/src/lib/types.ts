@@ -245,17 +245,27 @@ export interface EventRow {
 }
 export interface EventsLeft { count: number; primogems: number }
 export interface ResetRow { key: 'daily' | 'weekly' | 'abyss' | 'theater' | 'stygian'; label: string; at: string }
+export interface HistoryItem { id: number; name: string; icon: string | null; rarity: number }
+export interface TimelineRow {
+	key: string; kind: 'event' | 'wish'; pool: 'character' | 'weapon' | 'chronicled' | null; name: string;
+	start: string | null; end: string | null; image: string | null; description: string; calendar_id: number | null;
+	rewards: Reward[]; primogems: number; finished: boolean; done: boolean; ending_soon: boolean;
+	items: { featured_5: HistoryItem[]; featured_4: HistoryItem[] } | null; pulls: BannerPulls | null;
+}
+export interface EndingSoon { key: string; kind: 'event' | 'wish'; name: string; end: string }
 export interface EventsResponse {
 	connected: boolean; fetched_at: string | null; error: string | null;
 	banners: { current: LiveBanner[]; upcoming: LiveBanner[] };
 	events: EventRow[]; events_left: EventsLeft; resets: ResetRow[];
+	timeline: TimelineRow[]; ending_soon: EndingSoon[]; announcements_error: string | null;
 }
-export interface HistoryItem { id: number; name: string; icon: string | null; rarity: number }
 export interface HistoryBanner {
-	key: string; name: string; short_name: string; start: string; end: string;
+	key: string; pool: 'character' | 'weapon' | 'chronicled'; name: string;
 	featured_5: HistoryItem[]; featured_4: HistoryItem[]; pulls: BannerPulls | null;
 }
-export interface BannerHistoryPage { total: number; page: number; page_size: number; rows: HistoryBanner[] }
+export interface HistoryPhase { start: string; end: string; upcoming: boolean; image: string | null; banners: HistoryBanner[] }
+export interface HistoryVersion { version: string; phases: HistoryPhase[] }
+export interface BannerHistoryPage { total_versions: number; page: number; page_size: number; versions: HistoryVersion[] }
 
 export interface GoodRef { imported_at: string; source: string | null }
 export interface GoodCounts {
