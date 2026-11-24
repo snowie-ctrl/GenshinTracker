@@ -2,31 +2,56 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import BarChart from '$lib/BarChart.svelte';
-	import WishHistory from '$lib/WishHistory.svelte';
-	import { imgSrc } from '$lib/img';
-	import { api, errorMessage } from '$lib/api';
+	import FilterPill from '$lib/FilterPill.svelte';
+	import Histogram from '$lib/Histogram.svelte';
+	import LineChart from '$lib/LineChart.svelte';
 	import PityPanel from '$lib/PityPanel.svelte';
+	import RadarChart from '$lib/RadarChart.svelte';
+	import WishHistory from '$lib/WishHistory.svelte';
+	import { api, errorMessage } from '$lib/api';
+	import { ELEMENTS, WEAPON_TYPES } from '$lib/charts';
+	import { ELEMENT_STYLE } from '$lib/elements';
+	import { imgSrc } from '$lib/img';
 	import { timeAgo } from '$lib/time';
-	import type { ImportStatus, Pool, WishSummary } from '$lib/types';
-	import { POOL_COLOR, POOL_LABEL, histogramBars, importResultLine, outcomeLabel, scaleTo, stackedMonths } from '$lib/wishes';
+	import type { ImportStatus, Pool, WishFilter, WishSummary } from '$lib/types';
+	import {
+		FILTER_LABEL, POOL_LABEL, availableFilters, importResultLine, loadWishFilter, outcomeLabel, pickFilter,
+		rotationBars, saveWishFilter, spiderSeries, stackedMonths, toFilter, verdictLabel
+	} from '$lib/wishes';
 
 	let data = $state<WishSummary | null>(null);
 	let status = $state<ImportStatus | null>(null);
 	let error = $state<string | null>(null);
 	let toast = $state<string | null>(null);
-	let tab = $state<Pool>('character');
+	let filter = $state<WishFilter>('character');
+	let byRotation = $state(false);
 	let version = $state(0);
 	let now = $state(Date.now());
 	const running = $derived(status?.running ?? false);
-	const current = $derived(data?.pools.find((p) => p.pool === tab) ?? null);
-	const bannerWidths = $derived(data ? scaleTo(data.charts.banners.map((b) => b.pulls), 100) : []);
+	const filters = $derived(data ? availableFilters(data.analysis) : []);
+	const block = $derived(data?.analysis[filter] ?? null);
+	const elementAxes = ELEMENTS.map((e) => ({ label: e, icon: ELEMENT_STYLE[e].icon }));
+	const weaponAxes = WEAPON_TYPES.map((w) => ({ label: w }));
 	const pct = (n: number | null) => (n === null ? '—' : `${Math.round(n * 100)}%`);
+
+	function radar(counts: { five: Record<string, number>; four: Record<string, number> }, axes: readonly string[]) {
+		const s = spiderSeries(counts, axes);
+		return [
+			{ name: '5★', values: s.five, color: 'var(--rarity-5)' },
+			{ name: '4★', values: s.four, color: 'var(--rarity-4)' }
+		];
+	}
+
+	function choose(f: WishFilter) {
+		filter = f;
+		saveWishFilter(f);
+	}
 
 	async function load() {
 		try {
 			data = await api.wishSummary();
 			status = data.import;
-			if (data.pools.length && !data.pools.some((p) => p.pool === tab)) tab = data.pools[0].pool;
+			filter = pickFilter(loadWishFilter(), availableFilters(data.analysis));
 			error = null;
 		} catch (e) {
 			error = errorMessage(e);
@@ -160,46 +185,93 @@
 			</ol>
 		</section>
 	{:else}
-		<div class="panels">
+		<div class="tiles">
 			{#each data.pools as pool (pool.pool)}
-				<PityPanel {pool} onChart={(id) => setChart(pool.pool, id)} />
+				<PityPanel {pool} selected={filter === pool.pool} onselect={() => choose(toFilter(pool.pool))}
+					onChart={(id) => setChart(pool.pool, id)} />
 			{/each}
 		</div>
-		<div class="tabs" role="tablist" aria-label="Banner type">
-			{#each data.pools as p (p.pool)}
-				<button type="button" role="tab" aria-selected={tab === p.pool} class:active={tab === p.pool}
-					onclick={() => (tab = p.pool)}>{POOL_LABEL[p.pool]}</button>
+
+		<div class="pills" data-testid="filters" role="group" aria-label="Banner filter">
+			{#each filters as f (f)}
+				<FilterPill label={FILTER_LABEL[f]} on={filter === f} onclick={() => choose(f)} color="var(--avg-pity)" />
 			{/each}
 		</div>
-		{#if current}
-			<section class="panel" role="tabpanel" data-testid="tab-{current.pool}">
-				<div class="stats">
-					<div><span class="muted">Pulls</span><strong>{current.stats.pulls}</strong></div>
-					<div><span class="muted">Primogems</span><strong>{current.stats.primogems.toLocaleString()}</strong></div>
-					<div><span class="muted">5★</span><strong>{current.stats.five}</strong></div>
-					<div><span class="muted">Average 5★ pity</span><strong>{current.stats.avg_five_pity ?? '—'}</strong></div>
-					{#if current.pool === 'character' || current.pool === 'weapon'}
-						<div><span class="muted">{current.pool === 'weapon' ? '75/25' : '50/50'} win rate</span>
-							<strong>{pct(current.stats.win_rate)}</strong></div>
+
+		{#if block}
+			<div class="row two">
+				<section class="panel" data-testid="pulls-chart">
+					<div class="head">
+						<h2>Pulls per {byRotation ? 'rotation' : 'month'}</h2>
+						<div class="toggle" role="group" aria-label="Group pulls by">
+							<button type="button" aria-pressed={!byRotation} onclick={() => (byRotation = false)}>Month</button>
+							<button type="button" aria-pressed={byRotation} onclick={() => (byRotation = true)}>Rotation</button>
+						</div>
+					</div>
+					{#if byRotation && block.rotations.length === 0}
+						<p class="muted">No pulls are matched to banners yet.</p>
+					{:else}
+						<BarChart title="" bars={byRotation ? rotationBars(block.rotations) : stackedMonths(block.months)} />
 					{/if}
-				</div>
-				<h2>5★</h2>
-				{#if current.fives.length === 0}<p class="muted">No 5★ yet.</p>{/if}
-				<ul class="pulls">
-					{#each current.fives as p, i (`${p.time}-${i}`)}
+					{#if byRotation}
+						<div class="rot-fives">
+							{#each block.rotations.filter((r) => r.fives.length) as r (r.label)}
+								<span class="muted">{r.label}</span>
+								{#each r.fives as f, i (i)}{#if imgSrc(f.icon)}<img src={imgSrc(f.icon)} alt={f.name} title={f.name} />{/if}{/each}
+							{/each}
+						</div>
+					{/if}
+				</section>
+				<section class="panel luck" data-testid="luck">
+					<h2>Luck</h2>
+					{#if block.luck.avg_pity === null}
+						<p class="muted">No 5★ yet.</p>
+					{:else}
+						<div class="big">{block.luck.avg_pity}<span class="muted"> avg 5★ pity</span></div>
+						<div class="muted">expected ≈ {block.luck.expected} (estimate) · <strong>{verdictLabel(block.luck.verdict)}</strong></div>
+					{/if}
+					{#if block.luck.judged_label}
+						<div class="big">{pct(block.luck.rate)}<span class="muted"> {block.luck.judged_label} won ({block.luck.won} of {(block.luck.won ?? 0) + (block.luck.lost ?? 0)})</span></div>
+					{/if}
+				</section>
+			</div>
+
+			<div class="row three">
+				<section class="panel">
+					<RadarChart testid="elements-radar" title="Elements pulled" axes={elementAxes} series={radar(block.elements, ELEMENTS)} />
+					{#if block.unknown_items}<p class="muted small">{block.unknown_items} pull(s) not in game data yet are left out.</p>{/if}
+				</section>
+				<section class="panel">
+					<RadarChart testid="weapons-radar" title="Weapon types" axes={weaponAxes} series={radar(block.weapon_types, WEAPON_TYPES)} />
+				</section>
+				<section class="panel">
+					<Histogram buckets={block.pity_hist.buckets} soft={block.pity_hist.soft} avg={block.pity_hist.avg} />
+				</section>
+			</div>
+
+			<section class="panel">
+				<LineChart points={block.primogems.points} marks={block.primogems.fives} />
+			</section>
+
+			<section class="panel">
+				<h2>5★ pulled · {FILTER_LABEL[filter]}</h2>
+				{#if block.fives.length === 0}<p class="muted">No 5★ yet.</p>{/if}
+				<ul class="pulls" data-testid="five-list">
+					{#each block.fives as p, i (`${p.time}-${i}`)}
 						<li class="r5">
 							{#if imgSrc(p.icon)}<img src={imgSrc(p.icon)} alt="" />{/if}
 							<span class="name">{p.name}</span>
 							<span class="pity">{p.pity}</span>
 							{#if p.outcome}<span class="badge {p.outcome}">{outcomeLabel(p.outcome)}</span>{/if}
+							{#if filter === 'all'}<span class="badge">{POOL_LABEL[p.pool as Pool]}</span>{/if}
 							<span class="muted">{p.banner ?? ''} · {p.time.slice(0, 10)}</span>
 						</li>
 					{/each}
 				</ul>
 				<h2>4★</h2>
-				{#if current.fours.length === 0}<p class="muted">No 4★ yet.</p>{/if}
-				<ul class="pulls compact">
-					{#each current.fours as p, i (`${p.time}-${i}`)}
+				{#if block.fours.length === 0}<p class="muted">No 4★ yet.</p>{/if}
+				<ul class="pulls compact" data-testid="four-list">
+					{#each block.fours as p, i (`${p.time}-${i}`)}
 						<li><span class="name">{p.name}</span><span class="pity">{p.pity}</span>
 							<span class="muted">{p.time.slice(0, 10)}</span></li>
 					{/each}
@@ -207,27 +279,7 @@
 			</section>
 		{/if}
 
-		<section class="panel charts">
-			<BarChart title="Pulls per month" bars={stackedMonths(data.charts.monthly)} />
-			<BarChart title="5★ pity" bars={histogramBars(data.charts.pity_histogram)} />
-		</section>
-
-		<section class="panel">
-			<h2>Banners</h2>
-			{#if data.charts.banners.length === 0}<p class="muted">No pulls are matched to banners yet.</p>{/if}
-			<ul class="timeline">
-				{#each data.charts.banners as b, i (b.key)}
-					<li>
-						<span class="bname">{b.short_name} <span class="muted">{b.start.slice(0, 10)}</span></span>
-						<span class="track"><span style="width: {bannerWidths[i]}%; background: {POOL_COLOR[b.pool]}"></span></span>
-						<span>{b.pulls}</span>
-						<span class="muted">{b.fives.join(', ')}</span>
-					</li>
-				{/each}
-			</ul>
-		</section>
-
-		<WishHistory banners={data.charts.banners} {version} />
+		<WishHistory banners={data.banners} {version} />
 	{/if}
 {/if}
 
@@ -235,17 +287,26 @@
 	.header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 	.upload { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 	.upload input { max-width: 220px; }
-	.panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 12px 0; }
+	.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 12px 0; }
+	.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+	.row { display: grid; gap: 12px; margin-bottom: 12px; }
+	.row.two { grid-template-columns: 2fr 1fr; }
+	.row.three { grid-template-columns: 1fr 1fr 1.3fr; }
+	@media (max-width: 900px) { .row.two, .row.three { grid-template-columns: 1fr; } }
+	section.panel { margin-top: 0; margin-bottom: 12px; }
+	.row section.panel { margin-bottom: 0; }
+	.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+	.toggle { display: inline-flex; gap: 4px; }
+	.toggle button[aria-pressed='true'] { border-color: var(--avg-pity); color: var(--avg-pity); }
+	.rot-fives { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; font-size: 11px; }
+	.rot-fives img { width: 22px; height: 22px; border-radius: 50%; }
+	.luck .big { font-size: 24px; font-weight: 700; margin-top: 4px; }
+	.luck .big .muted { font-size: 13px; font-weight: 400; }
+	.small { font-size: 11px; }
 	.empty ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 	.spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--muted);
 		border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
 	@keyframes spin { to { transform: rotate(360deg); } }
-	section.panel { margin-top: 12px; }
-	.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-	.tabs button.active { border-color: var(--accent); color: var(--accent); }
-	.stats { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 10px; }
-	.stats div { display: flex; flex-direction: column; }
-	.stats strong { font-size: 20px; }
 	.pulls { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
 	.pulls li { display: flex; align-items: center; gap: 10px; }
 	.pulls img { width: 32px; height: 32px; border-radius: 6px; background: var(--r5); }
@@ -257,9 +318,4 @@
 	.badge.won, .badge.charted { color: var(--building); border-color: var(--building); }
 	.badge.lost, .badge.not_charted { color: var(--error); border-color: var(--error); }
 	.badge.guaranteed { color: var(--wanted); border-color: var(--wanted); }
-	.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-	.timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
-	.timeline li { display: grid; grid-template-columns: 220px 1fr 50px 2fr; gap: 10px; align-items: center; font-size: 13px; }
-	.track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
-	.track span { display: block; height: 100%; }
 </style>
