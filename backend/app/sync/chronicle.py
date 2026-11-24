@@ -76,6 +76,19 @@ class CalendarInfo:
 class Offering:
     name: str
     level: int
+    icon: str = ""
+
+
+@dataclass(frozen=True)
+class AreaInfo:
+    name: str
+    explored: float                 # percent, one decimal, clamped to 100
+
+
+@dataclass(frozen=True)
+class BossInfo:
+    name: str
+    kills: int
 
 
 @dataclass(frozen=True)
@@ -85,6 +98,9 @@ class RegionInfo:
     explored: float                 # percent, one decimal
     reputation: int | None
     offerings: list[Offering]
+    icon: str = ""
+    areas: list[AreaInfo] = field(default_factory=list)
+    bosses: list[BossInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -97,12 +113,32 @@ class ProfileStats:
     oculi: dict[str, int]
     waypoints: int
     domains: int
+    max_friendship: int = 0
+    abyss: str = ""
+
+
+@dataclass(frozen=True)
+class TeapotRealm:
+    name: str
+    icon: str
+
+
+@dataclass(frozen=True)
+class TeapotInfo:
+    level: int
+    comfort: int
+    comfort_name: str
+    comfort_icon: str
+    items: int
+    visitors: int
+    realms: list[TeapotRealm]
 
 
 @dataclass(frozen=True)
 class ProfileInfo:
     stats: ProfileStats
     regions: list[RegionInfo]
+    teapot: TeapotInfo | None = None
 
 
 @dataclass(frozen=True)
@@ -157,7 +193,20 @@ def to_calendar(cal: Any) -> CalendarInfo:
     return CalendarInfo(banners, events, challenges)
 
 
+def _area_pct(raw: Any) -> float:
+    return min(100.0, round(int(raw) / 10, 1))
+
+
+def _teapot(t: Any) -> TeapotInfo | None:
+    if t is None:
+        return None
+    return TeapotInfo(int(t.level), int(t.comfort), str(getattr(t, "comfort_name", "") or ""),
+                      str(getattr(t, "comfort_icon", "") or ""), int(t.items), int(t.visitors),
+                      [TeapotRealm(r.name, getattr(r, "icon", "") or "") for r in getattr(t, "realms", None) or []])
+
+
 def to_profile(user: Any) -> ProfileInfo:
+    """Identity fields (user.info nickname, server, icons) are not read here on purpose."""
     s = user.stats
     stats = ProfileStats(
         ar=int(user.info.level), days_active=int(s.days_active), achievements=int(s.achievements),
@@ -165,12 +214,18 @@ def to_profile(user: Any) -> ProfileInfo:
         chests={c: int(getattr(s, f"{c}_chests", 0) or 0) for c in CHESTS},
         oculi={o: int(getattr(s, o, 0) or 0) for o in OCULI},
         waypoints=int(s.unlocked_waypoints), domains=int(s.unlocked_domains),
+        max_friendship=int(getattr(s, "max_friendship_characters", 0) or 0),
+        abyss=str(getattr(s, "spiral_abyss", "") or ""),
     )
     regions = [RegionInfo(int(e.id), e.name, round(int(e.raw_explored) / 10, 1),
                           int(e.level) if e.type == "Reputation" else None,
-                          [Offering(o.name, int(o.level)) for o in e.offerings])
+                          [Offering(o.name, int(o.level), getattr(o, "icon", "") or "") for o in e.offerings],
+                          getattr(e, "icon", "") or "",
+                          [AreaInfo(a.name, _area_pct(a.raw_explored))
+                           for a in getattr(e, "area_exploration_list", None) or []],
+                          [BossInfo(b.name, int(b.kills)) for b in getattr(e, "boss_list", None) or []])
                for e in user.explorations if int(getattr(e, "parent_id", 0) or 0) == 0]
-    return ProfileInfo(stats, regions)
+    return ProfileInfo(stats, regions, _teapot(getattr(user, "teapot", None)))
 
 
 def to_abyss_run(a: Any) -> ChallengeRunInfo | None:

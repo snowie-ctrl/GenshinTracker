@@ -15,6 +15,7 @@ DEFAULTS: dict[str, object] = {
     "background_animated": True,    # Ad Astra drifting-dust background (Foundation)
     "traveler_body": "girl",             # "boy" | "girl", from the synced Traveler (sub-project 2)
     "traveler_current_element": None,    # e.g. "Cryo"; the element HoYoLAB reported last
+    "profile_showcase": [],              # Profile showcase character ids, in order; [] = automatic (sub-project 7)
 }
 
 

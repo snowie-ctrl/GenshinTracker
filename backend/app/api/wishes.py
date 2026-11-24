@@ -4,7 +4,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.config import APP_VERSION, WISH_HISTORY_PAGE_SIZE, WISH_UPLOAD_MAX_BYTES
 from app.context import AppContext, get_ctx
@@ -13,8 +13,9 @@ from app.servertime import offset_hours
 from app.settings.envfile import read_env
 from app.timeutil import iso, utcnow
 from app.wishes.importer import ImportBusy
-from app.wishes.pity import PoolResult, PullView, summarize
-from app.wishes.stats import banner_timeline, monthly, overall_stats, pity_histogram, pool_stats
+from app.wishes.analysis import analyze, load_items, load_phases
+from app.wishes.pity import PoolResult, PullView, banner_windows, summarize
+from app.wishes.stats import banner_timeline, overall_stats, pool_stats
 from app.wishes.types import NEEDS_UID, POOLS
 from app.wishes.uigf import build_uigf
 
@@ -48,7 +49,7 @@ def _pull(p: PullView, icons: dict[int, str]) -> dict:
 def pool_payload(r: PoolResult, icons: dict[int, str]) -> dict:
     return {"pool": r.pool, "total": r.total, "pity5": r.pity5, "pity4": r.pity4, "hard": r.hard, "soft": r.soft,
             "in_soft": r.in_soft, "next_state": r.next_state, "fate": r.fate, "radiance": r.radiance,
-            "stats": pool_stats(r), "fives": [_pull(p, icons) for p in reversed(r.fives)],
+            "stats": pool_stats(r), "avg_pity": pool_stats(r)["avg_five_pity"], "fives": [_pull(p, icons) for p in reversed(r.fives)],
             "fours": [_pull(p, icons) for p in reversed(r.fours)]}
 
 
@@ -86,17 +87,20 @@ def import_status(ctx: AppContext = Depends(get_ctx)) -> dict:
 
 @router.get("/wishes/summary")
 def summary(ctx: AppContext = Depends(get_ctx)) -> dict:
+    offset = _offset(ctx)
     with ctx.session_factory() as s:
-        results = summarize(s, utcnow(), _offset(ctx))
+        results = summarize(s, utcnow(), offset)
         icons = _icons(s)
         rows = list(s.scalars(select(Wish)))
-        banners_available = (s.scalar(select(func.count()).select_from(GameBanner)) or 0) > 0
+        game_banners = list(s.scalars(select(GameBanner)))
+        items = load_items(s)
+    phases = load_phases(banner_windows(game_banners, offset).get("character", []))
     return {
         "pools": [pool_payload(results[p], icons) for p in POOLS if results[p].total],
         "overall": overall_stats(results),
-        "charts": {"monthly": monthly(rows), "pity_histogram": pity_histogram(results),
-                   "banners": banner_timeline(results)},
-        "banners_available": banners_available,
+        "analysis": analyze(results, rows, phases, items),
+        "banners": banner_timeline(results),
+        "banners_available": bool(game_banners),
         "import": ctx.wishes.status(),
     }
 

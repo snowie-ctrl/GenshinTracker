@@ -109,13 +109,43 @@ export interface Dashboard {
 	calendar_fetched_at: string | null;
 	gaps: GapStatus;
 }
-export interface StatTile { label: string; value: number }
-export interface RegionView { id: number; name: string; explored: number; reputation: number | null; offerings: { name: string; level: number }[] }
-export interface ProfileView { ar: number; days_active: number; tiles: StatTile[]; chests: StatTile[]; oculi: StatTile[]; regions: RegionView[] }
+export interface StatTile { key: string; label: string; value: number | string; detail?: { label: string; value: number }[] }
+export interface RegionView {
+	id: number; name: string; explored: number; reputation: number | null; icon: string | null;
+	offerings: { name: string; level: number; icon: string | null }[]; areas: { name: string; explored: number }[];
+}
+export interface TeapotView {
+	level: number; comfort: number; comfort_name: string; comfort_icon: string; items: number; visitors: number;
+	realms: { name: string; icon: string }[];
+}
+export interface ProfileHeaderView { name: string; ar: number; days_active: number; achievements: number }
+export interface ProfileView {
+	header: ProfileHeaderView; tiles: StatTile[]; regions: RegionView[]; teapot: TeapotView | null;
+	bosses: { name: string; kills: number }[];
+}
+export interface RosterView {
+	total: number; elements: Record<string, number>; weapon_types: Record<string, number>;
+	rarity: { '5': number; '4': number }; constellations: number; c6: number;
+}
+export interface ShowcaseArtifact {
+	slot: number; set_name: string; icon: string; rarity: number; level: number; main_stat: string; substats: string[];
+}
+export interface ShowcaseEntry {
+	id: number; slug: string | null; name: string; rarity: number | null; element: string | null; icon: string | null;
+	level: number; constellation: number; friendship: number;
+	talents: { normal: number | null; skill: number | null; burst: number | null };
+	weapon: { name: string; icon: string; level: number; refinement: number; rarity: number };
+	stats: { name: string; value: string }[]; artifacts: ShowcaseArtifact[]; sets: string; crit_value: number;
+}
+export interface OwnedOption { id: number; name: string; icon: string | null }
 export interface TeamChar { id: number; name: string; icon: string | null }
 export interface ChallengeRunView { season: string; start: string | null; end: string | null; summary: Record<string, number | string>; teams: TeamChar[][] }
 export interface ChallengeViews { abyss: { current: ChallengeRunView | null; past: ChallengeRunView[] }; theater: { current: ChallengeRunView | null; past: ChallengeRunView[] }; stygian: { current: ChallengeRunView | null; past: ChallengeRunView[] } }
-export interface ProfileResponse { connected: boolean; fetched_at: string | null; error: string | null; profile: ProfileView | null; challenges: ChallengeViews }
+export interface ProfileResponse {
+	connected: boolean; fetched_at: string | null; error: string | null; profile: ProfileView | null;
+	roster: RosterView; showcase: ShowcaseEntry[]; showcase_mode: 'auto' | 'custom'; owned: OwnedOption[];
+	challenges: ChallengeViews;
+}
 export type MapKey = 'hoyolab' | 'appsample';
 export interface MapInfo { key: MapKey; name: string; url: string; allowed: boolean | null }
 export interface MapsResponse { maps: MapInfo[]; default_map: MapKey }
@@ -178,7 +208,24 @@ export interface WishStats {
 export interface PoolSummary {
 	pool: Pool; total: number; pity5: number; pity4: number; hard: number; soft: number | null; in_soft: boolean;
 	next_state: string | null; fate: Fate | null; radiance: Radiance | null; stats: WishStats;
-	fives: WishPull[]; fours: WishPull[];
+	avg_pity: number | null; fives: WishPull[]; fours: WishPull[];
+}
+export type WishFilter = 'all' | 'character' | 'weapon' | 'chronicled' | 'standard';
+export interface AnalysisPull extends WishPull { pool: Pool }
+export interface Rotation {
+	label: string; version: string; start: string; pool_counts: Partial<Record<Pool, number>>; pulls: number;
+	fives: { name: string; icon: string | null }[];
+}
+export interface TierCounts { five: Record<string, number>; four: Record<string, number> }
+export interface Luck {
+	avg_pity: number | null; expected: number; verdict: 'luckier' | 'average' | 'unluckier' | null;
+	won: number | null; lost: number | null; rate: number | null; judged_label: string | null;
+}
+export interface AnalysisBlock {
+	months: MonthRow[]; rotations: Rotation[]; elements: TierCounts; weapon_types: TierCounts; unknown_items: number;
+	pity_hist: { buckets: { bucket: string; count: number }[]; soft: number | null; avg: number | null };
+	primogems: { points: { date: string; total: number }[]; fives: { date: string; name: string; icon: string | null; total: number }[] };
+	luck: Luck; fives: AnalysisPull[]; fours: AnalysisPull[];
 }
 export interface WishImport {
 	id: number; source: 'game' | 'uigf' | 'paimon'; started_at: string; finished_at: string | null;
@@ -188,9 +235,8 @@ export interface ImportStatus { running: boolean; last: WishImport | null }
 export interface MonthRow { month: string; character: number; weapon: number; chronicled: number; standard: number; beginner: number }
 export interface BannerRow { key: string; pool: Pool; name: string; short_name: string; start: string; pulls: number; fives: string[] }
 export interface WishSummary {
-	pools: PoolSummary[]; overall: WishStats;
-	charts: { monthly: MonthRow[]; pity_histogram: { bucket: string; count: number }[]; banners: BannerRow[] };
-	banners_available: boolean; import: ImportStatus;
+	pools: PoolSummary[]; overall: WishStats; analysis: Partial<Record<WishFilter, AnalysisBlock>>;
+	banners: BannerRow[]; banners_available: boolean; import: ImportStatus;
 }
 export interface HistoryRow {
 	time: string; name: string; item_id: number | null; icon: string | null; item_type: 'character' | 'weapon';

@@ -90,7 +90,8 @@ def test_devseed_profile(tmp_path):
     seed(tmp_path)
     with make_client(Paths(tmp_path)) as client:
         body = client.get("/api/profile").json()
-    assert body["profile"]["ar"] == 58
+    assert body["profile"]["header"]["ar"] == 58
+    assert body["profile"]["teapot"]["level"] == 10 and body["profile"]["bosses"][0]["kills"] == 30
     assert len(body["challenges"]["abyss"]["past"]) == 2
     assert body["challenges"]["abyss"]["current"] is not None
 

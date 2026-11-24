@@ -3,7 +3,7 @@ export interface IconPath { d: string; evenodd?: boolean }
 
 export const ICON_NAMES = [
 	'dashboard', 'characters', 'teams', 'inventory', 'map', 'events', 'wishes', 'sync', 'profile', 'settings', 'external',
-	'commission', 'expedition'
+	'commission', 'expedition', 'friendship', 'waypoint', 'domain', 'abyss', 'chest', 'oculus', 'teapot', 'boss'
 ] as const;
 export type IconName = (typeof ICON_NAMES)[number];
 
@@ -37,5 +37,13 @@ export const ICONS: Record<IconName, IconPath[]> = {
 	settings: [{ d: 'M10 1h4l.6 3a8 8 0 0 1 2.2 1.3l2.9-1 2 3.4-2.3 2a8 8 0 0 1 0 2.6l2.3 2-2 3.4-2.9-1A8 8 0 0 1 14.6 20l-.6 3h-4l-.6-3a8 8 0 0 1-2.2-1.3l-2.9 1-2-3.4 2.3-2a8 8 0 0 1 0-2.6l-2.3-2 2-3.4 2.9 1A8 8 0 0 1 9.4 4zm2 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', evenodd: true }],
 	commission: [{ d: 'M5 2h11l4 4v16H5zm10 1.5V7h3.5zM8 10v2h9v-2zm0 4v2h9v-2zm0 4v2h6v-2z', evenodd: true }],
 	expedition: [{ d: 'M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7zm0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z', evenodd: true }],
-	external: [{ d: 'M14 3h7v7h-2V6.4l-8.3 8.3-1.4-1.4L17.6 5H14zM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z' }]
+	external: [{ d: 'M14 3h7v7h-2V6.4l-8.3 8.3-1.4-1.4L17.6 5H14zM5 5h6v2H5v12h12v-6h2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z' }],
+	friendship: [{ d: 'M12 21l-1.5-1.3C5 15 2 12.2 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.7-3 6.5-8.5 11.2z' }],
+	waypoint: [{ d: 'M12 1l5 8-5 14-5-14zm0 4.5L9.8 9 12 15l2.2-6z', evenodd: true }],
+	domain: [{ d: 'M3 21V9l9-6 9 6v12h-6v-6a3 3 0 0 0-6 0v6z' }],
+	abyss: [{ d: 'M12 2l2.6 6.9L22 9.3l-5.6 4.6L18.2 21 12 17.3 5.8 21l1.8-7.1L2 9.3l7.4-.4z' }],
+	chest: [{ d: 'M4 8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2H4zM4 12h7v2h2v-2h7v8H4z' }],
+	oculus: [{ d: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zm0 4l1.5 3.5L17 12l-3.5 1.5L12 17l-1.5-3.5L7 12l3.5-1.5z', evenodd: true }],
+	teapot: [{ d: 'M8 4h8v2h-1v2h3a3 3 0 0 1 3 3v1a3 3 0 0 1-3 3h-.4A7 7 0 0 1 5 15H3l2-5V8h4V6H8zm11 6v3a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1z', evenodd: true }],
+	boss: [{ d: 'M12 2c4.4 0 8 3.4 8 7.6 0 2.6-1.3 4.8-3.3 6.2V20H7.3v-4.2C5.3 14.4 4 12.2 4 9.6 4 5.4 7.6 2 12 2zm-3 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', evenodd: true }]
 };

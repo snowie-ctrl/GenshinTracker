@@ -1,6 +1,6 @@
 // frontend/src/lib/wishes.ts
 import { timeAgo } from './time';
-import type { CacheStatus, Fate, HistoryFilters, MonthRow, Outcome, PityLine, Pool, Radiance, WishImport } from './types';
+import type { CacheStatus, Fate, HistoryFilters, Luck, MonthRow, Outcome, PityLine, Pool, Radiance, Rotation, TierCounts, WishFilter, WishImport } from './types';
 
 export const POOLS: Pool[] = ['character', 'weapon', 'chronicled', 'standard', 'beginner'];
 export const POOL_LABEL: Record<Pool, string> = {
@@ -30,9 +30,13 @@ export function nextStateLabel(s: string | null): string {
 	return s ? (NEXT[s] ?? '') : '';
 }
 
-export function pityBar(pity: number, hard: number, soft: number | null): { fill: number; soft: number | null } {
+export function pityBar(pity: number, hard: number, soft: number | null, avg: number | null = null):
+	{ fill: number; soft: number | null; avg: number | null } {
 	const pct = (n: number) => Math.round((n / hard) * 1000) / 10;
-	return { fill: Math.min(100, Math.max(0, pct(pity))), soft: soft === null ? null : pct(soft) };
+	return {
+		fill: Math.min(100, Math.max(0, pct(pity))), soft: soft === null ? null : pct(soft),
+		avg: avg === null ? null : Math.min(100, pct(avg))
+	};
 }
 
 export function fateLine(f: Fate | null, pool: Pool): string {
@@ -134,4 +138,60 @@ export function saveFilters(storage: () => Storage, f: HistoryFilters): void {
 	} catch {
 		/* storage unavailable: filters just aren't remembered */
 	}
+}
+
+export const FILTER_ORDER: WishFilter[] = ['all', 'character', 'weapon', 'chronicled', 'standard'];
+export const FILTER_LABEL: Record<WishFilter, string> = {
+	all: 'All banners', character: 'Character Event', weapon: 'Weapon Event', chronicled: 'Chronicled Wish',
+	standard: 'Standard'
+};
+
+export function availableFilters(analysis: Partial<Record<WishFilter, unknown>>): WishFilter[] {
+	return FILTER_ORDER.filter((f) => f in analysis);
+}
+
+export function pickFilter(saved: string | null, available: WishFilter[]): WishFilter {
+	if (saved && (available as string[]).includes(saved)) return saved as WishFilter;
+	if (available.includes('character')) return 'character';
+	return available.find((f) => f !== 'all') ?? 'all';
+}
+
+export function toFilter(pool: Pool): WishFilter {
+	return pool === 'beginner' ? 'all' : pool;
+}
+
+const WISH_FILTER_KEY = 'wishes.filter';
+
+export function loadWishFilter(): string | null {
+	try {
+		return localStorage.getItem(WISH_FILTER_KEY);
+	} catch {
+		return null;
+	}
+}
+
+export function saveWishFilter(f: WishFilter): void {
+	try {
+		localStorage.setItem(WISH_FILTER_KEY, f);
+	} catch {
+		/* storage unavailable: the filter just is not remembered */
+	}
+}
+
+export function rotationBars(rows: Rotation[]): Bar[] {
+	return rows.map((r) => ({
+		label: r.label,
+		segments: POOLS.map((p) => ({ name: POOL_LABEL[p], value: r.pool_counts[p] ?? 0, color: POOL_COLOR[p] }))
+	}));
+}
+
+export function spiderSeries(t: TierCounts, axes: readonly string[]): { five: number[]; four: number[] } {
+	return { five: axes.map((a) => t.five[a] ?? 0), four: axes.map((a) => t.four[a] ?? 0) };
+}
+
+export function verdictLabel(v: Luck['verdict']): string {
+	if (v === 'luckier') return 'Luckier than average';
+	if (v === 'unluckier') return 'Unluckier than average';
+	if (v === 'average') return 'About average';
+	return '';
 }

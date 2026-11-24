@@ -134,3 +134,42 @@ def test_calendar_event_finished_flag():
     info = to_calendar(cal)
     assert [e.finished for e in info.events] == [False, True]
     assert to_json(info)["events"][1]["finished"] is True
+
+
+def _user(**extra):
+    stats = NS(achievements=900, days_active=1200, characters=95, spiral_abyss="12-3",
+               anemoculi=66, geoculi=131, dendroculi=271, electroculi=181, hydroculi=271, pyroculi=200,
+               lunoculi=0, cryoculi=0, common_chests=3000, exquisite_chests=2000, precious_chests=600,
+               luxurious_chests=200, remarkable_chests=100, unlocked_waypoints=400, unlocked_domains=70,
+               max_friendship_characters=40)
+    base = dict(info=NS(nickname="SECRET-NICK", server="os_euro", level=60, icon="https://x.test/me.png",
+                        in_game_avatar="https://x.test/avatar.png"),
+                stats=stats, characters=[], teapot=None, explorations=[])
+    return NS(**{**base, **extra})
+
+
+def test_profile_keeps_areas_bosses_teapot():
+    region = NS(id=1, parent_id=0, name="Mondstadt", raw_explored=1000, type="Reputation", level=8,
+                icon="https://act-upload.hoyoverse.com/m.png",
+                offerings=[NS(name="Frostbearing Tree", level=12, icon="https://act-upload.hoyoverse.com/t.png")],
+                area_exploration_list=[NS(name="Starfell Valley", raw_explored=1012),
+                                       NS(name="Galesong Hill", raw_explored=955)],
+                boss_list=[NS(name="Stormterror", kills=12)])
+    teapot = NS(level=10, comfort=21400, comfort_name="Exquisite", comfort_icon="https://act-upload.hoyoverse.com/c.png",
+                items=312, visitors=40, realms=[NS(name="Emerald Peak", icon="https://act-upload.hoyoverse.com/r.png")])
+    p = to_profile(_user(explorations=[region], teapot=teapot))
+    assert (p.stats.max_friendship, p.stats.abyss) == (40, "12-3")
+    r = p.regions[0]
+    assert r.icon.endswith("/m.png") and r.offerings[0].icon.endswith("/t.png")
+    assert [(a.name, a.explored) for a in r.areas] == [("Starfell Valley", 100.0), ("Galesong Hill", 95.5)]
+    assert [(b.name, b.kills) for b in r.bosses] == [("Stormterror", 12)]
+    assert p.teapot.level == 10 and p.teapot.comfort == 21400 and p.teapot.realms[0].name == "Emerald Peak"
+    blob = str(to_json(p))
+    for secret in ("SECRET-NICK", "os_euro", "me.png", "avatar.png"):
+        assert secret not in blob
+
+
+def test_profile_tolerates_missing_new_fields():
+    region = NS(id=2, parent_id=0, name="Liyue", raw_explored=900, type="Offering", level=0, offerings=[])
+    p = to_profile(_user(explorations=[region]))
+    assert p.teapot is None and p.regions[0].areas == [] and p.regions[0].bosses == [] and p.regions[0].icon == ""

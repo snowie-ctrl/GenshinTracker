@@ -259,14 +259,19 @@ def seed(root: Path) -> None:
                                  "remarkable": 60},
                       "oculi": {"anemoculi": 66, "geoculi": 131, "electroculi": 181, "dendroculi": 150,
                                 "hydroculi": 120, "pyroculi": 40, "cryoculi": 0, "lunoculi": 0},
-                      "waypoints": 310, "domains": 55},
+                      "waypoints": 310, "domains": 55, "max_friendship": 12, "abyss": "12-3"},
             "regions": [
                 {"id": 1, "name": "Mondstadt", "explored": 100.0, "reputation": 8,
-                 "offerings": [{"name": "Frostbearing Tree", "level": 12}]},
+                 "offerings": [{"name": "Frostbearing Tree", "level": 12}],
+                 "areas": [{"name": "Starfell Valley", "explored": 100.0}, {"name": "Galesong Hill", "explored": 95.5}],
+                 "bosses": [{"name": "Anemo Hypostasis", "kills": 30}, {"name": "Stormterror", "kills": 12}]},
                 {"id": 2, "name": "Liyue", "explored": 96.4, "reputation": 7,
-                 "offerings": [{"name": "Sacred Sakura's Favor", "level": 0}]},
+                 "offerings": [{"name": "Sacred Sakura's Favor", "level": 0}],
+                 "bosses": [{"name": "Azhdaha", "kills": 20}]},
                 {"id": 3, "name": "Inazuma", "explored": 88.1, "reputation": 6, "offerings": []},
             ],
+            "teapot": {"level": 10, "comfort": 21400, "comfort_name": "Exquisite", "comfort_icon": "",
+                       "items": 312, "visitors": 40, "realms": [{"name": "Emerald Peak", "icon": ""}]},
         }
         s.add(HoyolabSnapshot(part="profile", data=profile, fetched_at=now))
         ids = {c[2]: c[0] for c in CHARACTERS}             # slug -> id
