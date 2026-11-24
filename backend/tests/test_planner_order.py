@@ -84,3 +84,12 @@ def test_goal_endpoint_sets_and_clears_priority(paths):
         assert furina() == 1                                    # editing targets keeps the place
     with sf() as s:
         assert build_order(s) == [10000089, 10000032, 10000073]
+
+
+def test_leaving_build_clears_artifacts_done(session_factory):
+    with session_factory.begin() as s:
+        row = CharacterGoal(character_id=10000032, goal="build", priority=1, artifacts_done=True, updated_at=utcnow())
+        s.add(row)
+        s.flush()
+        apply_goal(s, row, "none")
+        assert row.artifacts_done is False
