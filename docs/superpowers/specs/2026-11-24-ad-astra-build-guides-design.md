@@ -1,7 +1,7 @@
 # Ad Astra Sub-project 9 — Build Recommendations and Guides
 
 **Date:** 2026-11-24
-**Status:** Draft, awaiting user review
+**Status:** Approved by the user 2026-11-24 (plan-time amendment in section 6.2 marked "Amended while planning"; ORM class named `CharacterStatRecommendation`)
 **Frame:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 9 of 10). Fills the two slots left by Character detail (`2026-11-23-ad-astra-character-detail-design.md`: Build "Suggestions" `build-suggestions-slot`, Guide "How to play" `guide-howto-slot`) and builds on Artifact planning (`2026-11-24-ad-astra-artifact-planning-design.md`: `character_goal.artifact_target`).
 **Scope:** The source decision, then official HoYoLAB artifact-stat recommendations (stored at sync, used to prefill new Build artifact targets and shown on Build with Apply) and a community-guide link on the Guide. Talent priority, artifact sets, teams, rotations and roles are omitted: no usable source has them.
 
@@ -101,7 +101,7 @@ No source has talent recommendations, so `build_defaults()` keeps the baseline (
 
 - A small card, "How to play", with "Community build guide ↗" linking to `communityGuideUrl(slug, element)` in a new tab with `rel="noopener noreferrer"`.
 - Note under it: "Third-party guide by the Genshin Impact Helper Team (all rights reserved), not affiliated with Ad Astra."
-- `lib/guides.ts` (pure): `communityGuideUrl(slug, travelerElement?)` → `https://genshin-impact-helper-team.github.io/genshin-builds/en/<their-slug>`, where `<their-slug>` is our slug except a small exceptions map (`raiden-shogun → shogun-raiden`; each Traveler element → `<element>-traveler`). The plan compares our full slug list against the site's character list once and adds every mismatch to the map; characters the site lacks still get a link (their 404 page is acceptable).
+- `lib/guides.ts` (pure): `communityGuideUrl(slug)` → `https://genshin-impact-helper-team.github.io/genshin-builds/en/<their-slug>`, where `<their-slug>` is our slug except a small exceptions map. Amended while planning: a full comparison of our 129 slugs with the site's list found one exception (`raiden-shogun → shogun-raiden`); our Traveler slugs (`anemo-traveler` …) already match the site's URLs, so no Traveler parameter. Characters the site lacks still get a link (their 404 page is acceptable).
 
 ### 6.3 New pieces
 
