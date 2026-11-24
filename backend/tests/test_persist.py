@@ -201,7 +201,8 @@ def test_save_details_none_keeps_row(session_factory):
         save_details(s, [replace(make_detail(10000032), recommendation=REC)], NOW)
         save_details(s, [make_detail(10000032)], NOW + timedelta(days=1))      # field missing this time
     with session_factory() as s:
-        assert s.get(CharacterStatRecommendation, 10000032).data == REC.to_json()
+        row = s.get(CharacterStatRecommendation, 10000032)
+        assert row.data == REC.to_json() and row.synced_at == NOW
 
 
 def test_recommendation_survives_losing_the_character(session_factory):

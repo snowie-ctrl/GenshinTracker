@@ -94,6 +94,17 @@ def test_character_payload_has_recommendation(paths):
     assert d["stat_recommendation"] == {**REC, "synced_at": "2026-11-24T00:00:00Z"}
 
 
+def test_character_payload_with_malformed_recommendation_row(paths):
+    sf = setup(paths, rec=False)
+    with sf.begin() as s:
+        s.add(CharacterStatRecommendation(character_id=10000032, data={}, synced_at=NOW))
+    with make_client(paths) as client:
+        r = client.get("/api/characters/bennett")
+    assert r.status_code == 200
+    assert r.json()["stat_recommendation"] == {"main": {"sands": [], "goblet": [], "circlet": []}, "subs": [],
+                                               "synced_at": "2026-11-24T00:00:00Z"}
+
+
 def test_character_payload_without_recommendation(paths):
     setup(paths, rec=False)
     with make_client(paths) as client:

@@ -12,12 +12,12 @@ import genshin
 import httpx
 
 from app.gamedata.yatta import canonical_id
-from app.sync.recommend import StatRecommendation, recommendations_by_raw_id
 from app.sync.announcements import Announcement, fetch_announcements
 from app.sync.chronicle import (
     CalendarInfo, ChallengeRunInfo, ProfileInfo, to_abyss_run, to_calendar, to_profile, to_stygian_runs,
     to_theater_runs,
 )
+from app.sync.recommend import StatRecommendation, recommendations_by_raw_id
 
 RETRY_DELAYS: tuple[float, ...] = (2.0, 5.0, 10.0)
 DETAIL_BATCH = 20

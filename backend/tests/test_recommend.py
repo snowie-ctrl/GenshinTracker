@@ -3,6 +3,7 @@ from types import SimpleNamespace as NS
 
 import genshin
 
+from app.gamedata.yatta import canonical_id
 from app.sync import hoyolab
 from app.sync.recommend import PROPERTY_KEYS, StatRecommendation, parse_recommendation, recommendations_by_raw_id
 
@@ -89,6 +90,28 @@ def test_get_details_attaches_recommendation(monkeypatch):
     out = asyncio.run(src.get_details([10000032]))
     assert out[0].id == 10000032 and out[0].recommendation.main["sands"] == ["er", "hp%"]
     assert seen["data"] is not raw and seen["data"]["list"] is not raw["list"]   # model got a copy
+
+
+def test_get_details_attaches_recommendation_for_traveler(monkeypatch):
+    raw = {"list": [entry(FULL, 10000007)]}
+
+    class Client:
+        async def get_genshin_detailed_characters(self, uid, *, characters, return_raw_data):
+            assert return_raw_data is True and list(characters) == [10000007]
+            return raw
+
+    def fake_model(**data):
+        weapon = NS(id=1, icon="https://act-webstatic.hoyoverse.com/w.png", name="W", rarity=4, level=90,
+                    refinement=1)
+        return NS(characters=[NS(id=10000007, element="Anemo", weapon=weapon, artifacts=[], skills=[],
+                                 base_properties=[], extra_properties=[])])
+
+    monkeypatch.setattr(genshin.models, "GenshinDetailCharacters", fake_model)
+    src = object.__new__(hoyolab.GenshinPySource)
+    src._client, src._uid, src._delays = Client(), 800000001, ()
+    out = asyncio.run(src.get_details([10000007]))
+    assert out[0].id == canonical_id(10000007, "Anemo")
+    assert out[0].recommendation is not None and out[0].recommendation.main["sands"] == ["er", "hp%"]
 
 
 def test_detail_entry_without_recommendation_defaults_to_none():
