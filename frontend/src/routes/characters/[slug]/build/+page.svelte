@@ -133,7 +133,7 @@
 		</div>
 	</section>
 
-	<BuildArtifacts />
+	<BuildArtifacts {editing} />
 
 	<section class="card">
 		<h2>Suggestions</h2>
