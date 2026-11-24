@@ -26,9 +26,9 @@ export function dayIndex(date: string): number {
 export function lineScale(dates: string[], maxY: number, width: number, height: number) {
 	const days = dates.map(dayIndex);
 	const lo = Math.min(...days);
-	const span = Math.max(...days) - lo || 1;
+	const span = Math.max(...days) - lo;
 	return {
-		x: (date: string) => r1(((dayIndex(date) - lo) / span) * width),
+		x: (date: string) => r1(span === 0 ? width / 2 : ((dayIndex(date) - lo) / span) * width),
 		y: (v: number) => r1(height - (maxY > 0 ? (v / maxY) * height : 0))
 	};
 }

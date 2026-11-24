@@ -10,7 +10,7 @@
 
 	const c = $derived(size / 2);
 	const R = $derived(size / 2 - 26);
-	const max = $derived(Math.max(1, ...series.flatMap((s) => s.values)));
+	const maxOf = (s: Series) => Math.max(1, ...s.values);
 	const summary = $derived(
 		series.map((s) => `${s.name}: ${axes.map((a, i) => `${a.label} ${s.values[i] ?? 0}`).join(', ')}`).join('; ')
 	);
@@ -33,7 +33,7 @@
 			{/if}
 		{/each}
 		{#each series as s (s.name)}
-			<polygon points={radarPoints(s.values, max, R, c, c)} fill={s.color} fill-opacity="0.3" stroke={s.color}
+			<polygon points={radarPoints(s.values, maxOf(s), R, c, c)} fill={s.color} fill-opacity="0.3" stroke={s.color}
 				stroke-width="1.5"><title>{s.name}</title></polygon>
 		{/each}
 	</svg>
@@ -41,6 +41,7 @@
 		<div class="legend">
 			{#each series as s (s.name)}<span><i style="background: {s.color}"></i>{s.name}</span>{/each}
 		</div>
+		<p class="note">Each shape is scaled to itself.</p>
 	{/if}
 </figure>
 
@@ -50,6 +51,7 @@
 	.ring { fill: none; stroke: var(--line); }
 	.spoke { stroke: var(--line); }
 	text { font-size: 9px; fill: var(--muted); }
+	.note { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
 	.legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); }
 	.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
 </style>

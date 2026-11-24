@@ -227,11 +227,11 @@
 					{#if block.luck.avg_pity === null}
 						<p class="muted">No 5★ yet.</p>
 					{:else}
-						<div class="big">{block.luck.avg_pity}<span class="muted"> avg 5★ pity</span></div>
+						<div class="big">{block.luck.avg_pity}<span class="muted">&nbsp;avg 5★ pity</span></div>
 						<div class="muted">expected ≈ {block.luck.expected} (estimate) · <strong>{verdictLabel(block.luck.verdict)}</strong></div>
 					{/if}
 					{#if block.luck.judged_label}
-						<div class="big">{pct(block.luck.rate)}<span class="muted"> {block.luck.judged_label} won ({block.luck.won} of {(block.luck.won ?? 0) + (block.luck.lost ?? 0)})</span></div>
+						<div class="big">{pct(block.luck.rate)}<span class="muted">&nbsp;{block.luck.judged_label} won ({block.luck.won} of {(block.luck.won ?? 0) + (block.luck.lost ?? 0)})</span></div>
 					{/if}
 				</section>
 			</div>

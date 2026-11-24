@@ -18,7 +18,7 @@ test('profile shows header, stats, exploration, roster, teapot, bosses and chall
 	await expect(page.getByTestId('abyss-past').getByRole('columnheader')).toHaveText(['Started', 'Result']);
 });
 
-test('showcase opens a detail panel and can be edited, then reset', async ({ page }) => {
+test('showcase opens a detail panel and can be edited, then reset', async ({ page, request }) => {
 	await page.goto('/profile');
 	const cards = page.getByTestId('showcase-card');
 	await expect(cards).toHaveCount(5);
@@ -27,19 +27,22 @@ test('showcase opens a detail panel and can be edited, then reset', async ({ pag
 	await cards.nth(1).click();
 	await expect(page.getByTestId('showcase-panel')).toContainText('Furina');
 
-	await page.getByRole('button', { name: 'Edit showcase' }).click();
-	const editor = page.getByTestId('showcase-editor');
-	await editor.getByRole('button', { name: 'Clear' }).click();
-	await editor.getByRole('button', { name: 'Furina', exact: true }).click();
-	await editor.getByRole('button', { name: 'Bennett', exact: true }).click();
-	await editor.getByRole('button', { name: 'Move Bennett up' }).click();
-	await editor.getByRole('button', { name: 'Save' }).click();
-	await expect(cards).toHaveCount(2);
-	await expect(cards.first()).toContainText('Bennett');
-	await page.reload();
-	await expect(page.getByTestId('showcase-card').first()).toContainText('Bennett');    // stored
-
-	await page.getByRole('button', { name: 'Edit showcase' }).click();                    // restore shared state
-	await page.getByTestId('showcase-editor').getByRole('button', { name: 'Reset to automatic' }).click();
-	await expect(page.getByTestId('showcase-card')).toHaveCount(5);
+	try {
+		await page.getByRole('button', { name: 'Edit showcase' }).click();
+		const editor = page.getByTestId('showcase-editor');
+		await editor.getByRole('button', { name: 'Clear' }).click();
+		await editor.getByRole('button', { name: 'Furina', exact: true }).click();
+		await editor.getByRole('button', { name: 'Bennett', exact: true }).click();
+		await editor.getByRole('button', { name: 'Move Bennett up' }).click();
+		await editor.getByRole('button', { name: 'Save' }).click();
+		await expect(cards).toHaveCount(2);
+		await expect(cards.first()).toContainText('Bennett');
+		await page.reload();
+		await expect(page.getByTestId('showcase-card').first()).toContainText('Bennett');    // stored
+		await page.getByRole('button', { name: 'Edit showcase' }).click();
+		await page.getByTestId('showcase-editor').getByRole('button', { name: 'Reset to automatic' }).click();
+		await expect(page.getByTestId('showcase-card')).toHaveCount(5);
+	} finally {
+		await request.put('/api/profile/showcase', { data: { ids: [] } });          // restore shared state
+	}
 });

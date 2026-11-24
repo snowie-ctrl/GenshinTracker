@@ -15,7 +15,7 @@
 	{#if !scale}
 		<p class="muted">No pulls yet.</p>
 	{:else}
-		<svg viewBox="-8 -8 {W + 16} {H + 28}" width="100%" role="img"
+		<svg viewBox="-8 -8 {W + 16} {H + 28}" width="100%" style="max-height: 240px" role="img"
 			aria-label="Primogems spent: {top.toLocaleString()} from {points[0].date} to {points[points.length - 1].date}">
 			<path class="line" d={linePath(points, W, H)} />
 			{#each marks as m, i (i)}

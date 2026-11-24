@@ -17,7 +17,7 @@ describe('charts', () => {
 		expect(dayIndex('1970-01-02')).toBe(1);
 		expect(linePath([{ date: '2026-01-01', total: 160 }, { date: '2026-01-03', total: 320 }], 100, 50))
 			.toBe('M0,25 L100,0');
-		expect(linePath([{ date: '2026-01-01', total: 160 }], 100, 50)).toBe('M0,0');
+		expect(linePath([{ date: '2026-01-01', total: 160 }], 100, 50)).toBe('M50,0');
 		expect(linePath([], 100, 50)).toBe('');
 	});
 	it('maps pity to an x position', () => {

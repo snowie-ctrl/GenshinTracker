@@ -18,7 +18,7 @@
 	{#if buckets.every((b) => b.count === 0)}
 		<p class="muted">No 5★ yet.</p>
 	{:else}
-		<svg viewBox="0 0 {W} {H + LABEL}" width="100%" role="img" aria-label="5★ pity: {summary}">
+		<svg viewBox="0 0 {W} {H + LABEL}" width="100%" style="max-width: 420px; display: block; margin: 0 auto" role="img" aria-label="5★ pity: {summary}">
 			{#each buckets as b, i (b.bucket)}
 				{#if b.count > 0}
 					<rect class="bar" x={i * bw + 2} width={bw - 4} y={H - h(b.count)} height={h(b.count)}>

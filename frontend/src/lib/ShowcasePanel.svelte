@@ -45,7 +45,7 @@
 </div>
 
 <style>
-	.detail { display: grid; grid-template-columns: 180px 1fr 2fr; gap: 16px; margin-top: 12px; padding: 12px;
+	.detail { display: grid; grid-template-columns: 180px minmax(200px, 320px) 1fr; gap: 16px; margin-top: 12px; padding: 12px;
 		border-radius: 12px; border: 1px solid color-mix(in srgb, var(--tint) 50%, transparent);
 		background: linear-gradient(90deg, color-mix(in srgb, var(--tint) 22%, transparent), transparent); }
 	@media (max-width: 900px) { .detail { grid-template-columns: 1fr; } }
