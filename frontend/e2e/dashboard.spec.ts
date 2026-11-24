@@ -4,7 +4,7 @@ test('dashboard shows every section in order', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByTestId('greeting')).toContainText(/Good (morning|afternoon|evening), /);
 	for (const id of ['bubble-resin', 'bubble-commissions', 'bubble-realm', 'bubble-expeditions', 'ending-soon',
-		'domains', 'weekly-bosses', 'builds', 'completed', 'timers', 'dash-banners', 'dash-events']) {
+		'domains', 'weekly-bosses', 'artifact-domains', 'builds', 'completed', 'timers', 'dash-banners', 'dash-events']) {
 		await expect(page.getByTestId(id)).toBeVisible();
 	}
 	await expect(page.getByTestId('bubble-commissions')).toContainText('Bonus not claimed');
