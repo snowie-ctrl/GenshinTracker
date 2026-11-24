@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import (ChallengeRun, CharacterGoal, EventLog, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
+from app.db.models import (ChallengeRun, CharacterGoal, EventLog, GameArtifactDomain, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
@@ -32,6 +32,16 @@ CHARACTERS = [
 OWNED = {10000032: (80, (6, 8, 8)), 10000089: (90, (9, 9, 9)), 10000023: (80, (6, 6, 6)), 10000073: (90, (8, 8, 8)),
          1000000507: (90, (4, 9, 10))}
 GOALS = {10000032: "build", 10000089: "build", 10000047: "want", 10000087: "build"}
+# Artifact targets (sub-project 8): Bennett is ticked done; Furina and Neuvillette still need domain runs.
+ARTIFACT_TARGETS = {
+    10000032: ({"sets": [{"set_id": 15007, "pieces": 4}], "main": {"sands": ["er"], "goblet": [], "circlet": []},
+                "subs": []}, True),
+    10000089: ({"sets": [{"set_id": 15007, "pieces": 2}, {"set_id": 15001, "pieces": 2}],
+                "main": {"sands": ["hp%"], "goblet": ["hydro"], "circlet": ["crit_rate", "crit_dmg"]},
+                "subs": ["crit_rate", "crit_dmg", "hp%", "er"]}, False),
+    10000087: ({"sets": [{"set_id": 15008, "pieces": 4}], "main": {"sands": [], "goblet": [], "circlet": []},
+                "subs": []}, False),
+}
 WEAPON = WeaponInfo("Favonius Sword", "https://enka.network/ui/UI_EquipIcon_Sword_Zephyrus.png", 4, 90, 3, 11401)
 
 # (id, name, category, rarity, craft_from, yatta_type, sources)
@@ -148,6 +158,8 @@ def seed(root: Path) -> None:
                                 target_normal=8 if build else None, target_skill=8 if build else None,
                                 target_burst=8 if build else None,
                                 target_weapon_level=90 if build else None, priority=build_rank.get(cid),
+                                artifact_target=ARTIFACT_TARGETS.get(cid, (None, False))[0],
+                                artifacts_done=ARTIFACT_TARGETS.get(cid, (None, False))[1],
                                 updated_at=now))
         for order, (mid, name, cat, rarity, craft, ytype, sources) in enumerate(MATERIALS):
             src = [FREEDOM_SOURCE] if cat == "talent" else sources
@@ -161,7 +173,12 @@ def seed(root: Path) -> None:
             s.add(GameWeapon(id=wid, name=name, icon=icon, rarity=rarity, weapon_type=wtype))
         s.add(GameArtifactSet(id=15001, name="Gladiator's Finale", icon="UI_RelicIcon_15001_4", sort_order=1))
         s.add(GameArtifactSet(id=15007, name="Noblesse Oblige", icon="UI_RelicIcon_15007_4", sort_order=2))
+        s.add(GameArtifactSet(id=15008, name="Bloodstained Chivalry", icon="UI_RelicIcon_15008_4", sort_order=3))
+        s.add(GameArtifactDomain(id=5101, name="Domain of Blessing: Stone Chamber",
+                                 entrance="Clear Pool and Mountain Cavern", region="Liyue",
+                                 elements=["Hydro", "Pyro"], set_ids=[15008, 15007]))
         s.merge(GameMeta(key="artifact_sets_fetched_at", value=iso(now)))
+        s.merge(GameMeta(key="artifact_domains_fetched_at", value=iso(now)))
         s.merge(GameMeta(key="materials_fetched_at", value=iso(now)))
         s.flush()
         result = GapResult(
