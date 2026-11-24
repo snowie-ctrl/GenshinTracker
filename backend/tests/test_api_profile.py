@@ -14,4 +14,6 @@ def test_profile_endpoint(paths):
         s.add(HoyolabSnapshot(part="profile", data=DATA, fetched_at=utcnow()))
     with make_client(paths) as client:
         body = client.get("/api/profile").json()
-    assert body["profile"]["ar"] == 60 and set(body["challenges"]) == {"abyss", "theater", "stygian"}
+    assert body["profile"]["header"]["ar"] == 60 and body["profile"]["header"]["name"] == "Traveler"
+    assert set(body["challenges"]) == {"abyss", "theater", "stygian"}
+    assert body["roster"]["total"] == 0
