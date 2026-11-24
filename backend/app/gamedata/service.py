@@ -72,6 +72,8 @@ async def refresh(session_factory: sessionmaker, http: httpx.AsyncClient,
 META_MAT_FETCHED = "materials_fetched_at"
 META_MAT_ERROR = "materials_last_error"
 META_MAT_KEYS = "material_keys_all"
+META_MAT_VERSION = "material_catalogue_version"
+MATERIAL_CATALOGUE_VERSION = 2   # bump when categorize() changes, so existing databases refetch once
 DETAIL_CONCURRENCY = 4
 FETCH_ERRORS = (httpx.HTTPError, KeyError, ValueError, TypeError)
 
@@ -81,6 +83,8 @@ def materials_need_refresh(session: Session, now: datetime) -> bool:
     if not fetched or session.scalar(select(func.count()).select_from(GameMaterial)) == 0:
         return True
     if _get_meta(session, META_MAT_KEYS) is None:
+        return True
+    if _get_meta(session, META_MAT_VERSION) != MATERIAL_CATALOGUE_VERSION:
         return True
     if session.scalar(select(func.count()).select_from(GameMaterial).where(GameMaterial.detail_fetched.is_(False))):
         return True
@@ -163,6 +167,7 @@ async def refresh_materials(session_factory: sessionmaker, http: httpx.AsyncClie
             row.detail_fetched = True
         _recompute_family_and_order(s)
         _set_meta(s, META_MAT_FETCHED, iso(now))
+        _set_meta(s, META_MAT_VERSION, MATERIAL_CATALOGUE_VERSION)
         _set_meta(s, META_MAT_ERROR,
                   f"{failures} material detail(s) failed; retried on next refresh" if failures else None)
     return True

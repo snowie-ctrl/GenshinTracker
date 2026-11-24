@@ -4,8 +4,8 @@ import httpx
 from sqlalchemy import select
 
 from app.db.models import GameArtifactSet, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
-from app.gamedata.service import (META_MAT_KEYS, _get_meta, claim_unknown_ids_refresh, gamedata_status,
-                                  needs_refresh, refresh, refresh_all, refresh_artifact_sets,
+from app.gamedata.service import (MATERIAL_CATALOGUE_VERSION, META_MAT_KEYS, META_MAT_VERSION, _get_meta,
+                                  claim_unknown_ids_refresh, gamedata_status, needs_refresh, refresh, refresh_all, refresh_artifact_sets,
                                   refresh_materials)
 from app.gamedata.yatta import parse_avatar_list, splash_for
 from helpers import load_fixture, yatta_transport
@@ -185,3 +185,34 @@ async def test_artifact_set_failure_keeps_cache(session_factory):
     with session_factory() as s:
         status = gamedata_status(s)["artifact_sets"]
         assert status["count"] == 2 and "503" in status["last_error"]
+
+
+async def test_refresh_materials_stores_catalogue_version(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+    with session_factory() as s:
+        assert _get_meta(s, META_MAT_VERSION) == MATERIAL_CATALOGUE_VERSION
+
+
+async def test_old_catalogue_version_forces_one_refresh(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+        with session_factory.begin() as s:
+            s.merge(GameMeta(key=META_MAT_VERSION, value=MATERIAL_CATALOGUE_VERSION - 1))
+        assert await refresh_materials(session_factory, http) is True     # fresh otherwise, but old version
+        assert await refresh_materials(session_factory, http) is False    # now current: no more refetching
+
+
+async def test_missing_catalogue_version_forces_a_refresh(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+        with session_factory.begin() as s:
+            s.delete(s.get(GameMeta, META_MAT_VERSION))
+        assert await refresh_materials(session_factory, http) is True
+
+
+async def test_failed_refresh_leaves_version_unset(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport(status=500)) as http:
+        assert await refresh_materials(session_factory, http) is False
+    with session_factory() as s:
+        assert _get_meta(s, META_MAT_VERSION) is None
