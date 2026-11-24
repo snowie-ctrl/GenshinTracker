@@ -188,6 +188,18 @@ class SyncManager:
             self._gaps_queued = False
             self.start_gaps()
 
+    def _save_census(self, source: HoyolabSource, part: str) -> None:
+        """TEMPORARY: store the source's field census for `part` (sync/census.py). Never raises."""
+        census = getattr(source, "census", None)
+        data = census.get(part) if isinstance(census, dict) else None
+        if not data:
+            return
+        try:
+            with self._sf.begin() as s:
+                save_snapshot(s, f"field_census:{part}", data, self._clock())
+        except Exception as e:
+            log.warning("Field census not saved: %s", type(e).__name__)
+
     async def _gaps_part(self, source: HoyolabSource) -> tuple[dict, set[int]]:
         """Raises AuthExpired; any other failure is recorded and returned as a failed part."""
         try:
@@ -208,6 +220,7 @@ class SyncManager:
             skipped = [*skipped, *(f"{names[cid]} ({REJECTED_NOTE})" for cid in rejected)]
             with self._sf.begin() as s:
                 unknown = save_gaps(s, result, snap, skipped, self._clock())
+            self._save_census(source, "calculator")
             part: dict = {"ok": True, "count": len(work) - len(rejected)}
             if skipped:
                 part["skipped"] = skipped
@@ -357,6 +370,7 @@ class SyncManager:
                         details = await source.get_details([r.raw_id for r in roster])
                         with self._sf.begin() as s:
                             save_details(s, details)
+                        self._save_census(source, "detail")
                         parts["details"] = {"ok": True, "count": len(details)}
                     except AuthExpired:
                         expired = True
