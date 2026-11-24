@@ -80,6 +80,19 @@ def test_roster_view(session_factory):
     assert r["weapon_types"]["Sword"] == 3 and r["rarity"] == {"5": 2, "4": 1}
 
 
+def test_roster_view_counts_one_traveler(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        own(s, 10000089, "Furina")
+        own(s, 1000000507, "Cryo Traveler", element="Cryo")
+        own(s, 1000000502, "Anemo Traveler", element="Anemo")
+    with session_factory() as s:
+        r = roster_view(s)
+    assert r["total"] == 2 and r["rarity"] == {"5": 2, "4": 0}
+    assert r["elements"]["Anemo"] == 1 and r["elements"]["Cryo"] == 0   # lowest id kept when none is current
+    assert r["weapon_types"]["Sword"] == 2
+
+
 def test_profile_view_sorts_regions_and_hides_zero_reputation():
     data = {**DATA, "regions": [
         {"id": 9, "name": "Snezhnaya", "explored": 10.0, "reputation": 0, "offerings": []},

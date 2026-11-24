@@ -60,22 +60,40 @@ def wish(pk, pool, time, rarity=3, item_id=None, name="Filler"):
                 imported_at=datetime(2024, 1, 1))
 
 
-def window(start, version, pool="character", order=0):
-    return BannerWindow(f"{pool}|{start}|{order}", pool, "B", "B", start, "2099-01-01 00:00:00", order, (FURINA,), (),
-                        version)
+def window(start, version, pool="character", order=0, end="2099-01-01 00:00:00"):
+    return BannerWindow(f"{pool}|{start}|{order}", pool, "B", "B", start, end, order, (FURINA,), (), version)
 
 
 def test_load_phases_labels_and_dedupes():
     ws = [window("2024-01-10 06:00:00", "4.3"), window("2024-01-10 06:00:00", "4.3", order=1),
           window("2024-01-31 18:00:00", "4.3"), window("2024-02-20 06:00:00", "4.4"),
           window("2024-01-01 00:00:00", None), window("2024-01-12 00:00:00", "4.3", pool="weapon")]
-    assert load_phases(ws) == [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00"),
-                               Phase("4.3 ph2", "4.3", "2024-01-31 18:00:00"),
-                               Phase("4.4 ph1", "4.4", "2024-02-20 06:00:00")]
+    E = "2099-01-01 00:00:00"
+    assert load_phases(ws) == [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00", E),
+                               Phase("4.3 ph2", "4.3", "2024-01-31 18:00:00", E),
+                               Phase("4.4 ph1", "4.4", "2024-02-20 06:00:00", E)]
+
+
+def test_load_phases_end_is_latest_window_end():
+    ws = [window("2024-01-10 06:00:00", "4.3", end="2024-01-31 17:59:59"),
+          window("2024-01-10 06:00:00", "4.3", order=1, end="2024-01-30 00:00:00")]
+    assert load_phases(ws)[0].end == "2024-01-31 17:59:59"
+
+
+def test_rotations_leave_out_pulls_after_the_last_end_and_in_gaps():
+    phases = [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00", "2024-01-20 00:00:00"),
+              Phase("4.3 ph2", "4.3", "2024-02-01 00:00:00", "2024-02-10 00:00:00")]
+    rows = [wish(1, "standard", "2024-01-15 10:00:00"),
+            wish(2, "standard", "2024-01-25 10:00:00"),                      # gap: left out
+            wish(3, "standard", "2024-02-05 10:00:00"),
+            wish(4, "standard", "2024-02-20 10:00:00")]                      # after the last end: left out
+    out = rotations(rows, phases, ITEMS)
+    assert [(e["label"], e["pulls"]) for e in out] == [("4.3 ph1", 1), ("4.3 ph2", 1)]
 
 
 def test_rotations_bucket_every_pool_and_skip_early_pulls():
-    phases = [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00"), Phase("4.3 ph2", "4.3", "2024-01-31 18:00:00")]
+    E = "2099-01-01 00:00:00"
+    phases = [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00", E), Phase("4.3 ph2", "4.3", "2024-01-31 18:00:00", E)]
     rows = [wish(1, "standard", "2024-01-09 10:00:00"),                       # before the first phase: left out
             wish(2, "character", "2024-01-11 10:00:00", 5, FURINA, "Furina"),
             wish(3, "standard", "2024-01-20 10:00:00"),

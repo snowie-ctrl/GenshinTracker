@@ -99,21 +99,24 @@ class Phase:
     label: str          # e.g. "7.1 ph2"
     version: str
     start: str          # server-local "YYYY-MM-DD HH:MM:SS" (already shifted by banner_windows)
+    end: str = "9999-12-31 23:59:59"   # latest end of the phase's character windows
 
 
 def load_phases(windows: list[BannerWindow]) -> list[Phase]:
     """Banner phases from the character windows: one per (version, start day), earliest start wins."""
     starts: dict[tuple[str, str], str] = {}
+    ends: dict[tuple[str, str], str] = {}
     for w in windows:
         if w.pool != "character" or not w.version:
             continue
         key = (w.version, w.start[:10])
         starts[key] = min(starts.get(key, w.start), w.start)
+        ends[key] = max(ends.get(key, w.end), w.end)
     count: Counter = Counter()
     out = []
-    for (version, _day), start in sorted(starts.items(), key=lambda kv: kv[1]):
+    for (version, day), start in sorted(starts.items(), key=lambda kv: kv[1]):
         count[version] += 1
-        out.append(Phase(f"{version} ph{count[version]}", version, start))
+        out.append(Phase(f"{version} ph{count[version]}", version, start, ends[(version, day)]))
     return out
 
 
@@ -123,12 +126,13 @@ def _icon(items: dict[int, ItemInfo], item_id: int | None) -> str | None:
 
 
 def rotations(rows: list[Wish], phases: list[Phase], items: dict[int, ItemInfo]) -> list[dict]:
-    """Pulls per phase. A pull belongs to the last phase that started at or before it; earlier pulls are left out."""
+    """Pulls per phase. A pull belongs to the last phase that started at or before it, and only while that phase
+    has not ended; pulls before the first phase, in a gap or after the last end are left out."""
     starts = [p.start for p in phases]
     out: dict[int, dict] = {}
     for w in rows:
         i = bisect_right(starts, w.time) - 1
-        if i < 0:
+        if i < 0 or w.time > phases[i].end:
             continue
         e = out.setdefault(i, {"label": phases[i].label, "version": phases[i].version, "start": phases[i].start,
                                "pool_counts": Counter(), "pulls": 0, "fives": []})

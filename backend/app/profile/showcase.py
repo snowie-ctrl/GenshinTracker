@@ -9,6 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import GameCharacter, OwnedArtifact, OwnedCharacter
+from app.gamedata.traveler import is_traveler
+from app.traveler.store import current_element_id
 from app.settings.store import get_setting
 
 SHOWCASE_MAX = 8
@@ -40,7 +42,17 @@ def set_summary(artifacts: list[OwnedArtifact]) -> str:
     return " · ".join(f"{n} 2" for n in sorted(n for n, c in counts.items() if c >= 2))
 
 
-def default_ids(owned: list[OwnedCharacter], game: dict[int, GameCharacter]) -> list[int]:
+def collapse_travelers(owned: list[OwnedCharacter], current: int | None) -> list[OwnedCharacter]:
+    """One Traveler row only: the current element's if owned, else the lowest id."""
+    travelers = sorted((o for o in owned if is_traveler(o.character_id)), key=lambda o: o.character_id)
+    if len(travelers) <= 1:
+        return list(owned)
+    keep = next((o for o in travelers if o.character_id == current), travelers[0])
+    return [o for o in owned if not is_traveler(o.character_id) or o is keep]
+
+
+def default_ids(owned: list[OwnedCharacter], game: dict[int, GameCharacter], current: int | None = None) -> list[int]:
+    owned = collapse_travelers(owned, current)
     def key(o: OwnedCharacter) -> tuple:
         g = game.get(o.character_id)
         return (-o.level, -o.constellation, -(g.rarity if g else 0), o.name)
@@ -71,8 +83,11 @@ def showcase_view(session: Session) -> dict:
     for a in session.scalars(select(OwnedArtifact)):
         arts.setdefault(a.character_id, []).append(a)
     saved = [i for i in get_setting(session, "profile_showcase") or [] if isinstance(i, int)]
-    ids = [i for i in saved if i in owned][:SHOWCASE_MAX] if saved else default_ids(list(owned.values()), game)
-    return {"mode": "custom" if saved else "auto",
+    ids = [i for i in saved if i in owned][:SHOWCASE_MAX]
+    custom = bool(ids)
+    if not custom:
+        ids = default_ids(list(owned.values()), game, current_element_id(session))
+    return {"mode": "custom" if custom else "auto",
             "entries": [_entry(owned[i], game.get(i), arts.get(i, [])) for i in ids]}
 
 

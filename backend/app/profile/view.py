@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from app.db.models import ChallengeRun, GameCharacter, OwnedCharacter
 from app.events.view import parse_iso
 from app.gamedata.kinds import ELEMENTS, WEAPON_TYPES
+from app.profile.showcase import collapse_travelers
+from app.traveler.store import current_element_id
 
 KINDS = ("abyss", "theater", "stygian")
 def _region(r: dict) -> dict:
@@ -56,7 +58,7 @@ def profile_view(data: dict | None, name: str = "") -> dict | None:
 
 def roster_view(session: Session) -> dict:
     game = {c.id: c for c in session.scalars(select(GameCharacter))}
-    owned = list(session.scalars(select(OwnedCharacter)))
+    owned = collapse_travelers(list(session.scalars(select(OwnedCharacter))), current_element_id(session))
     elements = dict.fromkeys(ELEMENTS, 0)
     weapons = dict.fromkeys(WEAPON_TYPES, 0)
     rarity = {"5": 0, "4": 0}

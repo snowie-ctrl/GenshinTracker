@@ -95,3 +95,37 @@ def test_validate_ids_and_owned_options(session_factory):
         assert validate_ids(s, [10000089, 10000089]) == "Each character can be shown once."
         assert validate_ids(s, [123]) == "Only characters you own can be shown."
         assert [o["name"] for o in owned_options(s)] == ["Bennett", "Furina"]
+
+
+def test_default_has_one_traveler_current_element_wins(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        own(s, 10000089, "Furina", level=80)
+        own(s, 1000000507, "Cryo Traveler", element="Cryo")
+        own(s, 1000000502, "Anemo Traveler", element="Anemo")
+        set_setting(s, "traveler_current_element", "Cryo")
+    with session_factory() as s:
+        ids = [e["id"] for e in showcase_view(s)["entries"]]
+        assert len(owned_options(s)) == 3
+    assert ids == [1000000507, 10000089]
+
+
+def test_custom_showcase_may_pick_any_traveler_element(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        own(s, 1000000507, "Cryo Traveler", element="Cryo")
+        own(s, 1000000502, "Anemo Traveler", element="Anemo")
+        set_setting(s, "profile_showcase", [1000000502])
+    with session_factory() as s:
+        v = showcase_view(s)
+    assert v["mode"] == "custom" and [e["id"] for e in v["entries"]] == [1000000502]
+
+
+def test_custom_list_with_no_owned_ids_falls_back_to_auto(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        own(s, 10000073, "Nahida")
+        set_setting(s, "profile_showcase", [999])
+    with session_factory() as s:
+        v = showcase_view(s)
+    assert v["mode"] == "auto" and [e["id"] for e in v["entries"]] == [10000073]
