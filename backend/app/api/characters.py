@@ -20,7 +20,13 @@ from app.planner.characters import character_shortfall
 from app.planner.order import apply_goal
 from app.schemas import ArtifactTargetIn, TargetsIn
 from app.settings.store import get_setting
-from app.targets import defaults_for, stored_targets, write_targets
+from app.targets import (
+    defaults_for,
+    prefill_artifact_target,
+    recommendation_payload,
+    stored_targets,
+    write_targets,
+)
 from app.teams.store import memberships
 from app.timeutil import utcnow
 from app.traveler.store import current_element_id
@@ -132,6 +138,7 @@ def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
             payload["planned_weapon"] = planned_weapon(s, r, o)
             payload["teams"] = memberships(s).get(payload["id"], [])
             payload["artifact_check"] = check_for(s, payload["id"], payload["artifact_target"])
+            payload["stat_recommendation"] = recommendation_payload(s, payload["id"])
             if is_traveler(payload["id"]):
                 payload["traveler"] = traveler_payload(s.get(TravelerElement, payload["id"]), payload["id"],
                                                        current_element_id(s))
@@ -171,7 +178,10 @@ async def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(ge
             targets = Targets(**body.targets.model_dump())
         else:
             targets = resolve_targets(new_goal, stored_targets(row), defaults_for(s, character_id))
+        was_build = row.goal == "build"
         apply_goal(s, row, new_goal)
+        if not was_build:
+            prefill_artifact_target(s, row)
         if targets is not None:
             write_targets(row, targets)
         if "planned_weapon_id" in body.model_fields_set:
