@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { MAIN_SLOTS, STAT_LABELS } from './artifacts';
+	import FilterPill from './FilterPill.svelte';
 	import { getCharacterPage } from './characterPage.svelte';
 	import { applyRecommendation, matchesRecommendation } from './recommend';
 
@@ -31,7 +32,9 @@
 			<div class="row">
 				<span class="label">{slot[0].toUpperCase() + slot.slice(1)}</span>
 				{#each rec.main[slot] as key (key)}
-					<span class="pill" data-testid="suggestion-{slot}-{key}">{label(key)}</span>
+					<span data-testid="suggestion-{slot}-{key}">
+						<FilterPill label={label(key)} on readonly color="var(--el, var(--gold))" />
+					</span>
 				{:else}
 					<span class="muted small">No preference</span>
 				{/each}
@@ -40,7 +43,7 @@
 		<div class="row">
 			<span class="label">Substats</span>
 			{#each rec.subs as key, i (key)}
-				<span class="pill" data-testid="suggestion-sub-{key}">{i + 1}. {label(key)}</span>
+				<span class="chip" data-testid="suggestion-sub-{key}"><span class="n">{i + 1}</span> {label(key)}</span>
 			{/each}
 		</div>
 		{#if matches}
@@ -61,8 +64,8 @@
 <style>
 	.row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-bottom: 6px; }
 	.label { width: 64px; font-size: 12px; color: var(--muted); }
-	.pill { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--el, var(--gold));
-		color: var(--text); }
+	.chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--glass-border); border-radius: 999px; padding: 2px 8px; font-size: 12px; }
+	.n { color: var(--el, var(--gold)); font-weight: 700; }
 	.small { font-size: 11px; }
 	.ok { color: var(--building); }
 	.foot { margin-top: 10px; }
