@@ -1,7 +1,7 @@
 # Ad Astra Sub-project 10 — Teapot Materials
 
 **Date:** 2026-11-24
-**Status:** Design approved in chat 2026-11-24; written spec awaiting the user's review
+**Status:** Approved by the user 2026-11-24
 **Frame:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 10 of 10, the last of the revision). Extends the Inventory backpack from Inventory and Events (`2026-11-23-ad-astra-inventory-events-design.md`, section 5) and the GOOD import from Phase 6 (`2026-11-22-phase6-good-import-design.md`).
 **Scope:** Wood, Fabric and dyes become a new material category, "Serenitea Pot", taken from the public Yatta catalogue. They show as the last card in the Inventory backpack with the existing best-known count (a GOOD scan count, or "—"). Counts only: no "needed" amounts, no furnishing planner.
 
