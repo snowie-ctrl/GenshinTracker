@@ -1,11 +1,16 @@
+from dataclasses import replace
 from datetime import datetime, timedelta
 
-from app.db.models import GameMaterial, GapRun, LiveNotes, MaterialGap, MaterialTotal, OwnedArtifact, OwnedCharacter
+from app.db.models import (
+    CharacterStatRecommendation, GameMaterial, GapRun, LiveNotes, MaterialGap, MaterialTotal, OwnedArtifact,
+    OwnedCharacter,
+)
 from app.sync.backup import backup_db
 from app.sync.hoyolab import GapResult, MaterialAmount, NotesInfo, TalentIds
 from app.sync.persist import (
     load_talent_ids, save_details, save_gap_failure, save_gaps, save_notes, save_roster, save_talent_ids,
 )
+from app.sync.recommend import StatRecommendation
 from fakes import NOTES, make_detail, make_roster
 from helpers import seed_game
 
@@ -162,3 +167,48 @@ def test_save_notes_new_fields(session_factory):
         assert row.transformer_ready_at == now
         save_notes(s, NotesInfo(1, 200, 60, 4, 4, 10, 2400, []), now)
         assert row.transformer_ready_at is None and row.realm_currency_full_at is None
+
+
+REC = StatRecommendation(main={"sands": ["er"], "goblet": ["pyro"], "circlet": ["crit_rate"]}, subs=["er", "crit_rate"])
+
+
+def test_save_details_stores_recommendation(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        save_roster(s, [make_roster(10000032)], NOW)
+        save_details(s, [replace(make_detail(10000032), recommendation=REC)], NOW)
+    with session_factory() as s:
+        row = s.get(CharacterStatRecommendation, 10000032)
+        assert row.data == REC.to_json() and row.synced_at == NOW
+
+
+def test_save_details_updates_recommendation(session_factory):
+    seed_game(session_factory)
+    newer = StatRecommendation(main={"sands": ["hp%"], "goblet": [], "circlet": []}, subs=[])
+    with session_factory.begin() as s:
+        save_roster(s, [make_roster(10000032)], NOW)
+        save_details(s, [replace(make_detail(10000032), recommendation=REC)], NOW)
+        save_details(s, [replace(make_detail(10000032), recommendation=newer)], NOW + timedelta(days=1))
+    with session_factory() as s:
+        row = s.get(CharacterStatRecommendation, 10000032)
+        assert row.data["main"]["sands"] == ["hp%"] and row.synced_at == NOW + timedelta(days=1)
+
+
+def test_save_details_none_keeps_row(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        save_roster(s, [make_roster(10000032)], NOW)
+        save_details(s, [replace(make_detail(10000032), recommendation=REC)], NOW)
+        save_details(s, [make_detail(10000032)], NOW + timedelta(days=1))      # field missing this time
+    with session_factory() as s:
+        assert s.get(CharacterStatRecommendation, 10000032).data == REC.to_json()
+
+
+def test_recommendation_survives_losing_the_character(session_factory):
+    seed_game(session_factory)
+    with session_factory.begin() as s:
+        save_roster(s, [make_roster(10000032), make_roster(10000089)], NOW)
+        save_details(s, [replace(make_detail(10000032), recommendation=REC)], NOW)
+        save_roster(s, [make_roster(10000089)], NOW)                            # 10000032 gone
+    with session_factory() as s:
+        assert s.get(CharacterStatRecommendation, 10000032) is not None
