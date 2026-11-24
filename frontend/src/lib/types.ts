@@ -178,7 +178,24 @@ export interface WishStats {
 export interface PoolSummary {
 	pool: Pool; total: number; pity5: number; pity4: number; hard: number; soft: number | null; in_soft: boolean;
 	next_state: string | null; fate: Fate | null; radiance: Radiance | null; stats: WishStats;
-	fives: WishPull[]; fours: WishPull[];
+	avg_pity: number | null; fives: WishPull[]; fours: WishPull[];
+}
+export type WishFilter = 'all' | 'character' | 'weapon' | 'chronicled' | 'standard';
+export interface AnalysisPull extends WishPull { pool: Pool }
+export interface Rotation {
+	label: string; version: string; start: string; pool_counts: Partial<Record<Pool, number>>; pulls: number;
+	fives: { name: string; icon: string | null }[];
+}
+export interface TierCounts { five: Record<string, number>; four: Record<string, number> }
+export interface Luck {
+	avg_pity: number | null; expected: number; verdict: 'luckier' | 'average' | 'unluckier' | null;
+	won: number | null; lost: number | null; rate: number | null; judged_label: string | null;
+}
+export interface AnalysisBlock {
+	months: MonthRow[]; rotations: Rotation[]; elements: TierCounts; weapon_types: TierCounts; unknown_items: number;
+	pity_hist: { buckets: { bucket: string; count: number }[]; soft: number | null; avg: number | null };
+	primogems: { points: { date: string; total: number }[]; fives: { date: string; name: string; icon: string | null; total: number }[] };
+	luck: Luck; fives: AnalysisPull[]; fours: AnalysisPull[];
 }
 export interface WishImport {
 	id: number; source: 'game' | 'uigf' | 'paimon'; started_at: string; finished_at: string | null;
@@ -188,9 +205,8 @@ export interface ImportStatus { running: boolean; last: WishImport | null }
 export interface MonthRow { month: string; character: number; weapon: number; chronicled: number; standard: number; beginner: number }
 export interface BannerRow { key: string; pool: Pool; name: string; short_name: string; start: string; pulls: number; fives: string[] }
 export interface WishSummary {
-	pools: PoolSummary[]; overall: WishStats;
-	charts: { monthly: MonthRow[]; pity_histogram: { bucket: string; count: number }[]; banners: BannerRow[] };
-	banners_available: boolean; import: ImportStatus;
+	pools: PoolSummary[]; overall: WishStats; analysis: Partial<Record<WishFilter, AnalysisBlock>>;
+	banners: BannerRow[]; banners_available: boolean; import: ImportStatus;
 }
 export interface HistoryRow {
 	time: string; name: string; item_id: number | null; icon: string | null; item_type: 'character' | 'weapon';

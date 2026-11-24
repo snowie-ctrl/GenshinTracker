@@ -2,8 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Fate, WishImport } from './types';
 import {
-	DEFAULT_FILTERS, cacheStatusLabel, fateLine, histogramBars, historyQuery, importResultLine, loadFilters,
-	nextStateLabel, niceMax, outcomeLabel, pityBar, pityLine, radianceLine, saveFilters, scaleTo, stackedMonths
+	DEFAULT_FILTERS, availableFilters, cacheStatusLabel, fateLine, histogramBars, historyQuery, importResultLine,
+	loadFilters, nextStateLabel, niceMax, outcomeLabel, pickFilter, pityBar, pityLine, radianceLine, rotationBars,
+	saveFilters, scaleTo, spiderSeries, stackedMonths, toFilter, verdictLabel
 } from './wishes';
 
 const fate = (p: Partial<Fate>): Fate => ({
@@ -61,8 +62,9 @@ describe('labels', () => {
 
 describe('numbers', () => {
 	it('pity bar marks', () => {
-		expect(pityBar(45, 90, 74)).toEqual({ fill: 50, soft: 82.2 });
-		expect(pityBar(120, 90, null)).toEqual({ fill: 100, soft: null });
+		expect(pityBar(45, 90, 74)).toEqual({ fill: 50, soft: 82.2, avg: null });
+		expect(pityBar(120, 90, null)).toEqual({ fill: 100, soft: null, avg: null });
+		expect(pityBar(10, 90, 74, 62.3)).toEqual({ fill: 11.1, soft: 82.2, avg: 69.2 });
 	});
 	it('scales and nice maxima', () => {
 		expect(scaleTo([0, 5, 10], 100)).toEqual([0, 50, 100]);
@@ -95,5 +97,32 @@ describe('history filters', () => {
 		const fake = () => ({ getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) }) as unknown as Storage;
 		saveFilters(fake, { ...DEFAULT_FILTERS, rarity: 5 });
 		expect(loadFilters(fake).rarity).toBe(5);
+	});
+});
+
+describe('wish filters and analysis helpers', () => {
+	it('lists filters in a fixed order and picks a sensible default', () => {
+		const avail = availableFilters({ standard: {}, all: {}, character: {} });
+		expect(avail).toEqual(['all', 'character', 'standard']);
+		expect(pickFilter(null, avail)).toBe('character');
+		expect(pickFilter('standard', avail)).toBe('standard');
+		expect(pickFilter('weapon', avail)).toBe('character');          // remembered filter without pulls
+		expect(pickFilter(null, ['all', 'standard'])).toBe('standard');
+		expect(pickFilter(null, [])).toBe('all');
+		expect(toFilter('beginner')).toBe('all');
+		expect(toFilter('weapon')).toBe('weapon');
+	});
+	it('stacks rotation bars by pool', () => {
+		const [bar] = rotationBars([{ label: '4.3 ph1', version: '4.3', start: '2024-01-10 06:00:00',
+			pool_counts: { character: 3, standard: 1 }, pulls: 4, fives: [] }]);
+		expect(bar.label).toBe('4.3 ph1');
+		expect(bar.segments.find((s) => s.name === 'Character Event')?.value).toBe(3);
+		expect(bar.segments.find((s) => s.name === 'Weapon Event')?.value).toBe(0);
+	});
+	it('reads spider series in axis order and labels verdicts', () => {
+		expect(spiderSeries({ five: { Hydro: 2 }, four: { Pyro: 1 } }, ['Pyro', 'Hydro']))
+			.toEqual({ five: [0, 2], four: [1, 0] });
+		expect(verdictLabel('luckier')).toBe('Luckier than average');
+		expect(verdictLabel(null)).toBe('');
 	});
 });
