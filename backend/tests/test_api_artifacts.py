@@ -116,3 +116,44 @@ def test_artifact_sets_lists_domains(paths):
     assert rows[0]["domain"] is None
     assert rows[1]["domain"] == {"id": 5101, "name": "Domain of Blessing: Stone Chamber",
                                  "entrance": "Clear Pool and Mountain Cavern", "region": "Liyue"}
+
+
+def test_traveler_current_element_gear_beats_stale_own_rows(paths):
+    from app.db.models import OwnedArtifact
+    from app.settings.store import set_setting
+    sf = setup(paths)
+    with sf.begin() as s:
+        set_setting(s, "traveler_current_element", "Geo")      # Geo is current; Anemo is owned but stale
+        s.add(OwnedArtifact(character_id=1000000502, slot=2, set_name="Gladiator's Finale", rarity=5, level=20,
+                            main_stat="atk", substats=[], icon="UI_RelicIcon_15001_2"))
+    with make_client(paths) as client:
+        client.put("/api/characters/1000000502/goal",
+                   json={"goal": "build", "artifact_target": {"sets": [{"set_id": 15007, "pieces": 4}]}})
+        d = client.get("/api/characters/anemo-traveler").json()
+    assert d["artifact_check"]["sets"][0]["equipped"] == 1           # Geo's Noblesse flower, not Anemo's stale row
+
+
+def test_artifact_sets_unknown_source_without_domains(paths):
+    sf = setup(paths)
+    with sf.begin() as s:
+        s.query(GameArtifactDomain).delete()
+    with make_client(paths) as client:
+        rows = client.get("/api/artifact-sets").json()
+    assert [r["source"] for r in rows] == ["unknown", "unknown"] and all(r["domain"] is None for r in rows)
+
+
+def test_artifact_sets_source_with_domains(paths):
+    setup(paths)
+    with make_client(paths) as client:
+        rows = client.get("/api/artifact-sets").json()
+    assert [r["source"] for r in rows] == ["none", "domain"]
+
+
+def test_dashboard_sources_known_flag(paths):
+    sf = setup(paths)
+    with make_client(paths) as client:
+        assert client.get("/api/dashboard").json()["artifact_domains"]["sources_known"] is True
+    with sf.begin() as s:
+        s.query(GameArtifactDomain).delete()
+    with make_client(paths) as client:
+        assert client.get("/api/dashboard").json()["artifact_domains"]["sources_known"] is False

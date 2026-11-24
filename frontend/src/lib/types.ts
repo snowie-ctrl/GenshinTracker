@@ -358,6 +358,7 @@ export interface ArtifactSetOption {
 	name: string;
 	icon: string | null;
 	domain: { id: number; name: string; entrance: string; region: string | null } | null;
+	source?: 'domain' | 'none' | 'unknown';
 }
 
 export interface ArtifactDomainChar {
@@ -381,6 +382,7 @@ export interface ArtifactDomainsView {
 	domains: { id: number; name: string; entrance: string; region: string | null; elements: string[]; sets: ArtifactSetRow[] }[];
 	other: ArtifactSetRow[];
 	hint: string | null;
+	sources_known: boolean;
 }
 
 export type GoalBody = {

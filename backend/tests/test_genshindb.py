@@ -95,6 +95,7 @@ async def test_refresh_domains_empty_result_keeps_rows(session_factory):
         status = gamedata_status(s)["artifact_domains"]
         assert status["count"] == 1 and status["last_error"]
         assert status["fetched_at"] == before
+        assert status["unmatched"] == []        # the stale list from the earlier fetch is replaced
 
 
 async def test_refresh_all_forces_domains_when_sets_refresh(session_factory):

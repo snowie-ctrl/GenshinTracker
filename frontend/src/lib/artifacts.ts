@@ -45,6 +45,6 @@ export function setSlot(sets: ArtifactTarget['sets'], index: number, setId: numb
 }
 
 export function sourceLabel(opt: ArtifactSetOption | undefined): string {
-	if (!opt) return 'Drop source unknown';
+	if (!opt || opt.source === 'unknown') return 'Drop source unknown';
 	return opt.domain ? opt.domain.entrance : 'Not from a domain';
 }

@@ -47,8 +47,8 @@
 			{/each}
 			{#if view.other.length}
 				<div class="card" data-testid="artifact-other">
-					<div class="title">Not from a domain</div>
-					<div class="muted small">Bosses / Strongbox</div>
+					<div class="title">{view.sources_known ? 'Not from a domain' : 'Drop source unknown'}</div>
+					{#if view.sources_known}<div class="muted small">Bosses / Strongbox</div>{/if}
 					{#each view.other as s (s.id)}{@render setRow(s)}{/each}
 				</div>
 			{/if}

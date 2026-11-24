@@ -65,4 +65,4 @@ def artifact_domains_view(s: Session) -> dict:
     sets = {a.id: {"id": a.id, "name": a.name, "icon": a.icon} for a in s.scalars(select(GameArtifactSet))}
     domains = [{"id": d.id, "name": d.name, "entrance": d.entrance, "region": d.region, "elements": d.elements,
                 "set_ids": d.set_ids} for d in s.scalars(select(GameArtifactDomain).order_by(GameArtifactDomain.id))]
-    return group_artifact_domains(builds, sets, domains)
+    return {**group_artifact_domains(builds, sets, domains), "sources_known": bool(domains)}

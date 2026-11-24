@@ -36,5 +36,7 @@ describe('artifacts helpers', () => {
 		expect(sourceLabel({ id: 1, name: 'N', icon: 'x', domain: { id: 2, name: 'D', entrance: 'Clear Pool', region: 'Liyue' } })).toBe('Clear Pool');
 		expect(sourceLabel({ id: 1, name: 'G', icon: 'x', domain: null })).toBe('Not from a domain');
 		expect(sourceLabel(undefined)).toBe('Drop source unknown');
+		expect(sourceLabel({ id: 1, name: 'G', icon: 'x', domain: null, source: 'unknown' })).toBe('Drop source unknown');
+		expect(sourceLabel({ id: 1, name: 'G', icon: 'x', domain: null, source: 'none' })).toBe('Not from a domain');
 	});
 });

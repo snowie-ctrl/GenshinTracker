@@ -16,7 +16,7 @@ def equipped_for(s: Session, cid: int) -> list[OwnedArtifact]:
     ids = [cid]
     if is_traveler(cid):
         cur = current_element_id(s)
-        ids += ([cur] if cur else []) + sorted(TRAVELER_IDS)
+        ids = ([cur] if cur else []) + ids + sorted(TRAVELER_IDS)
     for i in dict.fromkeys(ids):
         rows = s.scalars(select(OwnedArtifact).where(OwnedArtifact.character_id == i)
                          .order_by(OwnedArtifact.slot)).all()
