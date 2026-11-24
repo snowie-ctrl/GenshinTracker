@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Mapping, Protocol, Sequence
 
@@ -14,14 +13,12 @@ import httpx
 
 from app.gamedata.yatta import canonical_id
 from app.sync.announcements import Announcement, fetch_announcements
-from app.sync.census import field_census
 from app.sync.chronicle import (
     CalendarInfo, ChallengeRunInfo, ProfileInfo, to_abyss_run, to_calendar, to_profile, to_stygian_runs,
     to_theater_runs,
 )
 from app.sync.recommend import StatRecommendation, recommendations_by_raw_id
 
-log = logging.getLogger(__name__)
 RETRY_DELAYS: tuple[float, ...] = (2.0, 5.0, 10.0)
 DETAIL_BATCH = 20
 
@@ -314,14 +311,6 @@ class GenshinPySource:
         self._uid = uid
         self._region = region or genshin.utility.recognize_genshin_server(uid)
         self._delays = delays
-        self.census: dict = {}   # TEMPORARY field census (sync/census.py), saved by the runner
-
-    def _note_fields(self, part: str, raw: Any) -> None:
-        try:
-            census = self.__dict__.setdefault("census", {})
-            field_census(raw, census.setdefault(part, {"types": {}, "kept": {}}))
-        except Exception as e:  # a diagnostic must never fail a sync
-            log.warning("Field census failed: %s", type(e).__name__)
 
     async def get_roster(self) -> list[RosterEntry]:
         chars = await call_api(self._client.get_genshin_characters, self._uid, delays=self._delays)
@@ -333,7 +322,6 @@ class GenshinPySource:
         for i in range(0, len(ids), DETAIL_BATCH):
             raw = await call_api(self._client.get_genshin_detailed_characters, self._uid,
                                  characters=ids[i:i + DETAIL_BATCH], return_raw_data=True, delays=self._delays)
-            self._note_fields("detail", raw)
             recs = recommendations_by_raw_id(raw)          # read before the model's validator mutates a dict
             result = genshin.models.GenshinDetailCharacters(**copy.deepcopy(raw))
             out.extend(e for e in (to_detail_entry(c, recs.get(int(c.id))) for c in result.characters)
@@ -355,7 +343,6 @@ class GenshinPySource:
         body = build_batch_body(chars, self._uid, self._region)
         raw = await call_api(self._client.request_calculator, "batch_compute", data=body,
                              api_version=3, delays=self._delays)
-        self._note_fields("calculator", raw)
         return to_gap_result(raw, [c.character_id for c in chars])
 
     async def get_calendar(self) -> CalendarInfo:
