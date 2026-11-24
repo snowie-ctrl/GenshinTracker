@@ -24,8 +24,10 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 	const lamp = page.getByTestId('tile-100055');           // unneeded, now owned
 	await expect(lamp).toContainText('37');
 	await expect(lamp).not.toHaveClass(/dim/);
-	await expect(page.getByTestId('tile-104003')).toContainText('120/20 ✓');   // met, scan agrees
-	await expect(page.getByTestId('tile-104302')).toContainText('8/15');      // short: live wins over scan 2
+	await expect(page.getByTestId('tile-104003')).toContainText('120');      // met: scan count
+	await expect(page.getByTestId('tile-104003').locator('.count')).not.toContainText('✓');
+	await expect(page.getByTestId('tile-104302')).toContainText('8');        // short: live wins over scan 2
+	await expect(page.getByTestId('tile-104302').locator('.count')).not.toContainText('/');
 
 	await page.getByRole('button', { name: 'Owned', exact: true }).click();
 	await expect(page.getByTestId('tile-100055')).toBeVisible();

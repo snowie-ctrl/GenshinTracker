@@ -142,8 +142,8 @@ describe('text helpers', () => {
 			id: 1, name: 'Guide', icon: '', rarity: 3, category: 'talent', category_label: 'Talent books',
 			need: 9, short: 1, craftable: 1, to_farm: 0, shared: true
 		};
-		expect(teamTileView(row)).toEqual({ main: '8/9', badge: null, hint: 'craft 1 · shared', tone: 'short' });
-		expect(teamTileView({ ...row, short: 0, craftable: 0 })).toEqual({ main: '✓ 9', badge: null, hint: 'shared', tone: 'met' });
+		expect(teamTileView(row)).toEqual({ main: '8/9', badge: null, craft: null, hint: 'craft 1 · shared', tone: 'short' });
+		expect(teamTileView({ ...row, short: 0, craftable: 0 })).toEqual({ main: '✓ 9', badge: null, craft: null, hint: 'shared', tone: 'met' });
 		expect(teamTileView({ ...row, to_farm: 2, short: 2, craftable: 0, shared: false }).badge).toBe('−2');
 		expect(farmRows([row, { ...row, id: 2, short: 0 }]).map((r) => r.id)).toEqual([1]);
 	});

@@ -12,11 +12,29 @@ test('dashboard shows active domains and a weekly boss that can be ticked', asyn
 	await expect(page.getByTestId('boss-Stormterror')).toHaveClass(/done/);
 });
 
-test('inventory To farm filter shows only short tiles', async ({ page }) => {
+test('inventory To farm strip lists short materials; backpack shows plain counts', async ({ page }) => {
 	await page.goto('/inventory');
-	await expect(page.getByTestId('tile-104003')).toBeVisible(); // Hero's Wit, met
-	await page.getByRole('button', { name: 'To farm' }).click();
-	await expect(page.getByTestId('tile-104302')).toBeVisible(); // Guide to Freedom, short
-	await expect(page.getByTestId('tile-104003')).toHaveCount(0);
-	await expect(page.getByTestId('tile-100055')).toHaveCount(0); // unneeded
+	const strip = page.getByTestId('to-farm');
+	await expect(strip.getByTestId('farm-104302')).toBeVisible();          // Guide to Freedom, short
+	await expect(strip.getByTestId('farm-104302')).toContainText('−');
+	await expect(strip.getByTestId('farm-104003')).toHaveCount(0);         // Hero's Wit, met
+	await expect(page.getByTestId('tile-104302')).toContainText('8');
+	await expect(page.getByTestId('tile-104302').locator('.count')).not.toContainText('/');
+	await expect(page.getByTestId('tile-104003')).toContainText('—');      // met, no scan: unknown
+	await expect(page.getByTestId('tile-104003')).toHaveClass(/dim/);
+	await expect(page.getByTestId('scan-hint')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'To farm' })).toHaveCount(0);
+	await page.getByLabel('Search materials').fill('Freedom');
+	await expect(strip).toHaveCount(0);
+	await expect(page.getByTestId('tile-104302')).toBeVisible();
+	await page.getByLabel('Search materials').fill('');
+});
+
+test('a stored Needed filter opens on All', async ({ page }) => {
+	await page.goto('/inventory');
+	await page.evaluate(() => localStorage.setItem('gt.inventory.filter', 'needed'));
+	await page.reload();
+	await expect(page.getByRole('button', { name: 'All', exact: true })).toHaveClass(/on/);
+	await expect(page.getByTestId('tile-100055')).toBeVisible();           // unneeded tile still listed
+	await page.evaluate(() => localStorage.removeItem('gt.inventory.filter'));
 });

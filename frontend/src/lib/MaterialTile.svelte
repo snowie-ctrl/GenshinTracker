@@ -13,6 +13,7 @@
 	<button type="button" class="face r{rarity}" aria-label={name}>
 		{#if imgSrc(icon)}<img src={imgSrc(icon)} alt="" loading="lazy" />{/if}
 		{#if view.badge}<span class="badge">{view.badge}</span>{/if}
+		{#if view.craft}<span class="craft">{view.craft}</span>{/if}
 	</button>
 	<div class="count {view.tone}">{view.main}</div>
 	{#if view.hint}<div class="hint">{view.hint}</div>{/if}
@@ -29,6 +30,8 @@
 	.face.r4 { background: var(--r4); } .face.r5 { background: var(--r5); }
 	.face img { width: 64px; height: 64px; display: block; }
 	.badge { position: absolute; top: -6px; right: -6px; background: var(--error); color: #fff;
+		border-radius: 10px; padding: 1px 6px; font-weight: 700; font-size: 11px; }
+	.craft { position: absolute; bottom: -6px; right: -6px; background: #b7892f; color: #fff;
 		border-radius: 10px; padding: 1px 6px; font-weight: 700; font-size: 11px; }
 	.count { font-weight: 600; min-height: 16px; }
 	.count.short { color: var(--error); } .count.met { color: var(--accent); }
