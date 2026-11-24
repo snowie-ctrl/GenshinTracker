@@ -72,16 +72,20 @@ def record(session: Session, anns: list[Announcement], calendar: dict, now: date
     written = 0
     for a in anns:
         cal = match_calendar(a, events)
-        start = a.start or (cal or {}).get("start") or a.window_start
-        end = a.end or (cal or {}).get("end") or a.window_end
+        old = session.get(EventLog, f"ann:{a.ann_id}")
+        # Times from the announcement's own tags or a current calendar match win; otherwise keep what is stored,
+        # and only then fall back to the display window.
+        start = a.start or (cal or {}).get("start") or (old.start if old else None) or a.window_start
+        end = a.end or (cal or {}).get("end") or (old.end if old else None) or a.window_end
         if start is None and end is None:
             continue
         if cal is not None:
             matched.add(cal["id"])
             session.execute(delete(EventLog).where(EventLog.key == f"cal:{cal['id']}"))
         kind = f"wish:{wish_pool(a.title)}" if a.kind == "wish" else "event"
+        calendar_id = cal["id"] if cal else (old.calendar_id if old else None)
         _upsert(session, f"ann:{a.ann_id}", now, kind=kind, name=a.name, start=start, end=end, image=a.image,
-                description=a.description, calendar_id=cal["id"] if cal else None)
+                description=a.description, calendar_id=calendar_id)
         written += 1
     known = {r for (r,) in session.execute(select(EventLog.calendar_id).where(EventLog.calendar_id.is_not(None)))}
     for e in events:

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Countdown from './Countdown.svelte';
-	import { imgSrc } from './img';
+	import { cssUrl, imgSrc } from './img';
 	import type { TimelineRow } from './types';
 
 	let { row, now, onclose, ontoggle }: {
@@ -17,7 +17,7 @@
 
 <dialog bind:this={dialog} class="modal" data-testid="event-modal" aria-label={row.name}
 	onclose={onclose} onclick={(e) => { if (e.target === dialog) dialog.close(); }}>
-	<div class="hero" class:noart={!hero} style={hero ? `background-image:url('${hero}')` : ''}>
+	<div class="hero" class:noart={!hero} style={hero ? `background-image:${cssUrl(hero)}, var(--grad)` : ''}>
 		<button type="button" class="x" aria-label="Close" onclick={() => dialog.close()}>✕</button>
 		<h3>{row.name}</h3>
 	</div>
@@ -63,7 +63,7 @@
 	.modal { width: min(460px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
 		background: var(--glass-bg-strong); backdrop-filter: blur(var(--glass-blur)); color: var(--text); }
 	.modal::backdrop { background: rgba(0, 0, 0, 0.55); }
-	.hero { position: relative; height: 150px; background: linear-gradient(120deg, rgba(120, 130, 180, 0.4), rgba(60, 70, 110, 0.4)) center / cover; }
+	.hero { --grad: linear-gradient(120deg, rgba(120, 130, 180, 0.4), rgba(60, 70, 110, 0.4)); position: relative; height: 150px; background: var(--grad) center / cover; }
 	.hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--glass-bg-strong)); }
 	.hero h3 { position: absolute; left: 14px; bottom: 8px; margin: 0; z-index: 1; font-size: 18px; text-shadow: 0 1px 3px #000; }
 	.x { position: absolute; right: 10px; top: 8px; z-index: 2; width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(0, 0, 0, 0.5); color: #fff; cursor: pointer; }

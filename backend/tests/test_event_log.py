@@ -92,3 +92,15 @@ def test_record_keeps_rows_missing_from_feed_and_fills_times(session_factory):
         rows = {r.key: r for r in s.query(EventLog)}
     assert rows["ann:20"].start == "2026-11-20T15:00:00Z"      # from the matched calendar event
     assert "ann:21" not in rows                                 # no times and no fallback window: skipped
+
+
+def test_record_keeps_calendar_match_when_calendar_no_longer_has_event(session_factory):
+    with session_factory.begin() as s:
+        record(s, [ann(40, "Grand Test", start=None, end=None)], {"events": [cal_event(1, "Grand Test")]}, NOW)
+    with session_factory.begin() as s:
+        record(s, [ann(40, "Grand Test", start=None, end=None)], {"events": []}, NOW + timedelta(hours=1))
+    with session_factory() as s:
+        row = s.get(EventLog, "ann:40")
+    assert row.calendar_id == 1
+    assert row.start == "2026-11-20T15:00:00Z" and row.end == "2026-11-30T08:59:59Z"
+    assert row.last_seen == NOW + timedelta(hours=1)

@@ -58,3 +58,18 @@ test('banner history groups by version, pages on scroll and searches', async ({ 
 	await expect(history.getByTestId('version-1.0')).toHaveCount(0);
 	await page.getByLabel('Search banners').fill('');
 });
+
+test('banner history shows a retry when the first load fails', async ({ page }) => {
+	let fail = true;
+	await page.route('**/api/banners/history*', (route) =>
+		fail ? route.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"boom"}' }) : route.continue());
+	await page.goto('/events');
+	const history = page.getByTestId('banner-history');
+	await expect(history.getByRole('button', { name: 'Retry' })).toBeVisible();
+	await expect(history.getByText('No banners match.')).toHaveCount(0);
+	fail = false;
+	await history.getByRole('button', { name: 'Retry' }).click();
+	await expect(history.getByTestId('version-9.9')).toBeVisible();
+	await expect(history.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+	await expect(history.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
+});

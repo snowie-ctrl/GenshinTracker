@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { countdownWarn, timeLeft } from './events';
-	import { imgSrc } from './img';
+	import { cssUrl, imgSrc } from './img';
 	import { buildAxis, dayTicks, placeBars, todayOffset } from './timeline';
 	import type { TimelineRow } from './types';
 
@@ -52,7 +52,7 @@
 				{@const src = imgSrc(p.row.image)}
 				<button type="button" class="bar" data-testid="bar-{p.row.key}" aria-label={label(p)}
 					class:wish={p.row.kind === 'wish'} class:done={p.row.done} class:ended class:noart={!src}
-					style="left:{p.left * 100}%;width:{p.width * 100}%;top:{p.lane * LANE_PX}px;{src ? `background-image:url('${src}')` : ''}"
+					style="left:{p.left * 100}%;width:{p.width * 100}%;top:{p.lane * LANE_PX}px;{src ? `background-image:${cssUrl(src)}, var(--grad)` : ''}"
 					onclick={() => onopen(p.row.key)} onkeydown={(e) => move(e, i)}>
 					<b>{p.row.name}</b>
 					<i class:soon={!p.row.done && countdownWarn(p.row.end, now, true)}>{right(p)}{p.clampedEnd ? ' →' : ''}</i>
@@ -71,8 +71,8 @@
 	.lanes { position: relative; }
 	.today { position: absolute; top: -26px; bottom: 0; width: 2px; background: #e8cf9c; box-shadow: 0 0 8px #e8cf9c; z-index: 3; pointer-events: none; }
 	.today span { position: absolute; top: -2px; left: 5px; font-size: 10px; color: #e8cf9c; }
-	.bar { position: absolute; height: 30px; border-radius: 7px; border: none; padding: 0; overflow: hidden; cursor: pointer;
-		background: linear-gradient(120deg, rgba(120, 130, 180, 0.35), rgba(60, 70, 110, 0.35)) center 30% / cover;
+	.bar { --grad: linear-gradient(120deg, rgba(120, 130, 180, 0.35), rgba(60, 70, 110, 0.35)); position: absolute; height: 30px; border-radius: 7px; border: none; padding: 0; overflow: hidden; cursor: pointer;
+		background: var(--grad) center 30% / cover;
 		color: #fff; text-align: left; }
 	.bar::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(7, 10, 20, 0.85), rgba(7, 10, 20, 0.35) 55%, rgba(7, 10, 20, 0.1)); }
 	.bar b { position: absolute; left: 8px; top: 7px; z-index: 1; font-size: 12px; white-space: nowrap; text-shadow: 0 1px 2px #000; }

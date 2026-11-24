@@ -22,7 +22,7 @@ test('inventory To farm strip lists short materials; backpack shows plain counts
 	await expect(page.getByTestId('tile-104302').locator('.count')).not.toContainText('/');
 	await expect(page.getByTestId('tile-104003')).toContainText('—');      // met, no scan: unknown
 	await expect(page.getByTestId('tile-104003')).toHaveClass(/dim/);
-	await expect(page.getByTestId('scan-hint')).toBeVisible();
+	await expect(page.getByTestId('scan-hint')).toHaveCount(0);   // GOOD import is disabled on the seeded server
 	await expect(page.getByRole('button', { name: 'To farm' })).toHaveCount(0);
 	await page.getByLabel('Search materials').fill('Freedom');
 	await expect(strip).toHaveCount(0);

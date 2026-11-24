@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { api, errorMessage } from './api';
-	import { imgSrc } from './img';
+	import { cssUrl, imgSrc } from './img';
 	import type { HistoryPhase, HistoryVersion } from './types';
 
 	let q = $state('');
@@ -11,6 +11,7 @@
 	let total = $state(0);
 	let loading = $state(false);
 	let toast = $state<string | null>(null);
+	let failed = $state(false);
 	let sentinel = $state<HTMLDivElement>();
 	let request = 0;
 	const more = $derived(versions.length < total);
@@ -24,6 +25,7 @@
 	$effect(() => {
 		void query;
 		versions = [];
+		failed = false;
 		page = 0;
 		total = 0;
 		const forQuery = query;
@@ -45,10 +47,13 @@
 		try {
 			const res = await api.bannerHistory(forQuery, page + 1);
 			if (mine !== request) return;
+			toast = null;
+			failed = false;
 			versions = [...versions, ...res.versions];
 			page = res.page;
 			total = res.total_versions;
 		} catch (e) {
+			if (mine === request) failed = true;
 			if (mine === request) toast = `Could not load banner history: ${errorMessage(e)}`;
 		} finally {
 			if (mine === request) loading = false;
@@ -62,7 +67,7 @@
 
 <section class="panel" data-testid="banner-history">
 	<h2>Banner history</h2>
-	{#if toast}<div class="toast error">{toast} <button type="button" onclick={() => (toast = null)}>Dismiss</button></div>{/if}
+	{#if toast && !(failed && versions.length === 0)}<div class="toast error">{toast} <button type="button" onclick={() => (toast = null)}>Dismiss</button></div>{/if}
 	<input class="search" placeholder="Search banner or item" bind:value={q} aria-label="Search banners" />
 	{#each versions as v (v.version)}
 		<div class="version" data-testid="version-{v.version}">
@@ -72,7 +77,7 @@
 					<div class="phase" class:upcoming={p.upcoming} data-testid="phase">
 						<h5>Phase {i + 1} · {day(p.start)} – {day(p.end)}{#if p.upcoming} <span class="tag">upcoming</span>{/if}</h5>
 						{#if p.upcoming}
-							{#if imgSrc(p.image)}<div class="strip" style="background-image:url('{imgSrc(p.image)}')"></div>{/if}
+							{#if imgSrc(p.image)}<div class="strip" style="background-image:{cssUrl(imgSrc(p.image) ?? '')}, var(--grad)"></div>{/if}
 							<div class="muted">{p.banners.map((b) => b.name).join(' · ')}</div>
 						{:else}
 							<div class="names muted">{p.banners.map((b) => b.name).join(' · ')}</div>
@@ -98,7 +103,9 @@
 			</div>
 		</div>
 	{:else}
-		{#if !loading}<p class="muted">No banners match.</p>{/if}
+		{#if failed && !loading}
+			<p class="error">{toast ?? 'Could not load banner history.'} <button type="button" onclick={() => loadNext(query)}>Retry</button></p>
+		{:else if !loading}<p class="muted">No banners match.</p>{/if}
 	{/each}
 	{#if more}
 		<div bind:this={sentinel}></div>
@@ -124,5 +131,5 @@
 	.tag { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--panel); margin-right: 6px; }
 	.you { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; background: rgba(142, 197, 255, 0.18); font-size: 11px; }
 	.you.got { background: rgba(232, 207, 156, 0.25); color: #f3d9a6; }
-	.strip { height: 60px; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 6px; }
+	.strip { --grad: linear-gradient(120deg, rgba(120, 130, 180, 0.35), rgba(60, 70, 110, 0.35)); height: 60px; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 6px; }
 </style>

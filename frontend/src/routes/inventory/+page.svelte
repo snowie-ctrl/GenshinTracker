@@ -96,6 +96,7 @@
 			.filter((c) => c.shown.length > 0)
 	);
 	const farm = $derived((data?.categories ?? []).flatMap((c) => c.materials.filter((m) => m.to_farm > 0)));
+	const needsAny = $derived((data?.categories ?? []).some((c) => c.materials.some((m) => m.state !== 'unneeded')));
 	const searching = $derived(query.trim().length > 0);
 </script>
 
@@ -135,7 +136,7 @@
 		{#if data.gaps.skipped.length}
 			<p class="muted">{data.gaps.skipped.join(', ')} planning isn't supported yet.</p>
 		{/if}
-		{#if !data.good}<p class="muted" data-testid="scan-hint">Import a GOOD scan to see every count.</p>{/if}
+		{#if goodEnabled && !data.good}<p class="muted" data-testid="scan-hint">Import a GOOD scan to see every count.</p>{/if}
 		{#if !searching}
 			<section class="panel" data-testid="to-farm">
 				<h2>To farm{#if farm.length} · {farm.length} material{farm.length === 1 ? '' : 's'}{/if}</h2>
@@ -147,6 +148,8 @@
 							</MaterialTile>
 						{/each}
 					</div>
+				{:else if gapsSettled(data.gaps) && !needsAny}
+					<p class="muted">Set characters to Build to plan farming.</p>
 				{:else if gapsSettled(data.gaps)}
 					<p class="muted">Nothing to farm ✓</p>
 				{:else}
