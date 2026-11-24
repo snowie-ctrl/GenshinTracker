@@ -38,3 +38,17 @@ test('a stored Needed filter opens on All', async ({ page }) => {
 	await expect(page.getByTestId('tile-100055')).toBeVisible();           // unneeded tile still listed
 	await page.evaluate(() => localStorage.removeItem('gt.inventory.filter'));
 });
+
+test('Serenitea Pot card is the last backpack card, faded without a scan, searchable', async ({ page }) => {
+	await page.goto('/inventory');
+	const card = page.getByTestId('category-teapot');
+	await expect(card.getByRole('heading')).toHaveText('Serenitea Pot: wood, fabric & dyes');
+	await expect(page.locator('section[data-testid^="category-"]').last()).toHaveAttribute('data-testid', 'category-teapot');
+	await expect(card.getByTestId('tile-101301')).toContainText('—');       // Birch Wood, no scan
+	await expect(card.getByTestId('tile-101301')).toHaveClass(/dim/);
+	await expect(page.getByTestId('to-farm').getByTestId('farm-101301')).toHaveCount(0);
+	await page.getByLabel('Search materials').fill('Birch');
+	await expect(page.getByTestId('tile-101301')).toBeVisible();
+	await expect(page.getByTestId('tile-101401')).toHaveCount(0);          // Fabric filtered out
+	await page.getByLabel('Search materials').fill('');
+});
