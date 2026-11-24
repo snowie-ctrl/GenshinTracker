@@ -120,3 +120,15 @@ def test_devseed_stores_a_kit_per_character(tmp_path):
         assert [t["role"] for t in k["talents"]] == ["normal", "skill", "burst"]
         assert len(k["constellations"]) == 6 and k["constellations"][2]["raises"] == "skill"
     engine.dispose()
+
+
+def test_devseed_artifact_domains(tmp_path):
+    seed(tmp_path)
+    with make_client(Paths(tmp_path)) as client:
+        block = client.get("/api/dashboard").json()["artifact_domains"]
+        furina = client.get("/api/characters/furina").json()
+    assert [d["entrance"] for d in block["domains"]] == ["Clear Pool and Mountain Cavern"]
+    sets = {s["name"]: [c["slug"] for c in s["characters"]] for s in block["domains"][0]["sets"]}
+    assert sets == {"Bloodstained Chivalry": ["neuvillette"], "Noblesse Oblige": ["furina"]}   # Bennett ticked done
+    assert [(o["name"], [c["slug"] for c in o["characters"]]) for o in block["other"]] == [("Gladiator's Finale", ["furina"])]
+    assert furina["artifact_check"]["status"] == "missing"

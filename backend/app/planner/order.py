@@ -21,12 +21,15 @@ def _next_priority(session: Session) -> int:
 
 
 def apply_goal(session: Session, row: CharacterGoal, new_goal: str) -> None:
-    """Change a goal. Entering Build goes to the end of the order; leaving Build forgets the place."""
+    """Change a goal. Entering Build goes to the end of the order; leaving Build forgets the place.
+    Leaving Build also clears the Artifacts done tick (sub-project 8)."""
     if new_goal == row.goal:
         return
     priority = _next_priority(session) if new_goal == BUILD else None
     row.goal = new_goal
     row.priority = priority
+    if new_goal != BUILD:
+        row.artifacts_done = False
 
 
 def set_order(session: Session, order: list[int]) -> None:

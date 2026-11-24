@@ -1,0 +1,19 @@
+[
+  {"id": 5101, "name": "Domain of Blessing: Stone Chamber I", "regionName": "Liyue", "entranceName": "Clear Pool and Mountain Cavern",
+   "domainType": "UI_ABYSSUS_RELIC", "recommendedLevel": 30, "recommendedElements": ["Cryo"],
+   "rewardPreview": [{"id": 202, "name": "Mora", "count": 1000}, {"id": 400020, "name": "Noblesse Oblige", "rarity": 4}]},
+  {"id": 5103, "name": "Domain of Blessing: Stone Chamber III", "regionName": "Liyue", "entranceName": "Clear Pool and Mountain Cavern",
+   "domainType": "UI_ABYSSUS_RELIC", "recommendedLevel": 81, "recommendedElements": ["Hydro", "Pyro"],
+   "rewardPreview": [{"id": 202, "name": "Mora", "count": 2525}, {"id": 400030, "name": "Bloodstained Chivalry", "rarity": 5},
+                     {"id": 400031, "name": "Noblesse Oblige", "rarity": 5}, {"id": 400032, "name": "Noblesse Oblige", "rarity": 5}]},
+  {"id": 5102, "name": "Domain of Blessing: Stone Chamber II", "regionName": "Liyue", "entranceName": "Clear Pool and Mountain Cavern",
+   "domainType": "UI_ABYSSUS_RELIC", "recommendedLevel": 59, "recommendedElements": ["Hydro"],
+   "rewardPreview": [{"id": 400025, "name": "Noblesse Oblige", "rarity": 4}]},
+  {"id": 5006, "name": "Domain of Blessing: Fires of Purification VI", "regionName": "Mondstadt", "entranceName": "Midsummer Courtyard",
+   "domainType": "UI_ABYSSUS_RELIC", "recommendedLevel": 90, "recommendedElements": ["Pyro"],
+   "rewardPreview": [{"id": 400108, "name": "Thundering Fury", "rarity": 5}, {"id": 400073, "name": "Thundersoother", "rarity": 5}]},
+  {"id": 5201, "name": "Domain of Blessing: Broken Tier I", "domainType": "UI_ABYSSUS_RELIC", "recommendedLevel": 20},
+  {"id": 4213, "name": "Domain of Mastery: Forsaken Rift I", "regionName": "Mondstadt", "entranceName": "Forsaken Rift",
+   "domainType": "UI_ABYSSUS_AVATAR_PROUD", "recommendedLevel": 20, "recommendedElements": [],
+   "rewardPreview": [{"id": 104301, "name": "Teachings of Freedom", "rarity": 2}]}
+]

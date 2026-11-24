@@ -61,7 +61,7 @@ function char(id: number, goal: Character['goal'], name = `C${id}`): Character {
 	return {
 		id, slug: `c${id}`, name, rarity: 4, element: 'Pyro', weapon_type: 'Sword', icon: null, splash: null,
 		owned: true, level: 80, constellation: 0, friendship: 10, talents: null, weapon: null, goal,
-		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, priority: null, team_tags: [], release_at: null
+		targets: null, status: 'obtained', prefarming: false, progress: null, planned_weapon_id: null, artifact_target: null, artifacts_done: false, priority: null, team_tags: [], release_at: null
 	};
 }
 

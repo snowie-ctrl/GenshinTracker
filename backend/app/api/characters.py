@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from app.context import AppContext, get_ctx
 from app.api.planner import gaps_for, planner_view
 from app.api.traveler import traveler_payload
-from app.db.models import (CharacterGoal, GameCharacter, GameWeapon, OwnedArtifact, OwnedCharacter,
+from app.artifacts.gear import check_for
+from app.db.models import (CharacterGoal, GameArtifactSet, GameCharacter, GameWeapon, OwnedArtifact, OwnedCharacter,
                            TravelerElement)
 from app.domain import Current, Targets, derive_status, progress, resolve_targets
 from app.gamedata.kit import load_kit, yatta_key
@@ -17,7 +18,7 @@ from app.gamedata.traveler import is_traveler
 from app.gamedata.yatta import splash_for
 from app.planner.characters import character_shortfall
 from app.planner.order import apply_goal
-from app.schemas import TargetsIn
+from app.schemas import ArtifactTargetIn, TargetsIn
 from app.settings.store import get_setting
 from app.targets import defaults_for, stored_targets, write_targets
 from app.teams.store import memberships
@@ -31,6 +32,8 @@ class GoalIn(BaseModel):
     goal: Literal["none", "want", "build"] | None = None
     targets: TargetsIn | None = None
     planned_weapon_id: int | None = None
+    artifact_target: ArtifactTargetIn | None = None
+    artifacts_done: bool | None = None
 
 
 def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_row: CharacterGoal | None) -> dict:
@@ -71,6 +74,8 @@ def character_payload(g: GameCharacter | None, o: OwnedCharacter | None, goal_ro
         "prefarming": prefarming,
         "progress": prog,
         "planned_weapon_id": goal_row.planned_weapon_id if goal_row else None,
+        "artifact_target": goal_row.artifact_target if goal_row else None,
+        "artifacts_done": bool(goal_row.artifacts_done) if goal_row else False,
     }
 
 
@@ -126,6 +131,7 @@ def get_character(slug: str, ctx: AppContext = Depends(get_ctx)) -> dict:
             payload["stats"] = o.stats if o is not None else []
             payload["planned_weapon"] = planned_weapon(s, r, o)
             payload["teams"] = memberships(s).get(payload["id"], [])
+            payload["artifact_check"] = check_for(s, payload["id"], payload["artifact_target"])
             if is_traveler(payload["id"]):
                 payload["traveler"] = traveler_payload(s.get(TravelerElement, payload["id"]), payload["id"],
                                                        current_element_id(s))
@@ -175,6 +181,15 @@ async def set_goal(character_id: int, body: GoalIn, ctx: AppContext = Depends(ge
                 if w is None or (g is not None and w.weapon_type != g.weapon_type):
                     raise HTTPException(400, "That weapon does not fit this character.")
             row.planned_weapon_id = wid
+        if "artifact_target" in body.model_fields_set:
+            t = body.artifact_target
+            if t is not None:
+                unknown = [e.set_id for e in t.sets if s.get(GameArtifactSet, e.set_id) is None]
+                if unknown:
+                    raise HTTPException(422, f"Unknown artifact set: {', '.join(map(str, unknown))}")
+            row.artifact_target = None if t is None else t.model_dump()
+        if body.artifacts_done is not None:
+            row.artifacts_done = body.artifacts_done if row.goal == "build" else False
         changed = state() != before
         row.updated_at = utcnow()
         s.flush()

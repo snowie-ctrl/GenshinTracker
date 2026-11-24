@@ -1,4 +1,5 @@
 import type {
+	ArtifactSetOption, GoalBody,
 	DeleteTeamResponse,
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
 	GoodArtifact, GoodStatus, GoodSummary, GoodWeapon, ImportStatus, Inventory, KitResponse, MapKey, MapsResponse, Pool, PoolSummary, PriorityResult, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
@@ -47,8 +48,9 @@ export const api = {
 	characterKit: (slug: string) => request<KitResponse>('GET', `/characters/${encodeURIComponent(slug)}/kit`),
 	setTraveler: (id: number, body: { unlocked?: boolean; talents?: Talents; constellation?: number }) =>
 		request<TravelerInfo>('PUT', `/traveler/${id}`, body),
-	setGoal: (id: number, body: { goal?: Goal; targets?: Targets; planned_weapon_id?: number | null }) =>
+	setGoal: (id: number, body: GoalBody) =>
 		request<Character>('PUT', `/characters/${id}/goal`, body),
+	artifactSets: () => request<ArtifactSetOption[]>('GET', '/artifact-sets'),
 	inventory: () => request<Inventory>('GET', '/inventory'),
 	weapons: (type: string) => request<WeaponOption[]>('GET', `/weapons?type=${encodeURIComponent(type)}`),
 	setBossDone: (name: string, done: boolean) =>

@@ -118,3 +118,16 @@ def test_artifact_sets_match_set_line():
 
 def test_artifact_sets_unknown_icon():
     assert artifact_sets(["Z"] * 4, ICONS) == [{"name": "Z", "icon": None, "pieces": 4}]
+
+
+def test_lower_from_build_clears_artifacts_done_keeps_target(session_factory):
+    target = {"sets": [{"set_id": 15007, "pieces": 4}], "main": {}, "subs": []}
+    with session_factory.begin() as s:
+        add_goal(s, 1, "build")
+        row = s.get(CharacterGoal, 1)
+        row.artifact_target, row.artifacts_done = target, True
+    with session_factory.begin() as s:
+        assert lower_from_build(s, [1], None) == [1]
+    with session_factory() as s:
+        row = s.get(CharacterGoal, 1)
+        assert row.goal == "none" and row.artifacts_done is False and row.artifact_target == target

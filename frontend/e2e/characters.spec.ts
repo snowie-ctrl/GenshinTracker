@@ -148,7 +148,7 @@ test('Build tab edits targets and keeps them', async ({ page }) => {
 	await page.reload();
 	await expect(page.getByLabel('Target elemental skill')).toHaveValue('10');
 	await expect(page.getByLabel('Target constellation')).toHaveValue('6');
-	await expect(page.getByTestId('build-artifacts-slot')).toContainText('sub-project 8');
+	await expect(page.getByTestId('build-artifacts')).toContainText('Substat priority');
 	await expect(page.getByTestId('build-suggestions-slot')).toContainText('sub-project 9');
 	await page.getByLabel('Target elemental skill').selectOption(before);
 	await page.getByLabel('Target constellation').selectOption('1');

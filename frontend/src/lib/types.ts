@@ -47,6 +47,8 @@ export interface Character {
 	prefarming: boolean;
 	progress: number | null;
 	planned_weapon_id: number | null;
+	artifact_target: ArtifactTarget | null;
+	artifacts_done: boolean;
 	priority: number | null;
 	team_tags: number[][];
 }
@@ -62,6 +64,7 @@ export interface CharacterDetail extends Character {
 	shortfall: { gaps: GapStatus; materials: CharMaterial[]; calculated: boolean } | null;
 	planned_weapon: PlannedWeapon | null;
 	teams: TeamRef[];
+	artifact_check: ArtifactCheck;
 }
 
 export interface Connection { status: 'connected' | 'expired' | 'missing'; uid: number | null }
@@ -94,6 +97,7 @@ export interface DashEvent extends EventRow { kind: 'event' }
 export interface DashReset { kind: 'reset'; id: string; key: string; name: string; end: string; done: false }
 export type DashEventItem = DashEvent | DashReset;
 export interface Dashboard {
+	artifact_domains: ArtifactDomainsView;
 	connection: Connection;
 	display_name: string;
 	notes: Notes | null;
@@ -160,6 +164,7 @@ export interface Settings {
 	display_name: string;
 	gamedata: {
 		artifact_sets: { fetched_at: string | null; last_error: string | null; count: number };
+		artifact_domains: { fetched_at: string | null; last_error: string | null; count: number; unmatched: string[] };
 		fetched_at: string | null; last_error: string | null; count: number;
 		materials: { fetched_at: string | null; last_error: string | null; count: number };
 		banners: { fetched_at: string | null; last_error: string | null; count: number; unmapped: string[] };
@@ -332,3 +337,58 @@ export interface GoodArtifact {
 	main_stat: string; substats: { key: string; value: number }[]; lock: boolean; location: string | null;
 	holder: CharRef | null;
 }
+
+export type MainSlot = 'sands' | 'goblet' | 'circlet';
+
+export interface ArtifactTarget {
+	sets: { set_id: number; pieces: 2 | 4 }[];
+	main: Record<MainSlot, string[]>;
+	subs: string[];
+}
+
+export interface ArtifactCheck {
+	status: 'none' | 'met' | 'missing';
+	sets: { set_id: number; name: string; icon: string | null; pieces: number; equipped: number }[];
+	slots: { slot: string; set_name: string; icon: string; main_stat: string; key: string | null; ok: boolean | null }[];
+	missing: string[];
+}
+
+export interface ArtifactSetOption {
+	id: number;
+	name: string;
+	icon: string | null;
+	domain: { id: number; name: string; entrance: string; region: string | null } | null;
+	source?: 'domain' | 'none' | 'unknown';
+}
+
+export interface ArtifactDomainChar {
+	id: number;
+	name: string;
+	slug: string;
+	icon: string | null;
+	pieces: number;
+	equipped: number;
+}
+
+export interface ArtifactSetRow {
+	id: number;
+	name: string;
+	icon: string | null;
+	needed: boolean;
+	characters: ArtifactDomainChar[];
+}
+
+export interface ArtifactDomainsView {
+	domains: { id: number; name: string; entrance: string; region: string | null; elements: string[]; sets: ArtifactSetRow[] }[];
+	other: ArtifactSetRow[];
+	hint: string | null;
+	sources_known: boolean;
+}
+
+export type GoalBody = {
+	goal?: Goal;
+	targets?: Targets;
+	planned_weapon_id?: number | null;
+	artifact_target?: ArtifactTarget | null;
+	artifacts_done?: boolean;
+};

@@ -6,6 +6,7 @@ from app.api.events import events_payload
 from app.api.planner import gaps_for, planner_view, region
 from app.api.wishes import pity_lines
 from app.context import AppContext, get_ctx
+from app.dashboard.artifacts import artifact_domains_view
 from app.dashboard.view import banners_with_pity, build_progress, event_list, timers
 from app.db.models import LiveNotes, WeeklyBossDone
 from app.events.view import ending_within
@@ -65,6 +66,7 @@ def dashboard(ctx: AppContext = Depends(get_ctx)) -> dict:
                 "discounts_max": notes.weekly_discounts_max if notes is not None else None,
                 "bosses": weekly_bosses(data, done, index, rank),
             },
+            "artifact_domains": artifact_domains_view(s),
             **sections,
             "live_banners": banners_with_pity(ev["banners"]["current"], pity_lines(results)),
             "events": event_list(ev["events"], ev["resets"]),

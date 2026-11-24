@@ -24,6 +24,8 @@ def test_settings_defaults(paths):
     assert body["gamedata"] == {"fetched_at": None, "last_error": None, "count": 0,
                                "materials": {"fetched_at": None, "last_error": None, "count": 0},
                                "artifact_sets": {"fetched_at": None, "last_error": None, "count": 0},
+                               "artifact_domains": {"fetched_at": None, "last_error": None, "count": 0,
+                                                    "unmatched": []},
                                "banners": {"fetched_at": None, "last_error": None, "count": 0,
                                            "unmapped": []}}
 

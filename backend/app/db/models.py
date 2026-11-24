@@ -80,6 +80,17 @@ class GameArtifactSet(Base):
     sort_order: Mapped[int] = mapped_column(Integer)
 
 
+class GameArtifactDomain(Base):
+    """An artifact domain from genshin-db and the two 5★ sets it drops (sub-project 8)."""
+    __tablename__ = "game_artifact_domain"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(String)
+    entrance: Mapped[str] = mapped_column(String)
+    region: Mapped[str | None] = mapped_column(String, nullable=True)
+    elements: Mapped[list] = mapped_column(JSON)
+    set_ids: Mapped[list] = mapped_column(JSON)
+
+
 class GameBanner(Base):
     __tablename__ = "game_banner"
     key: Mapped[str] = mapped_column(String, primary_key=True)        # f"{pool}|{start}|{order}"
@@ -210,6 +221,8 @@ class CharacterGoal(Base):
     target_refinement: Mapped[int | None] = mapped_column(Integer, nullable=True)      # sub-project 5
     planned_weapon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     priority: Mapped[int | None] = mapped_column(Integer, nullable=True)   # Build order, 1 = first (sub-project 3)
+    artifact_target: Mapped[dict | None] = mapped_column(JSON, nullable=True)        # sub-project 8
+    artifacts_done: Mapped[bool] = mapped_column(Boolean, default=False)             # sub-project 8
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
