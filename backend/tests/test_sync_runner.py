@@ -5,7 +5,7 @@ import pytest
 
 from app.db.models import CharacterGoal, GapRun, LiveNotes, MaterialTotal, OwnedCharacter, SyncRun
 from app.settings.store import get_setting, set_setting
-from app.sync.hoyolab import AuthExpired, HoyolabError, NoInventoryData
+from app.sync.hoyolab import AuthExpired, HoyolabError, NoInventoryData, RateLimited
 from app.sync.runner import SyncManager, SyncTooSoon
 from fakes import Clock, FakeSource, make_roster
 from app.timeutil import utcnow
@@ -455,3 +455,50 @@ def test_last_successful_ignores_gaps_runs(session_factory):
         s.add(SyncRun(started_at=START, finished_at=START, trigger="gaps", parts={"roster": {"ok": True}}))
     with session_factory() as s:
         assert last_successful(s).trigger == "manual"
+
+
+async def test_calculator_rejecting_one_character_skips_it(paths, session_factory):
+    """HoYoLAB fails the whole batch for one character it rejects (seen with brand-new characters):
+    find it one by one, then calculate everyone else in one batch."""
+    from app.db.models import MaterialGap
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    build_goal(session_factory, 10000089)
+    source = FakeSource(reject={10000089})
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    await m.wait()
+    part = last_run(session_factory).parts["gaps"]
+    assert part == {"ok": True, "count": 1, "skipped": ["Furina (HoYoLAB calculator error)"]}
+    gap_calls = [c for c in source.calls if isinstance(c, tuple) and c[0] == "gaps"]
+    assert gap_calls == [("gaps", (10000032, 10000089)), ("gaps", (10000032,)), ("gaps", (10000089,)),
+                         ("gaps", (10000032,))]
+    with session_factory() as s:
+        assert {g.character_id for g in s.query(MaterialGap)} == {10000032}
+        run = s.get(GapRun, 1)
+        assert run.ok is True and run.skipped == ["Furina (HoYoLAB calculator error)"]
+
+
+async def test_calculator_rejecting_everyone_keeps_the_error(paths, session_factory):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    m = manager(paths, session_factory, FakeSource(reject={10000032}))
+    await m.request("manual")
+    await m.wait()
+    part = last_run(session_factory).parts["gaps"]
+    assert part["ok"] is False and "-500001" in part["error"]
+    with session_factory() as s:
+        assert s.get(GapRun, 1).ok is False
+
+
+@pytest.mark.parametrize("error", [RateLimited("slow down"), NoInventoryData("HoYoLAB returned no inventory data.")])
+async def test_calculator_errors_that_are_not_per_character_do_not_retry_one_by_one(paths, session_factory, error):
+    seed_game(session_factory)
+    build_goal(session_factory, 10000032)
+    build_goal(session_factory, 10000089)
+    source = FakeSource(fail={"gaps": error})
+    m = manager(paths, session_factory, source)
+    await m.request("manual")
+    await m.wait()
+    assert last_run(session_factory).parts["gaps"]["ok"] is False
+    assert [c for c in source.calls if isinstance(c, tuple) and c[0] == "gaps"] == [("gaps", (10000032, 10000089))]

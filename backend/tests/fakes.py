@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 from app.sync.chronicle import CalendarInfo, ProfileInfo, ProfileStats
 from app.sync.hoyolab import (
-    ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, TalentIds,
-    WeaponInfo,
+    ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, HoyolabError, MaterialAmount, NotesInfo, RosterEntry,
+    TalentIds, WeaponInfo,
 )
 
 WEAPON = WeaponInfo("The Flute", "https://act-webstatic.hoyoverse.com/w.png", 4, 90, 5, 1)
@@ -29,7 +29,7 @@ class FakeSource:
 
     def __init__(self, roster=None, notes=NOTES, fail=None, gate: asyncio.Event | None = None,
                  gaps: GapResult | None = None, gaps_gate: asyncio.Event | None = None,
-                 calendar=None, profile=None, challenges=None, announcements=None):
+                 calendar=None, profile=None, challenges=None, announcements=None, reject=()):
         self.roster = roster if roster is not None else [
             make_roster(10000032, name="Bennett"), make_roster(10000089, level=90, name="Furina"),
         ]
@@ -42,6 +42,7 @@ class FakeSource:
         self.profile = profile
         self.challenges = challenges
         self.announcements = announcements
+        self.reject = set(reject)  # character ids the calculator refuses (the whole batch fails)
         self.calls: list = []
 
     async def get_roster(self):
@@ -76,6 +77,8 @@ class FakeSource:
             await self.gaps_gate.wait()
         if "gaps" in self.fail:
             raise self.fail["gaps"]
+        if self.reject & {c.character_id for c in chars}:
+            raise HoyolabError("[-500001] Network error. Please try again later")
         if self.gaps is not None:
             return self.gaps
         guide = MaterialAmount(104302, "Guide to Freedom", "", 3, 9, 4)

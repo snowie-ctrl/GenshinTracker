@@ -19,12 +19,44 @@ from app.planner.requests import build_inputs, gap_requests, has_work, snapshot
 from app.settings.store import get_setting, set_setting
 from app.sync.backup import backup_db
 from app.sync.chronicle import character_ids, to_json
-from app.sync.hoyolab import AuthExpired, HoyolabSource
+from app.sync.hoyolab import (AuthExpired, GapCharacter, GapResult, HoyolabError, HoyolabSource, NoInventoryData,
+                              RateLimited)
 from app.sync.persist import (load_talent_ids, save_challenge_runs, save_details, save_gap_failure, save_gaps,
                               save_notes, save_roster, save_snapshot, save_talent_ids, unknown_character_ids)
 from app.timeutil import utcnow
 
 log = logging.getLogger(__name__)
+
+REJECTED_NOTE = "HoYoLAB calculator error"
+
+
+async def compute_gaps_skipping_rejected(source: HoyolabSource, requests: list[GapCharacter]
+                                         ) -> tuple[GapResult, list[int]]:
+    """One batch for everyone. HoYoLAB fails the whole batch when it rejects a single character (seen
+    with brand-new characters), so on such a failure try each character alone and re-run one batch with
+    those it accepts (one batch keeps the shared inventory totals right). Rate limits, missing inventory
+    and expired cookies are not per-character and are raised as they are. Returns (result, rejected ids);
+    if every character is rejected the original error is raised."""
+    try:
+        return await source.compute_gaps(requests), []
+    except (AuthExpired, RateLimited, NoInventoryData):
+        raise
+    except HoyolabError as batch_error:
+        if len(requests) < 2:
+            raise
+        accepted, rejected = [], []
+        for r in requests:
+            try:
+                await source.compute_gaps([r])
+                accepted.append(r)
+            except (AuthExpired, RateLimited, NoInventoryData):
+                raise
+            except HoyolabError:
+                rejected.append(r.character_id)
+        if not accepted:
+            raise batch_error from None
+        log.warning("Calculator rejected %d character(s); calculated the rest", len(rejected))
+        return await source.compute_gaps(accepted), rejected
 CHRONICLE_PARTS = ("calendar", "profile", "challenges")
 PARTS = ("roster", "details", "notes", "gaps", *CHRONICLE_PARTS)
 FRESH_MINUTES = 60
@@ -170,10 +202,13 @@ class SyncManager:
             if missing:
                 with self._sf.begin() as s:
                     save_talent_ids(s, cache)
-            result = await source.compute_gaps(gap_requests(work, cache)) if work else None
+            result, rejected = (await compute_gaps_skipping_rejected(source, gap_requests(work, cache))
+                                if work else (None, []))
+            names = {i.character_id: i.name for i in work}
+            skipped = [*skipped, *(f"{names[cid]} ({REJECTED_NOTE})" for cid in rejected)]
             with self._sf.begin() as s:
                 unknown = save_gaps(s, result, snap, skipped, self._clock())
-            part: dict = {"ok": True, "count": len(work)}
+            part: dict = {"ok": True, "count": len(work) - len(rejected)}
             if skipped:
                 part["skipped"] = skipped
             return part, unknown
