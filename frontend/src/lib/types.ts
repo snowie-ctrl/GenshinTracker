@@ -160,6 +160,7 @@ export interface Settings {
 	display_name: string;
 	gamedata: {
 		artifact_sets: { fetched_at: string | null; last_error: string | null; count: number };
+		artifact_domains: { fetched_at: string | null; last_error: string | null; count: number; unmatched: string[] };
 		fetched_at: string | null; last_error: string | null; count: number;
 		materials: { fetched_at: string | null; last_error: string | null; count: number };
 		banners: { fetched_at: string | null; last_error: string | null; count: number; unmapped: string[] };

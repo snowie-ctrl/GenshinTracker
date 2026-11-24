@@ -303,6 +303,14 @@
 							{settings.gamedata.artifact_sets.fetched_at ? `updated ${timeAgo(settings.gamedata.artifact_sets.fetched_at, now)}` : 'never downloaded'}
 						</p>
 						{#if settings.gamedata.artifact_sets.last_error}<p class="error">Artifact sets: {settings.gamedata.artifact_sets.last_error}</p>{/if}
+						<p>
+							{settings.gamedata.artifact_domains.count} artifact domains ·
+							{settings.gamedata.artifact_domains.fetched_at ? `updated ${timeAgo(settings.gamedata.artifact_domains.fetched_at, now)}` : 'never downloaded'}
+						</p>
+						{#if settings.gamedata.artifact_domains.last_error}<p class="error">Artifact domains: {settings.gamedata.artifact_domains.last_error}</p>{/if}
+						{#if settings.gamedata.artifact_domains.unmatched.length}
+							<p class="muted">Domain sets not matched to game data: {settings.gamedata.artifact_domains.unmatched.join(', ')}</p>
+						{/if}
 						{#if settings.gamedata.banners.unmapped.length}
 							<p class="muted">Banner items not matched to game data: {settings.gamedata.banners.unmapped.join(', ')}</p>
 						{/if}

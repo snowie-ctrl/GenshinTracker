@@ -31,6 +31,7 @@ def yatta_transport(status: int = 200, fail_details: frozenset[int] = frozenset(
     dungeon = load_fixture("yatta_daily_dungeon.json")
     weapon = load_fixture("yatta_weapon.json")
     reliquary = load_fixture("yatta_reliquary.json")
+    domains = load_fixture("genshindb_domains.json")
     banners_js = (FIXTURES / "paimon_banners.js").read_text(encoding="utf-8")
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -55,6 +56,8 @@ def yatta_transport(status: int = 200, fail_details: frozenset[int] = frozenset(
             return httpx.Response(200, json=weapon)
         if path.endswith("/reliquary"):
             return httpx.Response(200, json=reliquary)
+        if path.endswith("/api/v5/domains"):
+            return httpx.Response(200, json=domains)
         return httpx.Response(404)
 
     return httpx.MockTransport(handler)

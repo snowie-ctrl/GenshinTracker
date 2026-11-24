@@ -7,8 +7,9 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import GAMEDATA_MAX_AGE_DAYS
-from app.db.models import GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
+from app.db.models import GameArtifactDomain, GameArtifactSet, GameBanner, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
 from app.gamedata.artifacts import fetch_reliquary_list
+from app.gamedata.genshindb import fetch_domains, parse_artifact_domains
 from app.gamedata.materials import (CATEGORIES, fetch_daily_dungeon, fetch_material_catalogue,
                                     fetch_material_detail, fetch_weapon_list)
 from app.gamedata.yatta import CharacterData, fetch_avatar_list
@@ -200,6 +201,49 @@ async def refresh_artifact_sets(session_factory: sessionmaker, http: httpx.Async
     return True
 
 
+META_DOMAINS_FETCHED = "artifact_domains_fetched_at"
+META_DOMAINS_ERROR = "artifact_domains_last_error"
+META_DOMAINS_UNMATCHED = "artifact_domains_unmatched"
+
+
+def artifact_domains_need_refresh(session: Session, now: datetime) -> bool:
+    fetched = _get_meta(session, META_DOMAINS_FETCHED)
+    if not fetched or session.scalar(select(func.count()).select_from(GameArtifactDomain)) == 0:
+        return True
+    return now - datetime.fromisoformat(fetched.rstrip("Z")) > timedelta(days=GAMEDATA_MAX_AGE_DAYS)
+
+
+async def refresh_artifact_domains(session_factory: sessionmaker, http: httpx.AsyncClient,
+                                   now: datetime | None = None, force: bool = False) -> bool:
+    """genshin-db artifact domains, mapped to our set ids by name. Needs artifact sets first."""
+    now = now or utcnow()
+    with session_factory() as s:
+        if not force and not artifact_domains_need_refresh(s, now):
+            return False
+        by_name = {a.name: a.id for a in s.scalars(select(GameArtifactSet))}
+    if not by_name:
+        return False
+    try:
+        domains, unmatched = parse_artifact_domains(await fetch_domains(http), by_name)
+    except FETCH_ERRORS as e:
+        message = f"{type(e).__name__}: {e}"[:300]
+        log.warning("Artifact domain refresh failed: %s", message)
+        with session_factory.begin() as s:
+            _set_meta(s, META_DOMAINS_ERROR, message)
+        return False
+    if unmatched:
+        log.info("Artifact domain sets not matched to game data: %s", ", ".join(unmatched))
+    with session_factory.begin() as s:
+        s.execute(delete(GameArtifactDomain))
+        for d in domains:
+            s.add(GameArtifactDomain(id=d.id, name=d.name, entrance=d.entrance, region=d.region,
+                                     elements=d.elements, set_ids=d.set_ids))
+        _set_meta(s, META_DOMAINS_FETCHED, iso(now))
+        _set_meta(s, META_DOMAINS_ERROR, None)
+        _set_meta(s, META_DOMAINS_UNMATCHED, unmatched)
+    return True
+
+
 META_BANNERS_FETCHED = "banners_fetched_at"
 META_BANNERS_ERROR = "banners_last_error"
 META_BANNERS_UNMAPPED = "banners_unmapped"
@@ -248,8 +292,9 @@ async def refresh_all(session_factory: sessionmaker, http: httpx.AsyncClient,
     characters = await refresh(session_factory, http, now=now, force=force)
     materials = await refresh_materials(session_factory, http, now=now, force=force)
     sets = await refresh_artifact_sets(session_factory, http, now=now, force=force)
+    domains = await refresh_artifact_domains(session_factory, http, now=now, force=force or sets)
     banners = await refresh_banners(session_factory, http, now=now, force=force or characters or materials)
-    return characters or materials or sets or banners
+    return characters or materials or sets or banners or domains
 
 
 META_UNKNOWN_REFRESH = "unknown_ids_refresh"
@@ -286,6 +331,12 @@ def gamedata_status(session: Session) -> dict:
             "fetched_at": _get_meta(session, META_SETS_FETCHED),
             "last_error": _get_meta(session, META_SETS_ERROR),
             "count": session.scalar(select(func.count()).select_from(GameArtifactSet)) or 0,
+        },
+        "artifact_domains": {
+            "fetched_at": _get_meta(session, META_DOMAINS_FETCHED),
+            "last_error": _get_meta(session, META_DOMAINS_ERROR),
+            "count": session.scalar(select(func.count()).select_from(GameArtifactDomain)) or 0,
+            "unmatched": _get_meta(session, META_DOMAINS_UNMATCHED) or [],
         },
         "banners": {
             "fetched_at": _get_meta(session, META_BANNERS_FETCHED),

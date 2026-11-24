@@ -44,6 +44,7 @@ async def test_refresh_stores_rows_and_meta(session_factory):
         assert status == {"fetched_at": "2026-11-19T12:00:00Z", "last_error": None, "count": 7,
                       "materials": {"fetched_at": None, "last_error": None, "count": 0},
                       "artifact_sets": {"fetched_at": None, "last_error": None, "count": 0},
+                      "artifact_domains": {"fetched_at": None, "last_error": None, "count": 0, "unmatched": []},
                       "banners": {"fetched_at": None, "last_error": None, "count": 0, "unmapped": []}}
 
 
