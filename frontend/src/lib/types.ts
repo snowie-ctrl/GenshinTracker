@@ -109,13 +109,43 @@ export interface Dashboard {
 	calendar_fetched_at: string | null;
 	gaps: GapStatus;
 }
-export interface StatTile { label: string; value: number }
-export interface RegionView { id: number; name: string; explored: number; reputation: number | null; offerings: { name: string; level: number }[] }
-export interface ProfileView { ar: number; days_active: number; tiles: StatTile[]; chests: StatTile[]; oculi: StatTile[]; regions: RegionView[] }
+export interface StatTile { key: string; label: string; value: number | string; detail?: { label: string; value: number }[] }
+export interface RegionView {
+	id: number; name: string; explored: number; reputation: number | null; icon: string | null;
+	offerings: { name: string; level: number; icon: string | null }[]; areas: { name: string; explored: number }[];
+}
+export interface TeapotView {
+	level: number; comfort: number; comfort_name: string; comfort_icon: string; items: number; visitors: number;
+	realms: { name: string; icon: string }[];
+}
+export interface ProfileHeaderView { name: string; ar: number; days_active: number; achievements: number }
+export interface ProfileView {
+	header: ProfileHeaderView; tiles: StatTile[]; regions: RegionView[]; teapot: TeapotView | null;
+	bosses: { name: string; kills: number }[];
+}
+export interface RosterView {
+	total: number; elements: Record<string, number>; weapon_types: Record<string, number>;
+	rarity: { '5': number; '4': number }; constellations: number; c6: number;
+}
+export interface ShowcaseArtifact {
+	slot: number; set_name: string; icon: string; rarity: number; level: number; main_stat: string; substats: string[];
+}
+export interface ShowcaseEntry {
+	id: number; slug: string | null; name: string; rarity: number | null; element: string | null; icon: string | null;
+	level: number; constellation: number; friendship: number;
+	talents: { normal: number | null; skill: number | null; burst: number | null };
+	weapon: { name: string; icon: string; level: number; refinement: number; rarity: number };
+	stats: { name: string; value: string }[]; artifacts: ShowcaseArtifact[]; sets: string; crit_value: number;
+}
+export interface OwnedOption { id: number; name: string; icon: string | null }
 export interface TeamChar { id: number; name: string; icon: string | null }
 export interface ChallengeRunView { season: string; start: string | null; end: string | null; summary: Record<string, number | string>; teams: TeamChar[][] }
 export interface ChallengeViews { abyss: { current: ChallengeRunView | null; past: ChallengeRunView[] }; theater: { current: ChallengeRunView | null; past: ChallengeRunView[] }; stygian: { current: ChallengeRunView | null; past: ChallengeRunView[] } }
-export interface ProfileResponse { connected: boolean; fetched_at: string | null; error: string | null; profile: ProfileView | null; challenges: ChallengeViews }
+export interface ProfileResponse {
+	connected: boolean; fetched_at: string | null; error: string | null; profile: ProfileView | null;
+	roster: RosterView; showcase: ShowcaseEntry[]; showcase_mode: 'auto' | 'custom'; owned: OwnedOption[];
+	challenges: ChallengeViews;
+}
 export type MapKey = 'hoyolab' | 'appsample';
 export interface MapInfo { key: MapKey; name: string; url: string; allowed: boolean | null }
 export interface MapsResponse { maps: MapInfo[]; default_map: MapKey }

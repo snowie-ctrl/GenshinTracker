@@ -2,7 +2,7 @@ import type {
 	DeleteTeamResponse,
 	BannerHistoryPage, EventsResponse, CacheStatus, Character, CharacterDetail, ConnectResponse, Dashboard, Goal, HistoryFilters, HistoryPage,
 	GoodArtifact, GoodStatus, GoodSummary, GoodWeapon, ImportStatus, Inventory, KitResponse, MapKey, MapsResponse, Pool, PoolSummary, PriorityResult, ProfileResponse, SaveTeamResponse, Settings, SyncStatus, Tag, TagWithCount, Targets,
-	Talents, TeamBody, TeamResponse, TeamsResponse, TravelerInfo, WeaponOption, WishSummary
+	ShowcaseEntry, Talents, TeamBody, TeamResponse, TeamsResponse, TravelerInfo, WeaponOption, WishSummary
 } from './types';
 import { historyQuery } from './wishes';
 
@@ -56,6 +56,8 @@ export const api = {
 	dashboard: () => request<Dashboard>('GET', '/dashboard'),
 	setPriority: (order: number[]) => request<PriorityResult>('PUT', '/priority', { order }),
 	profile: () => request<ProfileResponse>('GET', '/profile'),
+	setShowcase: (ids: number[]) =>
+		request<{ showcase: ShowcaseEntry[]; showcase_mode: 'auto' | 'custom' }>('PUT', '/profile/showcase', { ids }),
 	settings: () => request<Settings>('GET', '/settings'),
 	saveSettings: (body: { sync_interval_minutes?: number; game_install_path?: string; default_map?: MapKey; good_import_enabled?: boolean; background_animated?: boolean; display_name?: string }) =>
 		request<Settings>('PUT', '/settings', body),
