@@ -9,6 +9,7 @@ from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
 from app.db.models import (ChallengeRun, CharacterGoal, CharacterStatRecommendation, EventLog, GameArtifactDomain, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
+from app.gamedata.service import MATERIAL_CATALOGUE_VERSION, META_MAT_VERSION
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
 from app.sync.persist import save_details, save_gaps, save_notes, save_roster
@@ -55,6 +56,7 @@ STAT_RECOMMENDATIONS = {
 WEAPON = WeaponInfo("Favonius Sword", "https://enka.network/ui/UI_EquipIcon_Sword_Zephyrus.png", 4, 90, 3, 11401)
 
 # (id, name, category, rarity, craft_from, yatta_type, sources)
+WILD_SOURCE = {"kind": "text", "name": "Found in the wild", "days": []}
 MATERIALS = [
     (202, "Mora", "exp", 3, None, "commonCurrency", []),
     (104003, "Hero's Wit", "exp", 4, None, "characterEXPMaterial", []),
@@ -68,6 +70,10 @@ MATERIALS = [
     (113003, "Dvalin's Plume", "weekly", 5, None, "characterLevelUpMaterial",
      [{"kind": "weekly_boss", "name": "Stormterror", "days": []}]),
     (104319, "Crown of Insight", "special", 5, None, "characterTalentMaterial", []),
+    (101301, "Birch Wood", "teapot", 1, None, "material", [WILD_SOURCE]),
+    (101302, "Cuihua Wood", "teapot", 1, None, "material", [WILD_SOURCE]),
+    (101401, "Fabric", "teapot", 1, None, "material", [WILD_SOURCE]),
+    (101402, "Red Dye", "teapot", 1, None, "material", [WILD_SOURCE]),
 ]
 FREEDOM_SOURCE = {"kind": "domain", "name": "Domain of Mastery: Forsaken Rift", "days": [0, 1, 2, 3, 4, 5, 6]}
 WEAPONS = [(11401, "Favonius Sword", "UI_EquipIcon_Sword_Zephyrus", 4, "Sword"),
@@ -192,6 +198,7 @@ def seed(root: Path) -> None:
         s.merge(GameMeta(key="artifact_sets_fetched_at", value=iso(now)))
         s.merge(GameMeta(key="artifact_domains_fetched_at", value=iso(now)))
         s.merge(GameMeta(key="materials_fetched_at", value=iso(now)))
+        s.merge(GameMeta(key=META_MAT_VERSION, value=MATERIAL_CATALOGUE_VERSION))
         s.flush()
         result = GapResult(
             per_character={

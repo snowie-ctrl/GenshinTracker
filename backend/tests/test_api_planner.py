@@ -189,3 +189,20 @@ def test_sync_status_runs_exclude_gaps_only_runs(paths):
     with make_client(paths) as client:
         runs = client.get("/api/sync/status").json()["runs"]
     assert [r["trigger"] for r in runs] == ["manual"]
+
+
+def test_inventory_teapot_group_is_last_catalogue_group(paths):
+    sf = setup(paths)
+    with sf.begin() as s:
+        for mid, name in [(101301, "Birch Wood"), (101401, "Fabric")]:
+            s.add(GameMaterial(id=mid, name=name, icon=f"UI_ItemIcon_{mid}", rarity=1, yatta_type="material",
+                               category="teapot", family=mid, craft_from=None, sources=[], sort_order=mid,
+                               detail_fetched=True))
+    with make_client(paths) as client:
+        body = client.get("/api/inventory").json()
+    assert body["categories"][-1]["key"] == "teapot"
+    teapot = body["categories"][-1]
+    assert teapot["label"] == "Serenitea Pot: wood, fabric & dyes"
+    assert [m["id"] for m in teapot["materials"]] == [101301, 101401]
+    assert all(m["state"] == "unneeded" and m["to_farm"] == 0 and m["characters"] == []
+               for m in teapot["materials"])
