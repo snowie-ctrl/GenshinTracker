@@ -1,7 +1,7 @@
 # Ad Astra Sub-project 7 — Wishes and Profile
 
 **Date:** 2026-11-23
-**Status:** Draft, awaiting user review
+**Status:** Approved 2026-11-23
 **Frame:** `2026-11-22-ad-astra-revision-overview-design.md` (sub-project 7 of 10). Builds on Foundation (`2026-11-22-ad-astra-foundation-design.md`) for the glass look, icons and pills; replaces the Wishes page layout from Phase 3 (`2026-11-20-phase3-wishes-design.md`) and the Profile page from Phase 5 (`2026-11-21-phase5-events-profile-map-design.md`).
 **Scope:** Wishes becomes a data-analysis page: pity tiles with a soft-pity mark, an average-pity mark and a guarantee arrow, then one banner filter that drives a set of charts (pulls over time, luck, element and weapon-type spiders, pity histogram, primogems spent) and the 5★ list. Profile becomes an enka.network-style page built only from HoYoLAB data the app already fetches: a hero header, a user-chosen showcase of up to 8 characters with a detail panel, icon stat tiles, exploration rings, roster charts, teapot, boss kills and the challenge cards. No new external service; no migration.
 
