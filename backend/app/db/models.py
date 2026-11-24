@@ -91,6 +91,14 @@ class GameArtifactDomain(Base):
     set_ids: Mapped[list] = mapped_column(JSON)
 
 
+class CharacterStatRecommendation(Base):
+    """HoYoLAB's recommended artifact main stats and substats for a character, in our stat keys (sub-project 9)."""
+    __tablename__ = "stat_recommendation"
+    character_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    data: Mapped[dict] = mapped_column(JSON)
+    synced_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class GameBanner(Base):
     __tablename__ = "game_banner"
     key: Mapped[str] = mapped_column(String, primary_key=True)        # f"{pool}|{start}|{order}"

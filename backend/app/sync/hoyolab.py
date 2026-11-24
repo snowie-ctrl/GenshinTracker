@@ -3,6 +3,7 @@ so a library or endpoint change is contained here."""
 from __future__ import annotations
 
 import asyncio
+import copy
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Mapping, Protocol, Sequence
 
@@ -16,6 +17,7 @@ from app.sync.chronicle import (
     CalendarInfo, ChallengeRunInfo, ProfileInfo, to_abyss_run, to_calendar, to_profile, to_stygian_runs,
     to_theater_runs,
 )
+from app.sync.recommend import StatRecommendation, recommendations_by_raw_id
 
 RETRY_DELAYS: tuple[float, ...] = (2.0, 5.0, 10.0)
 DETAIL_BATCH = 20
@@ -83,6 +85,7 @@ class DetailEntry:
     weapon: WeaponInfo
     artifacts: list[ArtifactInfo]
     stats: list[dict]
+    recommendation: StatRecommendation | None = None
 
 
 @dataclass(frozen=True)
@@ -191,7 +194,7 @@ def to_roster_entry(c: Any) -> RosterEntry:
     )
 
 
-def to_detail_entry(c: Any) -> DetailEntry:
+def to_detail_entry(c: Any, recommendation: StatRecommendation | None = None) -> DetailEntry:
     # Active skills arrive as: normal, skill, [alternate sprint], burst. Burst is always last.
     levels = [int(s.level) for s in c.skills if s.skill_type == 1]
     normal = levels[0] if levels else 1
@@ -205,7 +208,7 @@ def to_detail_entry(c: Any) -> DetailEntry:
     stats = [{"name": p.info.name, "value": p.final} for p in [*c.base_properties, *c.extra_properties]]
     return DetailEntry(id=canonical_id(c.id, getattr(c, "element", None) or None), normal=normal, skill=skill,
                        burst=burst,
-                       weapon=_weapon(c.weapon), artifacts=artifacts, stats=stats)
+                       weapon=_weapon(c.weapon), artifacts=artifacts, stats=stats, recommendation=recommendation)
 
 
 def to_notes(n: Any) -> NotesInfo:
@@ -317,9 +320,12 @@ class GenshinPySource:
         out: list[DetailEntry] = []
         ids = list(raw_ids)
         for i in range(0, len(ids), DETAIL_BATCH):
-            result = await call_api(self._client.get_genshin_detailed_characters, self._uid,
-                                    characters=ids[i:i + DETAIL_BATCH], delays=self._delays)
-            out.extend(e for e in (to_detail_entry(c) for c in result.characters) if e.id is not None)
+            raw = await call_api(self._client.get_genshin_detailed_characters, self._uid,
+                                 characters=ids[i:i + DETAIL_BATCH], return_raw_data=True, delays=self._delays)
+            recs = recommendations_by_raw_id(raw)          # read before the model's validator mutates a dict
+            result = genshin.models.GenshinDetailCharacters(**copy.deepcopy(raw))
+            out.extend(e for e in (to_detail_entry(c, recs.get(int(c.id))) for c in result.characters)
+                       if e.id is not None)
         return out
 
     async def get_notes(self) -> NotesInfo:

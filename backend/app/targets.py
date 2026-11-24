@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.db.models import CharacterGoal, OwnedCharacter, TravelerElement
+from app.db.models import CharacterGoal, CharacterStatRecommendation, OwnedCharacter, TravelerElement
 from app.domain import Current, Targets, build_defaults
 from app.gamedata.traveler import is_traveler
 from app.planner.requests import shared_traveler_row
+from app.timeutil import iso
 
 
 def current_for(s: Session, cid: int) -> Current | None:
@@ -44,3 +45,27 @@ def write_targets(row: CharacterGoal, t: Targets) -> None:
         row.target_constellation = t.constellation
     if t.refinement is not None:
         row.target_refinement = t.refinement
+
+
+def _rec_fields(rec: CharacterStatRecommendation) -> dict:
+    """Copy of a stored recommendation's main/subs; a malformed row yields empty slots instead of raising."""
+    main = rec.data.get("main") or {}
+    return {"main": {slot: list(main.get(slot) or []) for slot in ("sands", "goblet", "circlet")},
+            "subs": list(rec.data.get("subs") or [])}
+
+
+def prefill_artifact_target(s: Session, row: CharacterGoal) -> None:
+    """A Build character with no artifact target starts from HoYoLAB's recommendation, when one is stored."""
+    if row.goal != "build" or row.artifact_target is not None:
+        return
+    rec = s.get(CharacterStatRecommendation, row.character_id)
+    if rec is None:
+        return
+    row.artifact_target = {"sets": [], **_rec_fields(rec)}
+
+
+def recommendation_payload(s: Session, cid: int) -> dict | None:
+    rec = s.get(CharacterStatRecommendation, cid)
+    if rec is None:
+        return None
+    return {**_rec_fields(rec), "synced_at": iso(rec.synced_at)}

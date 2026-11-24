@@ -65,6 +65,7 @@ export interface CharacterDetail extends Character {
 	planned_weapon: PlannedWeapon | null;
 	teams: TeamRef[];
 	artifact_check: ArtifactCheck;
+	stat_recommendation: StatRecommendation | null;
 }
 
 export interface Connection { status: 'connected' | 'expired' | 'missing'; uid: number | null }
@@ -344,6 +345,12 @@ export interface ArtifactTarget {
 	sets: { set_id: number; pieces: 2 | 4 }[];
 	main: Record<MainSlot, string[]>;
 	subs: string[];
+}
+
+export interface StatRecommendation {
+	main: Record<MainSlot, string[]>;
+	subs: string[];
+	synced_at: string;
 }
 
 export interface ArtifactCheck {

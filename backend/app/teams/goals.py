@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.db.models import CharacterGoal, TeamMember, TeamTag
 from app.domain import resolve_targets
 from app.planner.order import apply_goal
-from app.targets import defaults_for, stored_targets, write_targets
+from app.targets import defaults_for, prefill_artifact_target, stored_targets, write_targets
 from app.timeutil import utcnow
 
 BUILD_TAG_ID = 1
@@ -28,6 +28,7 @@ def raise_to_build(session: Session, character_ids: Iterable[int]) -> list[int]:
         targets = resolve_targets("build", stored_targets(row), defaults_for(session, cid))
         apply_goal(session, row, "build")
         write_targets(row, targets)
+        prefill_artifact_target(session, row)
         row.updated_at = utcnow()
         raised.append(cid)
     if raised:

@@ -6,8 +6,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    ChallengeRun, GameCharacter, GameMaterial, GameMeta, GapRun, HoyolabSnapshot, LiveNotes, MaterialGap,
-    MaterialTotal, OwnedArtifact, OwnedCharacter,
+    CharacterStatRecommendation, ChallengeRun, GameCharacter, GameMaterial, GameMeta, GapRun, HoyolabSnapshot,
+    LiveNotes, MaterialGap, MaterialTotal, OwnedArtifact, OwnedCharacter,
 )
 from app.sync.chronicle import ChallengeRunInfo
 from app.gamedata.yatta import VARIANT_ICONS
@@ -58,8 +58,16 @@ def save_roster(session: Session, entries: list[RosterEntry], now: datetime) -> 
     return seen - known
 
 
-def save_details(session: Session, details: list[DetailEntry]) -> None:
+def save_details(session: Session, details: list[DetailEntry], now: datetime | None = None) -> None:
+    when = now or utcnow()
     for d in details:
+        if d.recommendation is not None:
+            rec = session.get(CharacterStatRecommendation, d.id)
+            if rec is None:
+                session.add(CharacterStatRecommendation(character_id=d.id, data=d.recommendation.to_json(),
+                                                        synced_at=when))
+            else:
+                rec.data, rec.synced_at = d.recommendation.to_json(), when
         row = session.get(OwnedCharacter, d.id)
         if row is None:
             continue

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/api';
 	import BuildArtifacts from '$lib/BuildArtifacts.svelte';
+	import BuildSuggestions from '$lib/BuildSuggestions.svelte';
 	import { getCharacterPage } from '$lib/characterPage.svelte';
 	import ConstellationRow from '$lib/ConstellationRow.svelte';
 	import { ownedLabel } from '$lib/good';
@@ -135,10 +136,7 @@
 
 	<BuildArtifacts {editing} />
 
-	<section class="card">
-		<h2>Suggestions</h2>
-		<div class="slot" data-testid="build-suggestions-slot">Recommended targets arrive with sub-project 9 (Build recommendations).</div>
-	</section>
+	<BuildSuggestions {editing} />
 </div>
 
 <style>
