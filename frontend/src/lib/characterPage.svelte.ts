@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte';
 import { api, errorMessage } from './api';
-import type { CharacterDetail, Goal, Kit, KitResponse, Targets } from './types';
+import type { CharacterDetail, GoalBody, Goal, Kit, KitResponse, Targets } from './types';
 
 const KEY = Symbol('character-page');
 
@@ -43,7 +43,7 @@ export class CharacterPage {
 		}
 	}
 
-	async saveGoal(body: { goal?: Goal; targets?: Targets; planned_weapon_id?: number | null }): Promise<void> {
+	async saveGoal(body: GoalBody): Promise<void> {
 		if (!this.c) return;
 		try {
 			await api.setGoal(this.c.id, body);
