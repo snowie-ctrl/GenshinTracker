@@ -30,6 +30,7 @@
 	--wanted: #e8c15a;
 	--unobtained: #6b6b7d;
 	--warn: #f0a04b;
+	--avg-pity: #7cc8ff;   /* light blue: the user's average 5★ pity (sub-project 7) */
 	--error: #ef6b6b;
 	--r5: linear-gradient(160deg, #9b6a3c, #d6a253);
 	--r4: linear-gradient(160deg, #5c4a8a, #9a78c9);
