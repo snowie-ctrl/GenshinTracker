@@ -34,7 +34,6 @@
 		<div class="cards">
 			{#each domains as d (d.id)}
 				<div class="card">
-					<div class="image" aria-hidden="true"></div>
 					<div class="title">{d.name}</div>
 					<div class="tiles-row">
 						{#each d.materials as m (m.id)}
@@ -63,7 +62,6 @@
 	.day.viewed { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 	.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 10px; }
 	.card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
-	.image { height: 64px; border-radius: 8px; background: linear-gradient(135deg, var(--panel), var(--panel-2)); margin-bottom: 6px; }
 	.title { font-weight: 600; }
 	.tiles-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 	.avatars { display: flex; gap: 4px; }

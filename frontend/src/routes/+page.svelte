@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
+	import ArtifactDomains from '$lib/dashboard/ArtifactDomains.svelte';
 	import BuildList from '$lib/dashboard/BuildList.svelte';
 	import CompletedBuilds from '$lib/dashboard/CompletedBuilds.svelte';
 	import DomainDays from '$lib/dashboard/DomainDays.svelte';
@@ -68,7 +69,7 @@
 				hasBuilds={data.builds.length + data.completed.length > 0} gaps={data.gaps} {now} />
 			<WeeklyBosses weekly={data.weekly_bosses} hasBuilds={data.builds.length + data.completed.length > 0}
 				gaps={data.gaps} {now} />
-			<!-- Sub-project 8 adds the Artifact domains section here. -->
+			<ArtifactDomains view={data.artifact_domains} />
 			<BuildList builds={data.builds} completedCount={data.completed.length} gaps={data.gaps} {now} onsaved={saved} />
 			<CompletedBuilds completed={data.completed} />
 		</div>
