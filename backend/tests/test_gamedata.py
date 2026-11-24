@@ -85,8 +85,17 @@ async def test_refresh_materials_stores_catalogue_chains_and_domains(session_fac
         order = sorted(mats.values(), key=lambda m: m.sort_order)
         cats = [m.category for m in order]
         assert cats == sorted(cats, key=["exp", "ascension", "specialty", "talent", "weapon",
-                                         "enemy", "weekly", "special"].index)
+                                         "enemy", "weekly", "special", "teapot"].index)
         assert [m.id for m in order if m.category == "talent"] == [104301, 104302, 104303]
+        assert [m.id for m in order if m.category == "teapot"] == [101301, 101401]
+        assert order[-1].category == "teapot"
+        assert mats[101301].sources == [
+            {"kind": "text", "name": "Found in the wild", "days": []},
+            {"kind": "text", "name": "Recommendation: Cut from Windwail Highland", "days": []},
+            {"kind": "text", "name": "Purchased from Realm Depot: Wood", "days": []},
+            {"kind": "text", "name": "Convert Wood", "days": []},
+        ]
+        assert 100618 not in mats
         assert {d.id for d in s.scalars(select(GameDomain))} == {4213, 4313}
         assert s.get(GameWeapon, 11401).weapon_type == "Sword"
         assert gamedata_status(s)["materials"]["count"] == len(mats)
