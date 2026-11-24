@@ -188,6 +188,12 @@ def seed(root: Path) -> None:
             s.add(GameBanner(key=f"{pool}|{b_start}|0", pool=pool, name=name, short_name=short, start=b_start,
                              end=b_end, timezone_dependent=False, timezone_dependent_end=False, order=0,
                              featured_5=f5, featured_4=f4, version="9.9"))
+        for i in range(8):
+            day = f"2020-{i + 1:02d}-01 06:00:00"
+            s.add(GameBanner(key=f"character|{day}|0", pool="character", name=f"Archive Banner {i}",
+                             short_name=f"Archive {i}", start=day, end=f"2020-{i + 1:02d}-20 17:59:00",
+                             timezone_dependent=True, timezone_dependent_end=False, order=0,
+                             featured_5=[10000089], featured_4=[10000032], version=f"1.{i}"))
         s.merge(GameMeta(key="banners_fetched_at", value=iso(now)))
         s.flush()
         merge(s, demo_wishes(start), "game", now)

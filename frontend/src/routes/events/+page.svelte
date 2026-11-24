@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, errorMessage } from '$lib/api';
+	import BannerHistory from '$lib/BannerHistory.svelte';
 	import Countdown from '$lib/Countdown.svelte';
 	import EventModal from '$lib/EventModal.svelte';
 	import EventTimeline from '$lib/EventTimeline.svelte';
@@ -119,7 +120,7 @@
 	</section>
 {/if}
 
-<section class="panel" data-testid="banner-history"></section>
+<BannerHistory />
 
 {#if openRow}
 	<EventModal row={openRow} {now} onclose={() => (openKey = null)} ontoggle={toggleRow} />

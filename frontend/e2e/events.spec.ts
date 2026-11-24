@@ -42,19 +42,19 @@ test('wish popup shows featured items; timers list resets and ending soon', asyn
 	await expect(modal).toBeHidden();
 });
 
-test('banner history search narrows the list', async ({ page }) => {
+test('banner history groups by version, pages on scroll and searches', async ({ page }) => {
 	await page.goto('/events');
 	const history = page.getByTestId('banner-history');
-	// control: the seeded weapon banner is listed in the weapon pool before searching
-	await history.getByRole('button', { name: 'weapon' }).click();
-	await expect(history.locator('tbody')).toContainText('Epitome Invocation');
-	await history.getByRole('button', { name: 'character' }).click();
-	await page.getByLabel('Search banners').fill('Furina');
-	await expect(history.locator('tbody tr').first()).toContainText('Tide of Furina');
-	await expect(history.locator('tbody tr')).toHaveCount(1);
-	await expect(history.locator('tbody')).not.toContainText('Epitome Invocation');
-	// searching Furina in the weapon pool finds nothing: the weapon banner does not match
-	await history.getByRole('button', { name: 'weapon' }).click();
-	await expect(history.locator('tbody')).toContainText('No banners match.');
-	await expect(history.locator('tbody')).not.toContainText('Epitome Invocation');
+	const top = history.getByTestId('version-9.9');
+	await expect(top).toContainText('Tide of Furina');
+	await expect(top.getByTestId('phase').first()).toContainText('Phase 1');
+	await expect(top.locator('.phase.upcoming')).toContainText('Next Phase Wish');
+	await expect(history.getByTestId('version-1.0')).toHaveCount(0);
+	await history.getByRole('button', { name: 'Load more' }).scrollIntoViewIfNeeded();
+	await expect(history.getByTestId('version-1.0')).toBeVisible();
+	await page.getByLabel('Search banners').fill('Epitome');
+	await expect(history.getByTestId('version-9.9')).toContainText('Epitome Invocation');
+	await expect(history.getByTestId('version-9.9')).not.toContainText('Tide of Furina');
+	await expect(history.getByTestId('version-1.0')).toHaveCount(0);
+	await page.getByLabel('Search banners').fill('');
 });
