@@ -132,3 +132,17 @@ def test_devseed_artifact_domains(tmp_path):
     assert sets == {"Bloodstained Chivalry": ["neuvillette"], "Noblesse Oblige": ["furina"]}   # Bennett ticked done
     assert [(o["name"], [c["slug"] for c in o["characters"]]) for o in block["other"]] == [("Gladiator's Finale", ["furina"])]
     assert furina["artifact_check"]["status"] == "missing"
+
+
+def test_devseed_stat_recommendations(tmp_path):
+    seed(tmp_path)
+    with make_client(Paths(tmp_path)) as client:
+        bennett = client.get("/api/characters/bennett").json()
+        furina = client.get("/api/characters/furina").json()
+        neuv = client.get("/api/characters/neuvillette").json()
+        xiangling = client.get("/api/characters/xiangling").json()
+    assert bennett["stat_recommendation"]["main"]["sands"] == ["er", "hp%"]
+    assert furina["stat_recommendation"]["main"] == furina["artifact_target"]["main"]
+    assert furina["stat_recommendation"]["subs"] == furina["artifact_target"]["subs"]
+    assert xiangling["stat_recommendation"] is not None and xiangling["artifact_target"] is None
+    assert neuv["stat_recommendation"] is None

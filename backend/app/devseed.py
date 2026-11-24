@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.config import Paths
 from app.db.engine import make_engine, make_session_factory, migrate
-from app.db.models import (ChallengeRun, CharacterGoal, EventLog, GameArtifactDomain, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
+from app.db.models import (ChallengeRun, CharacterGoal, CharacterStatRecommendation, EventLog, GameArtifactDomain, GameArtifactSet, GameBanner, GameCharacter, GameCharacterKit, GameDomain, GameMaterial, GameMeta, GameWeapon,
                            HoyolabSnapshot, Tag, Team, TeamMember, TeamTag)
 from app.planner.requests import snapshot
 from app.sync.hoyolab import ArtifactInfo, DetailEntry, ExpeditionInfo, GapResult, MaterialAmount, NotesInfo, RosterEntry, WeaponInfo
@@ -41,6 +41,16 @@ ARTIFACT_TARGETS = {
                 "subs": ["crit_rate", "crit_dmg", "hp%", "er"]}, False),
     10000087: ({"sets": [{"set_id": 15008, "pieces": 4}], "main": {"sands": [], "goblet": [], "circlet": []},
                 "subs": []}, False),
+}
+# HoYoLAB-style stat recommendations (sub-project 9): Bennett differs from his target, Furina matches hers,
+# Xiangling (goal none) shows the prefill, Neuvillette has none.
+STAT_RECOMMENDATIONS = {
+    10000032: {"main": {"sands": ["er", "hp%"], "goblet": ["pyro", "hp%"], "circlet": ["heal", "hp%"]},
+               "subs": ["er", "hp%", "hp", "crit_rate"]},
+    10000089: {"main": {"sands": ["hp%"], "goblet": ["hydro"], "circlet": ["crit_rate", "crit_dmg"]},
+               "subs": ["crit_rate", "crit_dmg", "hp%", "er"]},
+    10000023: {"main": {"sands": ["er", "em"], "goblet": ["pyro"], "circlet": ["crit_rate", "crit_dmg"]},
+               "subs": ["er", "crit_rate", "crit_dmg", "em"]},
 }
 WEAPON = WeaponInfo("Favonius Sword", "https://enka.network/ui/UI_EquipIcon_Sword_Zephyrus.png", 4, 90, 3, 11401)
 
@@ -161,6 +171,8 @@ def seed(root: Path) -> None:
                                 artifact_target=ARTIFACT_TARGETS.get(cid, (None, False))[0],
                                 artifacts_done=ARTIFACT_TARGETS.get(cid, (None, False))[1],
                                 updated_at=now))
+        for cid, data in STAT_RECOMMENDATIONS.items():
+            s.add(CharacterStatRecommendation(character_id=cid, data=data, synced_at=now))
         for order, (mid, name, cat, rarity, craft, ytype, sources) in enumerate(MATERIALS):
             src = [FREEDOM_SOURCE] if cat == "talent" else sources
             s.add(GameMaterial(id=mid, name=name, icon=f"UI_ItemIcon_{mid}", rarity=rarity, yatta_type=ytype,
