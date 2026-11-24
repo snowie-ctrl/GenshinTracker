@@ -21,6 +21,7 @@
 	let draft: ArtifactTarget | null = null;
 	let inflight = $state(0);
 	const t = $derived(loaded);
+	let resetKey = $state(0);
 	let modeOverride = $state<4 | 2 | null>(null);
 	const mode = $derived<4 | 2>(modeOverride ?? (t.sets.length === 2 || t.sets[0]?.pieces === 2 ? 2 : 4));
 
@@ -30,7 +31,7 @@
 		try {
 			await p.saveGoal({ artifact_target: next });
 		} finally {
-			if (--inflight === 0) { draft = null; modeOverride = null; }
+			if (--inflight === 0) { draft = null; if (t.sets.length) modeOverride = null; }
 		}
 	}
 	const base = () => draft ?? t;
@@ -41,14 +42,19 @@
 	}
 	function pick(index: number, id: number | null) {
 		const cur = base();
-		save({ ...cur, sets: setSlot(cur.sets, index, id, mode) });
+		const sets = setSlot(cur.sets, index, id, mode);
+		if (sets === cur.sets) { resetKey++; return; } // duplicate ignored: show the stored value again
+		save({ ...cur, sets });
 	}
 	function toggleMain(slot: MainSlot, key: string) {
 		const cur = base();
 		save({ ...cur, main: { ...cur.main, [slot]: toggleStat(cur.main[slot], key) } });
 	}
 	function setSubs(subs: string[]) { save({ ...base(), subs }); }
-	function setDone(done: boolean) { p.saveGoal({ artifacts_done: done }); }
+	async function setDone(done: boolean) {
+		inflight++;
+		try { await p.saveGoal({ artifacts_done: done }); } finally { inflight--; }
+	}
 	const SLOT_LABEL: Record<string, string> = { flower: 'Flower', plume: 'Plume', sands: 'Sands', goblet: 'Goblet', circlet: 'Circlet' };
 </script>
 
@@ -60,10 +66,12 @@
 				<button type="button" class:on={mode === 4} aria-pressed={mode === 4} data-testid="artifact-mode-4" onclick={() => setMode(4)}>4-piece</button>
 				<button type="button" class:on={mode === 2} aria-pressed={mode === 2} data-testid="artifact-mode-2" onclick={() => setMode(2)}>2 + 2</button>
 			</div>
-			<ArtifactSetPicker index={0} {options} value={t.sets[0]?.set_id ?? null} onchange={(id) => pick(0, id)} />
-			{#if mode === 2}
-				<ArtifactSetPicker index={1} {options} value={t.sets[1]?.set_id ?? null} onchange={(id) => pick(1, id)} />
-			{/if}
+			{#key resetKey}
+				<ArtifactSetPicker index={0} {options} value={t.sets[0]?.set_id ?? null} onchange={(id) => pick(0, id)} />
+				{#if mode === 2}
+					<ArtifactSetPicker index={1} {options} value={t.sets[1]?.set_id ?? null} onchange={(id) => pick(1, id)} />
+				{/if}
+			{/key}
 		</div>
 
 		<h3>Main stats</h3>
@@ -92,12 +100,12 @@
 	<div class="status">
 		<span data-testid="artifact-status">
 			{#if check.status === 'met'}Matches target
-			{:else if check.status === 'missing'}Missing: {check.missing.join(', ')}
+			{:else if check.status === 'missing'}{#if check.missing.length === 1 && check.missing[0] === 'No artifacts equipped'}No artifacts equipped{:else}Missing: {check.missing.join(', ')}{/if}
 			{:else}No artifact target set{/if}
 		</span>
 		{#each check.sets as s (s.set_id)}<span class="muted small">{s.name} {s.equipped}/{s.pieces}</span>{/each}
 		<label class="done">
-			<input type="checkbox" data-testid="artifacts-done" checked={c.artifacts_done} disabled={!editing}
+			<input type="checkbox" data-testid="artifacts-done" checked={c.artifacts_done} disabled={!editing || inflight > 0}
 				onchange={(e) => setDone(e.currentTarget.checked)} />
 			Artifacts done
 		</label>
