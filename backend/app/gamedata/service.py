@@ -231,6 +231,12 @@ async def refresh_artifact_domains(session_factory: sessionmaker, http: httpx.As
         with session_factory.begin() as s:
             _set_meta(s, META_DOMAINS_ERROR, message)
         return False
+    if not domains:
+        message = f"genshin-db returned no artifact domains matching known sets ({len(unmatched)} unmatched)"
+        log.warning("Artifact domain refresh failed: %s", message)
+        with session_factory.begin() as s:
+            _set_meta(s, META_DOMAINS_ERROR, message)
+        return False
     if unmatched:
         log.info("Artifact domain sets not matched to game data: %s", ", ".join(unmatched))
     with session_factory.begin() as s:

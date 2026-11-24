@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import httpx
 import pytest
 
-from app.db.models import GameArtifactDomain, GameArtifactSet
+from app.db.models import GameArtifactDomain, GameArtifactSet, GameMeta
 from app.gamedata.genshindb import base_name, parse_artifact_domains
-from app.gamedata.service import gamedata_status, refresh_all, refresh_artifact_domains, refresh_artifact_sets
+from app.gamedata.service import META_SETS_FETCHED, gamedata_status, refresh_all, refresh_artifact_domains, refresh_artifact_sets
 from helpers import load_fixture, yatta_transport
 
 NOW = datetime(2026, 11, 24, 12, 0)
@@ -80,3 +80,29 @@ async def test_refresh_all_refreshes_domains_after_sets(session_factory):
     with session_factory() as s:
         assert s.get(GameArtifactSet, 15007) is not None
         assert s.get(GameArtifactDomain, 5101) is not None
+
+
+async def test_refresh_domains_empty_result_keeps_rows(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_artifact_sets(session_factory, http, now=NOW)
+        await refresh_artifact_domains(session_factory, http, now=NOW)
+    with session_factory() as s:
+        before = gamedata_status(s)["artifact_domains"]["fetched_at"]
+    empty = httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
+    async with httpx.AsyncClient(transport=empty) as http:
+        assert await refresh_artifact_domains(session_factory, http, now=NOW + timedelta(days=1), force=True) is False
+    with session_factory() as s:
+        status = gamedata_status(s)["artifact_domains"]
+        assert status["count"] == 1 and status["last_error"]
+        assert status["fetched_at"] == before
+
+
+async def test_refresh_all_forces_domains_when_sets_refresh(session_factory):
+    later = NOW + timedelta(days=1)
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_all(session_factory, http, now=NOW)
+        with session_factory.begin() as s:   # make only the sets stale
+            s.merge(GameMeta(key=META_SETS_FETCHED, value="2026-01-01T00:00:00Z"))
+        assert await refresh_all(session_factory, http, now=later) is True
+    with session_factory() as s:
+        assert gamedata_status(s)["artifact_domains"]["fetched_at"] == "2026-11-25T12:00:00Z"
