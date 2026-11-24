@@ -20,6 +20,7 @@
 | Profile layout | A: enka-style, header and full-width showcase first, then full-width rows |
 | Showcase card | A: compact portrait row; clicking a card opens a wide detail panel beneath it |
 | Approach | 1: backend computes the analysis in pure Python; frontend draws hand-rolled SVG (no chart library) |
+| Identity (correction while planning) | The Phase 5 rule stays: nickname, server and avatars are dropped at sync and never stored. The header name is the local `display_name` setting (the Dashboard greeting's), or "Traveler" when blank; the header portrait is the first showcase character's icon |
 
 Mockups: `.superpowers/brainstorm/19933-1795489705/content` (git-ignored).
 
@@ -29,7 +30,7 @@ Mockups: `.superpowers/brainstorm/19933-1795489705/content` (git-ignored).
 
 - **Wish rows** hold pool, gacha_type, server-local time, seq, name, item_id, item_type and rarity. Element, weapon type and rarity come from joining `item_id` to `game_character` / `game_weapon`. The real history has an item_id on every row.
 - **Already computed** in `wishes/pity.py` and `wishes/stats.py`: pity per pull, 5★ outcome (won / lost / guaranteed / unknown), next state, average 5★ pity, monthly counts, pity histogram and per-banner pull counts. Banner attribution uses `game_banner` windows (paimon.moe) with a `version` column.
-- **HoYoLAB profile**: the sync already calls genshin.py `get_partial_genshin_user`. `to_profile` keeps only AR, days active, achievements, characters, chests, oculi, waypoints, domains and top-level regions. The same response also carries nickname, server, in-game avatar, `max_friendship_characters`, the `spiral_abyss` string, per-region icon, sub-areas, boss kills and offering icons, and the teapot (level, comfort, tier name/icon, furnishings, visitors, realms).
+- **HoYoLAB profile**: the sync already calls genshin.py `get_partial_genshin_user`. `to_profile` keeps only AR, days active, achievements, characters, chests, oculi, waypoints, domains and top-level regions. The same response also carries identity fields (nickname, server, avatar: deliberately dropped, see §1), `max_friendship_characters`, the `spiral_abyss` string, per-region icon, sub-areas, boss kills and offering icons, and the teapot (level, comfort, tier name/icon, furnishings, visitors, realms).
 - **Owned characters** already hold level, constellation, friendship, talents, weapon and final stats (HP, ATK, DEF, EM, CRIT Rate, CRIT DMG, ER, healing, element bonuses); `owned_artifact` holds slot, set, rarity, level, main stat and substats.
 - **enka.network** was probed only with its documentation sample UID. Beyond HoYoLAB it would add signature, world level, namecard, profile picture and showcase order; the user declined it.
 
@@ -94,18 +95,17 @@ New components in `src/lib/`: `RadarChart.svelte`, `Histogram.svelte`, `LineChar
 
 `ProfileInfo` gains, all optional so older snapshots still load:
 
-- `player`: `{nickname, server, avatar}` from `user.info` (`in_game_avatar`, falling back to `icon`).
 - `stats.max_friendship`, `stats.abyss` (the `spiral_abyss` string, e.g. "12-3").
 - per region: `icon`, `areas: [{name, explored}]`, `bosses: [{name, kills}]`, offering `icon`.
 - `teapot`: `{level, comfort, comfort_name, comfort_icon, items, visitors, realms: [{name, icon}]}`, or `null` when the teapot is locked.
 
-Icons are HoYoLAB CDN URLs and go through the existing `/api/img/remote` allow-list.
+Icons are HoYoLAB CDN URLs and go through the existing `/api/img/remote` allow-list. Identity fields stay dropped (the existing test that the nickname and server never reach the snapshot keeps passing).
 
 ### 5.2 `profile/view.py`
 
 `profile_view` returns:
 
-- `header`: nickname, AR, server, avatar, days active, achievements.
+- `header`: AR, days active, achievements. The API adds `name` (the `display_name` setting, "Traveler" when blank) and the page uses the first showcase entry's icon as the portrait.
 - `tiles`: `[{key, label, value, detail?}]` for characters, max friendship, waypoints, domains, Spiral Abyss, chests (total; per-tier `detail`), oculi (total; per-element `detail`). Each `key` maps to an `Icon`.
 - `regions`: as today plus icon, areas, offering icon.
 - `teapot` (or `null`) and `bosses` (all regions merged, sorted by kills descending).
@@ -132,7 +132,7 @@ New `roster_view(session)` (from `owned_character` + `game_character`): counts b
 
 Top to bottom:
 
-1. **Hero header**: in-game avatar in a gold ring, nickname, AR pill, small line "server · N days active · N achievements", "as of …" and the last-error line as today.
+1. **Hero header**: the first showcase character's icon in a gold ring (an initial when there is none), the `display_name` (or "Traveler"), AR pill, small line "N days active · N achievements", "as of …" and the last-error line as today.
 2. **Showcase**: a row of 8 portrait cards (rarity-tinted background, element badge, name, Lv · C). Clicking a card opens a full-width panel beneath the row, tinted with that character's element: portrait, friendship, talent pills and weapon on the left; the stats list in the middle; the set summary, crit value and 5 artifact cards (slot, main stat, substats) on the right; "Open character" link to the character page. The first card is open by default. **Edit** opens a dialog: owned characters as tickable tiles (max 8), the chosen list with ↑↓ and ×, Save, and "Reset to automatic". Hidden when no characters are owned; "No artifacts synced" when a character has none.
 3. **Stat tiles**: a row of icon tiles (original single-colour icons in the sidebar style); chests and oculi show their breakdown on hover/focus.
 4. **Exploration**: one card per region with a progress ring, region icon, %, reputation, offering icon + level; sub-area bars expand on click.
@@ -165,7 +165,7 @@ New components: `ProfileHeader.svelte`, `Showcase.svelte`, `ShowcasePanel.svelte
 
 - **pytest**: `analysis.py` (months, rotations incl. unattributed pulls, element/weapon counts incl. unknown ids, histogram, primogem series, luck with a hand-computed expected pity for a small rule and the verdict thresholds, won/lost per filter); pool `avg_pity`; wider `to_profile` on a fake genshin.py object (old and new shapes; teapot null); `profile_view` on an old and a new snapshot; `roster_view`; default showcase order; showcase skips unowned ids; `PUT /profile/showcase` validation; `/wishes/summary` and `/profile` shapes.
 - **vitest**: `charts.ts` geometry (radar points, stacked bars, histogram scale, line path); filter default and fallback; showcase editor ordering helpers.
-- **Playwright**: Wishes — tiles show the average mark and ▲ when guaranteed, filter pills switch charts and the 5★ list, Month/Rotation toggle, tile click selects the filter. Profile — header, showcase panel opens on click, editing the showcase (the test restores it afterwards: one shared seeded server), teapot and boss cards. Devseed gains made-up teapot, boss, sub-area and player data.
+- **Playwright**: Wishes — tiles show the average mark and ▲ when guaranteed, filter pills switch charts and the 5★ list, Month/Rotation toggle, tile click selects the filter. Profile — header, showcase panel opens on click, editing the showcase (the test restores it afterwards: one shared seeded server), teapot and boss cards. Devseed gains made-up teapot, boss and sub-area data.
 - Full suite at the end: pytest, `npm run check`, vitest, `npm run build`, Playwright.
 
 ## 10. Build order
