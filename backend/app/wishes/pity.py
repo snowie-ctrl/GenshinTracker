@@ -30,6 +30,7 @@ class BannerWindow:
     order: int
     featured_5: tuple[int, ...]
     featured_4: tuple[int, ...]
+    version: str | None = None
 
 
 @dataclass
@@ -73,7 +74,7 @@ def banner_windows(banners: Iterable[GameBanner], offset: int) -> dict[str, list
         start = shift_time(b.start, ASIA_OFFSET, offset) if b.timezone_dependent else b.start
         end = shift_time(b.end, ASIA_OFFSET, offset) if b.timezone_dependent_end else b.end
         out.setdefault(b.pool, []).append(BannerWindow(b.key, b.pool, b.name, b.short_name, start, end, b.order,
-                                                       tuple(b.featured_5), tuple(b.featured_4)))
+                                                       tuple(b.featured_5), tuple(b.featured_4), b.version))
     for windows in out.values():
         windows.sort(key=lambda w: (w.start, w.order))
     return out

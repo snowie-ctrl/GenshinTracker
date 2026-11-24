@@ -66,6 +66,11 @@ def test_game_import_summary_history_and_dashboard(paths):
         assert pools["character"]["fives"][0]["name"] == "Furina"
         assert pools["character"]["fives"][0]["outcome"] == "unknown"        # no banner data yet
         assert summary["overall"]["pulls"] == 61 and summary["banners_available"] is False
+        assert "charts" not in summary and summary["banners"] == []
+        assert set(summary["analysis"]) == {"all", "character", "standard"}
+        assert summary["analysis"]["character"]["fives"][0]["name"] == "Furina"
+        assert summary["analysis"]["character"]["rotations"] == []                # no banner data
+        assert pools["character"]["avg_pity"] == 1.0 and pools["standard"]["avg_pity"] is None
         page1 = client.get("/api/wishes?pool=standard").json()
         assert page1["total"] == 60 and len(page1["rows"]) == 50 and page1["page_size"] == 50
         assert len(client.get("/api/wishes?pool=standard&page=2").json()["rows"]) == 10

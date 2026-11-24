@@ -1,5 +1,9 @@
-from app.wishes.analysis import ItemInfo, expected_for, expected_pity, luck, spiders
-from app.wishes.pity import PullView
+from datetime import datetime
+
+from app.db.models import GameBanner, Wish
+from app.wishes.analysis import (ItemInfo, Phase, analyze, expected_for, expected_pity, load_phases, luck,
+                                 primogem_series, rotations, spiders)
+from app.wishes.pity import BannerWindow, PullView, banner_windows, summarize_pool
 from app.wishes.types import PityRule
 
 FURINA, NAHIDA, MIST, FAV = 10000089, 10000073, 11509, 11401
@@ -48,3 +52,95 @@ def test_spiders_counts_zero_fill_and_unknown():
     assert weapons["five"] == {"Sword": 2, "Claymore": 0, "Polearm": 0, "Bow": 0, "Catalyst": 1}
     assert weapons["four"]["Sword"] == 1
     assert unknown == 1                                                # 3★ never counted, unknown 4★ is
+
+
+def wish(pk, pool, time, rarity=3, item_id=None, name="Filler"):
+    return Wish(pk=pk, id=None, pool=pool, gacha_type={"character": "301", "weapon": "302", "standard": "200"}[pool],
+                time=time, seq=0, name=name, item_id=item_id, item_type="character", rarity=rarity, source="game",
+                imported_at=datetime(2024, 1, 1))
+
+
+def window(start, version, pool="character", order=0):
+    return BannerWindow(f"{pool}|{start}|{order}", pool, "B", "B", start, "2099-01-01 00:00:00", order, (FURINA,), (),
+                        version)
+
+
+def test_load_phases_labels_and_dedupes():
+    ws = [window("2024-01-10 06:00:00", "4.3"), window("2024-01-10 06:00:00", "4.3", order=1),
+          window("2024-01-31 18:00:00", "4.3"), window("2024-02-20 06:00:00", "4.4"),
+          window("2024-01-01 00:00:00", None), window("2024-01-12 00:00:00", "4.3", pool="weapon")]
+    assert load_phases(ws) == [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00"),
+                               Phase("4.3 ph2", "4.3", "2024-01-31 18:00:00"),
+                               Phase("4.4 ph1", "4.4", "2024-02-20 06:00:00")]
+
+
+def test_rotations_bucket_every_pool_and_skip_early_pulls():
+    phases = [Phase("4.3 ph1", "4.3", "2024-01-10 06:00:00"), Phase("4.3 ph2", "4.3", "2024-01-31 18:00:00")]
+    rows = [wish(1, "standard", "2024-01-09 10:00:00"),                       # before the first phase: left out
+            wish(2, "character", "2024-01-11 10:00:00", 5, FURINA, "Furina"),
+            wish(3, "standard", "2024-01-20 10:00:00"),
+            wish(4, "weapon", "2024-02-01 10:00:00")]
+    out = rotations(rows, phases, ITEMS)
+    assert out == [
+        {"label": "4.3 ph1", "version": "4.3", "start": "2024-01-10 06:00:00",
+         "pool_counts": {"character": 1, "standard": 1}, "pulls": 2,
+         "fives": [{"name": "Furina", "icon": "UI_AvatarIcon_Furina"}]},
+        {"label": "4.3 ph2", "version": "4.3", "start": "2024-01-31 18:00:00",
+         "pool_counts": {"weapon": 1}, "pulls": 1, "fives": []}]
+
+
+def test_primogem_series_one_point_per_day_with_five_marks():
+    rows = [wish(1, "character", "2024-01-11 10:00:00"), wish(2, "character", "2024-01-11 11:00:00", 5, FURINA, "Furina"),
+            wish(3, "standard", "2024-01-13 09:00:00")]
+    assert primogem_series(rows, ITEMS) == {
+        "points": [{"date": "2024-01-11", "total": 320}, {"date": "2024-01-13", "total": 480}],
+        "fives": [{"date": "2024-01-11", "name": "Furina", "icon": "UI_AvatarIcon_Furina", "total": 320}]}
+
+
+def run_summary(rows, windows):
+    by_pool = {}
+    for w in rows:
+        by_pool.setdefault(w.pool, []).append(w)
+    names = {FURINA: "Furina", NAHIDA: "Nahida", MIST: "Mistsplitter Reforged"}
+    from app.wishes.types import POOLS
+    return {p: summarize_pool(p, by_pool.get(p, []), [w for w in windows if w.pool == p], None,
+                              "2024-02-01 00:00:00", 8, names) for p in POOLS}
+
+
+def test_analyze_filters_and_blocks():
+    windows = [window("2024-01-10 06:00:00", "4.3")]
+    rows = ([wish(i, "character", f"2024-01-11 10:{i:02d}:00") for i in range(1, 10)]
+            + [wish(10, "character", "2024-01-11 10:10:00", 5, NAHIDA, "Nahida")]                 # lost, pity 10
+            + [wish(11, "weapon", "2024-01-12 10:00:00", 4, FAV, "Favonius Sword")]
+            + [wish(12, "standard", "2024-01-13 10:00:00")])
+    results = run_summary(rows, windows)
+    out = analyze(results, rows, load_phases(windows), ITEMS)
+    assert set(out) == {"all", "character", "weapon", "standard"}                # chronicled has no pulls
+    ch = out["character"]
+    assert ch["luck"]["avg_pity"] == 10.0 and ch["luck"]["lost"] == 1 and ch["luck"]["judged_label"] == "50/50"
+    assert ch["pity_hist"] == {"buckets": ch["pity_hist"]["buckets"], "soft": 74, "avg": 10.0}
+    assert ch["pity_hist"]["buckets"][0] == {"bucket": "1-10", "count": 1}
+    assert ch["fives"][0]["name"] == "Nahida" and ch["fives"][0]["pool"] == "character"
+    assert ch["fives"][0]["icon"] == "UI_AvatarIcon_Nahida" and ch["fives"][0]["outcome"] == "lost"
+    assert ch["elements"]["five"]["Dendro"] == 1 and ch["months"][0]["character"] == 10
+    assert out["weapon"]["luck"]["avg_pity"] is None and out["weapon"]["fours"][0]["name"] == "Favonius Sword"
+    assert out["standard"]["luck"]["judged_label"] is None
+    a = out["all"]
+    assert a["luck"]["judged_label"] == "50/50 + 75/25" and a["pity_hist"]["soft"] is None
+    assert a["primogems"]["points"][-1]["total"] == 12 * 160
+    assert [r["pulls"] for r in a["rotations"]] == [12]
+    # pull-weighted expectation: (10 * 62.3 + 1 * 53.3 + 1 * 62.3) / 12 = 61.55 -> 61.5 or 61.6
+    assert abs(a["luck"]["expected"] - 61.55) <= 0.051
+
+
+def test_analyze_without_phases():
+    rows = [wish(1, "standard", "2024-01-13 10:00:00")]
+    out = analyze(run_summary(rows, []), rows, [], ITEMS)
+    assert out["standard"]["rotations"] == [] and out["standard"]["months"][0]["standard"] == 1
+
+
+def test_banner_windows_carry_version():
+    b = GameBanner(key="character|2024-01-10 06:00:00|0", pool="character", name="B", short_name="B",
+                   start="2024-01-10 06:00:00", end="2024-01-30 17:59:00", timezone_dependent=False,
+                   timezone_dependent_end=False, order=0, featured_5=[], featured_4=[], version="4.3")
+    assert banner_windows([b], 8)["character"][0].version == "4.3"
