@@ -145,3 +145,16 @@ def test_check_cli_prints_only_the_summary(session_factory, paths, capsys):
     assert "materials: 4 matched, 1 ignored, 1 unmatched" in out
     assert "weapon:UnknownBlade" in out
     assert "1234567" not in out and "Test_Scanner" not in out
+
+
+def test_teapot_materials_match_by_name(session_factory):
+    seed_catalogue(session_factory)
+    with session_factory.begin() as s:
+        for order, (mid, name) in enumerate([(101301, "Birch Wood"), (101401, "Fabric")], start=10):
+            s.add(GameMaterial(id=mid, name=name, icon=f"UI_ItemIcon_{mid}", rarity=1, yatta_type="material",
+                               category="teapot", family=mid, craft_from=None, sources=[], sort_order=order,
+                               detail_fetched=True))
+    body = {"format": "GOOD", "version": 2, "materials": {"BirchWood": 250, "Fabric": 40, "Fowl": 3}}
+    m = match_file(parse_good(json.dumps(body).encode()), index(session_factory))
+    assert m.materials == {101301: 250, 101401: 40}
+    assert m.counts["materials"] == {"matched": 2, "ignored": 1, "unmatched": 0}

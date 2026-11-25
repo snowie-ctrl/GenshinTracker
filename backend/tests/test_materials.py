@@ -1,6 +1,6 @@
 # backend/tests/test_materials.py
 from app.gamedata.materials import (
-    categorize, parse_daily_dungeon, parse_material_detail, parse_material_list, parse_weapon_list,
+    CATEGORIES, CATEGORY_LABELS, categorize, parse_daily_dungeon, parse_material_detail, parse_material_list, parse_weapon_list,
 )
 from helpers import load_fixture
 
@@ -56,3 +56,27 @@ def test_parse_weapon_list_maps_types():
     weapons = parse_weapon_list(load_fixture("yatta_weapon.json"))
     assert [w.name for w in weapons] == ["Mistsplitter Reforged", "Favonius Lance", "Favonius Sword"]
     assert {w.weapon_type for w in weapons} == {"Sword", "Polearm"}
+
+
+def test_categorize_teapot_range():
+    assert categorize("material", 1, 101299) is None
+    assert categorize("material", 1, 101300) == "teapot"
+    assert categorize("material", 1, 101301) == "teapot"      # Birch Wood
+    assert categorize("material", 1, 101404) == "teapot"      # Blue Dye
+    assert categorize("material", 1, 101499) == "teapot"
+    assert categorize("material", 1, 101500) is None
+    assert categorize("material", 1, 100618) is None          # Strange Tooth: type material, outside range
+    assert categorize("cookingIngredient", 1, 101301) is None  # inside range, wrong type
+
+
+def test_teapot_category_is_last_and_labelled():
+    assert CATEGORIES[-1] == "teapot"
+    assert CATEGORY_LABELS["teapot"] == "Serenitea Pot: wood, fabric & dyes"
+    assert set(CATEGORIES) <= set(CATEGORY_LABELS)
+
+
+def test_parse_material_list_keeps_teapot_materials():
+    mats = {m.id: m for m in parse_material_list(load_fixture("yatta_material.json"))}
+    assert mats[101301].category == "teapot" and mats[101301].name == "Birch Wood"
+    assert mats[101401].category == "teapot" and mats[101401].region is None
+    assert 100618 not in mats

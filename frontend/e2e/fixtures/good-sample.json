@@ -1,6 +1,6 @@
 {
   "format": "GOOD", "version": 2, "source": "E2E_Scanner",
-  "materials": {"SmallLampGrass": 37, "HerosWit": 120, "GuideToFreedom": 2, "Fowl": 4},
+  "materials": {"SmallLampGrass": 37, "HerosWit": 120, "GuideToFreedom": 2, "Fowl": 4, "BirchWood": 250, "Fabric": 40},
   "weapons": [
     {"key": "FavoniusSword", "level": 90, "ascension": 6, "refinement": 3, "location": "Bennett", "lock": true},
     {"key": "MistsplitterReforged", "level": 20, "ascension": 1, "refinement": 1, "location": "", "lock": false}

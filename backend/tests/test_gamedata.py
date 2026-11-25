@@ -4,8 +4,8 @@ import httpx
 from sqlalchemy import select
 
 from app.db.models import GameArtifactSet, GameCharacter, GameDomain, GameMaterial, GameMeta, GameWeapon
-from app.gamedata.service import (META_MAT_KEYS, _get_meta, claim_unknown_ids_refresh, gamedata_status,
-                                  needs_refresh, refresh, refresh_all, refresh_artifact_sets,
+from app.gamedata.service import (MATERIAL_CATALOGUE_VERSION, META_MAT_KEYS, META_MAT_VERSION, _get_meta,
+                                  claim_unknown_ids_refresh, gamedata_status, needs_refresh, refresh, refresh_all, refresh_artifact_sets,
                                   refresh_materials)
 from app.gamedata.yatta import parse_avatar_list, splash_for
 from helpers import load_fixture, yatta_transport
@@ -85,8 +85,17 @@ async def test_refresh_materials_stores_catalogue_chains_and_domains(session_fac
         order = sorted(mats.values(), key=lambda m: m.sort_order)
         cats = [m.category for m in order]
         assert cats == sorted(cats, key=["exp", "ascension", "specialty", "talent", "weapon",
-                                         "enemy", "weekly", "special"].index)
+                                         "enemy", "weekly", "special", "teapot"].index)
         assert [m.id for m in order if m.category == "talent"] == [104301, 104302, 104303]
+        assert [m.id for m in order if m.category == "teapot"] == [101301, 101401]
+        assert order[-1].category == "teapot"
+        assert mats[101301].sources == [
+            {"kind": "text", "name": "Found in the wild", "days": []},
+            {"kind": "text", "name": "Recommendation: Cut from Windwail Highland", "days": []},
+            {"kind": "text", "name": "Purchased from Realm Depot: Wood", "days": []},
+            {"kind": "text", "name": "Convert Wood", "days": []},
+        ]
+        assert 100618 not in mats
         assert {d.id for d in s.scalars(select(GameDomain))} == {4213, 4313}
         assert s.get(GameWeapon, 11401).weapon_type == "Sword"
         assert gamedata_status(s)["materials"]["count"] == len(mats)
@@ -176,3 +185,34 @@ async def test_artifact_set_failure_keeps_cache(session_factory):
     with session_factory() as s:
         status = gamedata_status(s)["artifact_sets"]
         assert status["count"] == 2 and "503" in status["last_error"]
+
+
+async def test_refresh_materials_stores_catalogue_version(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+    with session_factory() as s:
+        assert _get_meta(s, META_MAT_VERSION) == MATERIAL_CATALOGUE_VERSION
+
+
+async def test_old_catalogue_version_forces_one_refresh(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+        with session_factory.begin() as s:
+            s.merge(GameMeta(key=META_MAT_VERSION, value=MATERIAL_CATALOGUE_VERSION - 1))
+        assert await refresh_materials(session_factory, http) is True     # fresh otherwise, but old version
+        assert await refresh_materials(session_factory, http) is False    # now current: no more refetching
+
+
+async def test_missing_catalogue_version_forces_a_refresh(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport()) as http:
+        await refresh_materials(session_factory, http)
+        with session_factory.begin() as s:
+            s.delete(s.get(GameMeta, META_MAT_VERSION))
+        assert await refresh_materials(session_factory, http) is True
+
+
+async def test_failed_refresh_leaves_version_unset(session_factory):
+    async with httpx.AsyncClient(transport=yatta_transport(status=500)) as http:
+        assert await refresh_materials(session_factory, http) is False
+    with session_factory() as s:
+        assert _get_meta(s, META_MAT_VERSION) is None

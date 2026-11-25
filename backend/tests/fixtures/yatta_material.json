@@ -17,6 +17,9 @@
     "114001": {"id": 114001, "name": "Tile of Decarabian's Tower", "type": "weaponAscensionMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_114001", "rank": 2, "route": "Tile of Decarabian's Tower"},
     "112002": {"id": 112002, "name": "Slime Condensate", "type": "characterandWeaponEnhancementMaterial", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_112002", "rank": 1, "route": "Slime Condensate"},
     "100001": {"id": 100001, "name": "Fowl", "type": "cookingIngredient", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_100001", "rank": 1, "route": "Fowl"},
+    "100618": {"id": 100618, "name": "Strange Tooth", "type": "material", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_100618", "rank": 1, "route": "Strange Tooth"},
+    "101301": {"id": 101301, "name": "Birch Wood", "type": "material", "recipe": null, "mapMark": true, "icon": "UI_ItemIcon_101301", "rank": 1, "route": "Birch Wood"},
+    "101401": {"id": 101401, "name": "Fabric", "type": "material", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_101401", "rank": 1, "route": "Fabric"},
     "100100": {"id": 100100, "name": "Some Quest Item", "type": "questItem", "recipe": null, "mapMark": false, "icon": "UI_ItemIcon_100100", "rank": 4, "route": "Some Quest Item"}
   }
 }}

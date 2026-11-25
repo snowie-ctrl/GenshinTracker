@@ -10,7 +10,8 @@ from app.gamedata.yatta import WEAPONS
 
 YATTA_BASE = "https://gi.yatta.moe/api/v2/en"
 
-CATEGORIES: tuple[str, ...] = ("exp", "ascension", "specialty", "talent", "weapon", "enemy", "weekly", "special")
+CATEGORIES: tuple[str, ...] = ("exp", "ascension", "specialty", "talent", "weapon", "enemy", "weekly", "special",
+                               "teapot")
 CATEGORY_LABELS = {
     "exp": "Character EXP & weapon enhancement",
     "ascension": "Character ascension",
@@ -20,11 +21,13 @@ CATEGORY_LABELS = {
     "enemy": "Common enemy drops",
     "weekly": "Weekly boss drops",
     "special": "Crowns & special",
+    "teapot": "Serenitea Pot: wood, fabric & dyes",
     "other": "Other",
 }
 MORA_ID = 202
 DREAM_SOLVENT_ID = 113021
 CROWN_ID = 104319
+TEAPOT_ID_MIN, TEAPOT_ID_MAX = 101300, 101499   # Yatta 'material': 1013xx woods, 1014xx Fabric and dyes
 DAY_INDEX = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6}
 WEEKLY_RE = re.compile(r"^Lv\. \d+\+ (?P<boss>.+?) Challenge Reward$")
 SPECIALTY_RE = re.compile(r"\((?P<region>[^)]+)\)")
@@ -83,6 +86,8 @@ def categorize(yatta_type: str, rank: int, material_id: int) -> str | None:
         return "weapon"
     if yatta_type == "characterandWeaponEnhancementMaterial":
         return "enemy"
+    if yatta_type == "material" and TEAPOT_ID_MIN <= material_id <= TEAPOT_ID_MAX:
+        return "teapot"
     return None
 
 
@@ -164,7 +169,7 @@ async def fetch_material_list(http: httpx.AsyncClient) -> list[MaterialData]:
 
 
 async def fetch_material_catalogue(http: httpx.AsyncClient) -> tuple[list[MaterialData], list[str]]:
-    """The eight-category catalogue plus the GOOD key of every Yatta item (food, quest items...),
+    """The material catalogue (every category in CATEGORIES) plus the GOOD key of every Yatta item (food, quest items...),
     so a GOOD import can tell 'not a planner material' apart from 'unknown'."""
     from app.good.keys import good_key
     payload = await _get_json(http, "material")

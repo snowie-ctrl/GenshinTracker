@@ -18,7 +18,7 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 
 	await page.goto('/inventory');
 	await page.getByTestId('good-file-input').setInputFiles(fixture);
-	await expect(page.getByTestId('good-toast')).toContainText('Imported 3 materials, 2 weapons, 3 artifacts.');
+	await expect(page.getByTestId('good-toast')).toContainText('Imported 5 materials, 2 weapons, 3 artifacts.');
 	await expect(page.getByTestId('scan-status')).toContainText('E2E_Scanner');
 
 	const lamp = page.getByTestId('tile-100055');           // unneeded, now owned
@@ -28,9 +28,14 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 	await expect(page.getByTestId('tile-104003').locator('.count')).not.toContainText('✓');
 	await expect(page.getByTestId('tile-104302')).toContainText('8');        // short: live wins over scan 2
 	await expect(page.getByTestId('tile-104302').locator('.count')).not.toContainText('/');
+	await expect(page.getByTestId('tile-101301')).toContainText('250');      // Birch Wood from the scan
+	await expect(page.getByTestId('tile-101301')).not.toHaveClass(/dim/);
+	await expect(page.getByTestId('tile-101401')).toContainText('40');       // Fabric
 
 	await page.getByRole('button', { name: 'Owned', exact: true }).click();
 	await expect(page.getByTestId('tile-100055')).toBeVisible();
+	await expect(page.getByTestId('tile-101301')).toBeVisible();            // scanned teapot tile kept
+	await expect(page.getByTestId('tile-101302')).toHaveCount(0);           // Cuihua Wood: not in the scan
 	await expect(page.getByTestId('tile-104319')).toHaveCount(0);           // Crown: not in the scan
 	await page.getByRole('button', { name: 'All', exact: true }).click();
 
@@ -56,6 +61,7 @@ test('GOOD import: opt in, import, exact counts, weapons, artifacts, opt out', a
 	await page.goto('/inventory');
 	await expect(page.getByTestId('tile-100055')).toHaveClass(/dim/);      // data loaded
 	await expect(page.getByTestId('tile-100055')).not.toContainText('37');
+	await expect(page.getByTestId('tile-101301')).toContainText('—');
 	await expect(page.getByRole('tab', { name: 'Weapons', exact: true })).toHaveCount(0);
 	await expect(page.getByRole('tab', { name: 'Artifacts', exact: true })).toHaveCount(0);
 	await expect(page.getByRole('button', { name: 'Import GOOD file' })).toHaveCount(0);

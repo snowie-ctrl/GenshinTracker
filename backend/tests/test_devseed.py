@@ -146,3 +146,19 @@ def test_devseed_stat_recommendations(tmp_path):
     assert furina["stat_recommendation"]["subs"] == furina["artifact_target"]["subs"]
     assert xiangling["stat_recommendation"] is not None and xiangling["artifact_target"] is None
     assert neuv["stat_recommendation"] is None
+
+
+def test_devseed_teapot_materials(tmp_path):
+    from app.db.models import GameMeta
+    from app.gamedata.service import MATERIAL_CATALOGUE_VERSION, META_MAT_VERSION
+
+    seed(tmp_path)
+    with make_client(Paths(tmp_path)) as client:
+        inv = client.get("/api/inventory").json()
+    teapot = inv["categories"][-1]
+    assert teapot["key"] == "teapot"
+    assert [m["id"] for m in teapot["materials"]] == [101301, 101302, 101401, 101402]
+    assert teapot["materials"][0]["sources"] == [{"kind": "text", "name": "Found in the wild", "days": []}]
+    sf = make_session_factory(make_engine(Paths(tmp_path).db_file))
+    with sf() as s:
+        assert s.get(GameMeta, META_MAT_VERSION).value == MATERIAL_CATALOGUE_VERSION
